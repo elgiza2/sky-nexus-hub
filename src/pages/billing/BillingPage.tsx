@@ -349,31 +349,96 @@ const BillingPage = () => {
 
   const cancelFlow = SAVE_OFFER.enabled && step === "offer" ? saveOffer : cancelForm;
 
-  const sections = (
-    <div className="flex flex-col gap-4">
-      {creditsCard}
-      {progressCard}
+  const fmtN = (n: number) => n.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US");
+  const Head = ({ title, action }: { title: string; action?: React.ReactNode }) => (
+    <div className="flex items-center justify-between border-b border-border pb-2.5">
+      <h2 className="text-[16px] font-medium text-foreground">{title}</h2>
+      {action}
+    </div>
+  );
+  const Line = ({ label, value, badge }: { label: string; value: React.ReactNode; badge?: string }) => (
+    <div className="flex items-center justify-between py-1.5 text-[13.5px]">
+      <span className="flex items-center gap-1.5 text-foreground/80">
+        {label}
+        {badge && (
+          <span className="rounded-[4px] bg-foreground px-1 text-[9.5px] font-semibold leading-[14px] text-background">
+            {badge}
+          </span>
+        )}
+      </span>
+      <span className="text-foreground/70" dir="ltr">{value}</span>
+    </div>
+  );
+  const LinkBtn = ({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between rounded-[10px] border border-border bg-muted/50 px-3.5 py-3 text-[13.5px] font-medium transition active:scale-[0.99] ${danger ? "text-destructive" : "text-foreground"}`}
+    >
+      {label}
+      <span aria-hidden className="text-muted-foreground">↗</span>
+    </button>
+  );
+  const goal = 5;
+  const refs = Math.min(milestone.referrals ?? 0, goal);
 
-      <section className="flex flex-col gap-2">
-        <h2 className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          {copy("Plan")}
-        </h2>
-        {planCard}
+  const sections = (
+    <div className="flex flex-col gap-6">
+      <section>
+        <Head
+          title={copy("Available credits")}
+          action={
+            <button
+              type="button"
+              onClick={() => navigate("/pricing")}
+              className="rounded-full bg-foreground px-3.5 py-1.5 text-[12.5px] font-medium text-background active:scale-95"
+            >
+              {copy("Add credits")}
+            </button>
+          }
+        />
+        <div className="pt-2">
+          <Line label={copy("Plan")} value={copy(sub?.plan || plan)} badge={isActive ? "Pro" : undefined} />
+          <Line label={copy("Status")} value={isActive ? copy(String(sub?.status)) : copy("No active subscription")} />
+          {isActive && sub?.current_period_end && (
+            <Line label={copy("Next renewal")} value={fmtDate(sub.current_period_end, lang)} />
+          )}
+          <Line label={copy("Total available credits")} value={`${fmtN(credits)} MC`} />
+        </div>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          {copy("Manage")}
-        </h2>
-        {manageCard}
+      <section>
+        <Head title={copy("Referrals")} />
+        <div className="pt-2">
+          <div className="flex items-center justify-between py-1.5 text-[13.5px]">
+            <span className="text-foreground/80">{copy("Free Pro progress")}</span>
+            <span className="flex items-center gap-2 text-foreground/70" dir="ltr">
+              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                <span className="block h-full bg-foreground" style={{ width: `${(refs / goal) * 100}%` }} />
+              </span>
+              {refs} / {goal}
+            </span>
+          </div>
+          <div className="mt-2">
+            <LinkBtn label={copy("Invite friends")} onClick={() => navigate("/settings/referrals")} />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <Head title={copy("Plan settings")} />
+        <div className="flex flex-col gap-2 pt-3">
+          <LinkBtn label={isActive ? copy("Change plan") : copy("Upgrade plan")} onClick={() => navigate("/pricing")} />
+          {isActive && !cancelOpen && (
+            <LinkBtn danger label={copy("Cancel subscription")} onClick={() => { setStep("offer"); setCancelOpen(true); }} />
+          )}
+        </div>
       </section>
 
       {isActive && cancelOpen && (
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {step === "offer" ? copy("Wait — an offer for you") : copy("Before you go")}
-          </h2>
-          {cancelFlow}
+        <section>
+          <Head title={step === "offer" ? copy("Wait — an offer for you") : copy("Before you go")} />
+          <div className="pt-3">{cancelFlow}</div>
         </section>
       )}
     </div>
