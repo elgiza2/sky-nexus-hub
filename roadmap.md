@@ -14,4 +14,5 @@
   - In progress: security, privacy, help, support, contact (subagent running)
   - In progress: skills, passwords, desktop bridge, cloud browser, data category (subagent running)
   - Still to do: profile edit, AI personalization, data controls, notifications, referrals, delete account, system status, capabilities, image models, mail
+- Redesign the Agents page (/agents) clean, with a distinct icon per agent instead of the robot icon; the robot icon stays only inside the conversation
 - Verify each converted page visually, then report
