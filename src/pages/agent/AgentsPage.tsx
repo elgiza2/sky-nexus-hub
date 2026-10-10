@@ -1,5 +1,6 @@
 /** English agent directory; setup happens in the original main-agent conversation. */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { ClaudeCode, HermesAgent, OpenClaw, OpenHands } from "@lobehub/icons";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -55,7 +56,10 @@ import { canUseAgent } from "@/lib/octoberOffer";
 /* ── One distinct icon per agent, chosen from what the agent is for ────────── */
 const RULES: [RegExp, LucideIcon][] = [
   [/\b(research|deep research|source|fact|investigat|scan|browse|web|search)\b/, Search],
-  [/\b(code|coding|program|developer|dev|script|debug|api|software|engineer|frontend|backend)\b/, CodeXml],
+  [
+    /\b(code|coding|program|developer|dev|script|debug|api|software|engineer|frontend|backend)\b/,
+    CodeXml,
+  ],
   [/\b(video|film|clip|cinema|movie|animation|trailer|footage)\b/, Film],
   [/\b(image|photo|picture|illustrat|art|logo|poster|visual|render)\b/, ImageIcon],
   [/\b(design|brand|ui|color|style|aesthet)\b/, Palette],
@@ -89,10 +93,40 @@ const RULES: [RegExp, LucideIcon][] = [
 ];
 
 const CYCLE: LucideIcon[] = [
-  Sparkles, Search, CodeXml, Film, ImageIcon, Palette, PenLine, ChartColumn, Mail,
-  CalendarDays, Languages, GraduationCap, Megaphone, DollarSign, MapIcon, Heart,
-  Music2, Presentation, FileText, Brain, ShieldCheck, Users, Clock, Globe, BookOpen,
-  Mic, Terminal, Star, Zap, Camera, Rocket, Briefcase, MessageSquare, WandSparkles,
+  Sparkles,
+  Search,
+  CodeXml,
+  Film,
+  ImageIcon,
+  Palette,
+  PenLine,
+  ChartColumn,
+  Mail,
+  CalendarDays,
+  Languages,
+  GraduationCap,
+  Megaphone,
+  DollarSign,
+  MapIcon,
+  Heart,
+  Music2,
+  Presentation,
+  FileText,
+  Brain,
+  ShieldCheck,
+  Users,
+  Clock,
+  Globe,
+  BookOpen,
+  Mic,
+  Terminal,
+  Star,
+  Zap,
+  Camera,
+  Rocket,
+  Briefcase,
+  MessageSquare,
+  WandSparkles,
 ];
 
 function pickIcon(a: AgentInfo): LucideIcon {
@@ -103,6 +137,22 @@ function pickIcon(a: AgentInfo): LucideIcon {
   let h = 0;
   for (let i = 0; i < a.id.length; i++) h = (h * 31 + a.id.charCodeAt(i)) >>> 0;
   return CYCLE[h % CYCLE.length];
+}
+
+function brandMark(a: AgentInfo): ReactNode | null {
+  if (a.isDefault) {
+    return <img src="/model-logos/megsy.png" alt="" aria-hidden="true" decoding="async" />;
+  }
+
+  const name = a.name.toLowerCase();
+  if (name.includes("openclaw")) return <OpenClaw.Color aria-hidden="true" />;
+  if (name.includes("hermes")) return <HermesAgent aria-hidden="true" />;
+  if (name.includes("openhands")) return <OpenHands.Color aria-hidden="true" />;
+  if (name.includes("claude")) return <ClaudeCode.Color aria-hidden="true" />;
+  if (name.includes("higgsfield")) {
+    return <img src="/model-logos/higgsfield.png" alt="" aria-hidden="true" decoding="async" />;
+  }
+  return null;
 }
 
 /* ── The agent's own colour drives the icon tile tint ─────────────────────── */
@@ -117,6 +167,31 @@ const TINT: Record<AgentColor, string> = {
 };
 
 const AGENT_CSS = `
+  .agx-header {
+    min-height: 72px;
+    padding-inline: clamp(16px, 3vw, 28px);
+    background: color-mix(in oklch, var(--settings-surface) 88%, transparent);
+    border-color: color-mix(in oklch, var(--settings-line) 82%, transparent);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 8px 24px color-mix(in oklch, black 5%, transparent);
+  }
+  .agx-header-title { display: flex; min-width: 0; align-items: center; gap: 11px; }
+  .agx-header-mark {
+    display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center;
+    border: 1px solid color-mix(in oklch, var(--settings-violet) 24%, transparent);
+    border-radius: 13px;
+    background: color-mix(in oklch, var(--settings-violet) 10%, var(--settings-surface));
+  }
+  .agx-header-mark img { width: 25px; height: 25px; object-fit: contain; }
+  .agx-header-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; line-height: 1.05; }
+  .agx-header-kicker { color: var(--settings-muted); font-size: 9px; font-weight: 750; letter-spacing: .16em; }
+  .agx-header-name { overflow: hidden; color: var(--foreground); font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+  .agx-header-actions { display: flex; align-items: center; gap: 10px; }
+  .agx-agent-count {
+    padding: 6px 10px; border: 1px solid var(--settings-line); border-radius: 999px;
+    color: var(--settings-muted); font-size: 11px; font-weight: 650; white-space: nowrap;
+    background: color-mix(in oklch, var(--settings-surface) 86%, transparent);
+  }
   .agx-tile {
     width: 38px; height: 38px; flex-shrink: 0;
     display: grid; place-items: center;
@@ -126,6 +201,7 @@ const AGENT_CSS = `
     border: 1px solid color-mix(in oklch, var(--agx) 26%, transparent);
   }
   .agx-tile svg { width: 19px; height: 19px; stroke-width: 1.7; }
+  .agx-tile img { width: 25px; height: 25px; object-fit: contain; }
   .agx-chip {
     flex-shrink: 0; white-space: nowrap;
     font-size: 11px; font-weight: 650; letter-spacing: .02em;
@@ -137,7 +213,10 @@ const AGENT_CSS = `
   .agx-card { animation: agx-in .45s cubic-bezier(.22,1,.36,1) both; }
   @keyframes agx-in { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
   @media(prefers-reduced-motion:reduce) { .agx-card { animation: none; } }
-  @media(max-width:520px) { .agx-open-label { display: none; } }
+  @media(max-width:520px) {
+    .agx-open-label, .agx-agent-count { display: none; }
+    .agx-header { padding-inline: 12px; }
+  }
 `;
 
 export function AgentsPage() {
@@ -148,17 +227,22 @@ export function AgentsPage() {
   const [now] = useState(Date.now());
   const setup = () => nav("/chat", { state: { agentCreation: true } });
   const filtered = agents;
-  const personal = filtered.filter(a => !a.isTemplate);
-  const catalogue = filtered.filter(a => a.isTemplate && !a.mediaOnly);
-  const media = filtered.filter(a => a.mediaOnly);
+  const personal = filtered.filter((a) => !a.isTemplate);
+  const catalogue = filtered.filter((a) => a.isTemplate && !a.mediaOnly);
+  const media = filtered.filter((a) => a.mediaOnly);
 
   const item = (a: AgentInfo) => {
-    const active = sessions.filter(s => s.agentId === a.id && s.status === "running").length;
+    const active = sessions.filter((s) => s.agentId === a.id && s.status === "running").length;
     const locked = !a.isDefault && !canUseAgent(tier, !!a.mediaOnly, now);
+    const BrandMark = brandMark(a);
     const Icon = pickIcon(a);
     return (
-      <li key={a.id} className="gx-row gx-row-tap" style={{ ["--agx" as any]: TINT[a.color] }}>
-        <span className="agx-tile"><Icon /></span>
+      <li
+        key={a.id}
+        className="gx-row gx-row-tap"
+        style={{ "--agx": TINT[a.color] } as CSSProperties}
+      >
+        <span className="agx-tile">{BrandMark ?? <Icon />}</span>
         <span className="gx-row-body">
           <span className="gx-row-label flex min-w-0 items-center gap-2">
             <span className="agx-name">{a.name}</span>
@@ -166,7 +250,9 @@ export function AgentsPage() {
             {active > 0 && <span className="agx-chip">{active} live</span>}
           </span>
           <span className="gx-row-hint">
-            {a.mediaOnly ? "Image and video creation" : a.description || (a.isDefault ? "Your everyday partner" : "Personal AI agent")}
+            {a.mediaOnly
+              ? "Image and video creation"
+              : a.description || (a.isDefault ? "Your everyday partner" : "Personal AI agent")}
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
@@ -199,7 +285,17 @@ export function AgentsPage() {
             size="sm"
             onClick={() => nav(locked ? "/pricing" : `/chat?agent=${encodeURIComponent(a.id)}`)}
           >
-            {locked ? <><Lock size={14} />Pro</> : <><span className="agx-open-label">Open chat</span><ArrowUpRight size={14} /></>}
+            {locked ? (
+              <>
+                <Lock size={14} />
+                Pro
+              </>
+            ) : (
+              <>
+                <span className="agx-open-label">Open chat</span>
+                <ArrowUpRight size={14} />
+              </>
+            )}
           </Button>
         </span>
       </li>
@@ -211,27 +307,53 @@ export function AgentsPage() {
       <style>{AGENT_CSS}</style>
       <AgentShell
         lang="en"
-        title="Agents"
+        headerClassName="agx-header"
+        title={
+          <div className="agx-header-title">
+            <span className="agx-header-mark">
+              <img src="/model-logos/megsy.png" alt="" aria-hidden="true" decoding="async" />
+            </span>
+            <span className="agx-header-copy">
+              <span className="agx-header-kicker">MEGSY WORKSPACE</span>
+              <span className="agx-header-name">Agent directory</span>
+            </span>
+          </div>
+        }
         actions={
-          <Button variant="neutral" size="sm" onClick={setup}>
-            <Plus size={16} />
-            Add agent
-          </Button>
+          <div className="agx-header-actions">
+            {ready && <span className="agx-agent-count">{agents.length} agents</span>}
+            <Button variant="neutral" size="sm" onClick={setup}>
+              <Plus size={16} />
+              Add agent
+            </Button>
+          </div>
         }
       >
-        <SEOHead locale="en" path="/agents" title="Your agents" description="Your personal Megsy AI agents, specialist agents and conversations." />
+        <SEOHead
+          locale="en"
+          path="/agents"
+          title="Your agents"
+          description="Your personal Megsy AI agents, specialist agents and conversations."
+        />
         <div
           className="flex-1 overflow-y-auto px-5 py-8 md:px-12 md:py-10"
           style={{ background: "var(--settings-backdrop)", backgroundAttachment: "fixed" }}
         >
           <div className="mx-auto w-full max-w-3xl">
             <h1 className="gx-title">Agents</h1>
-            <p className="gx-sub">Personal agents, specialists and media makers — each with its own icon and chat.</p>
+            <p className="gx-sub">
+              Personal agents, specialists and media makers — each with its own icon and chat.
+            </p>
 
             {(error || deleteError) && (
               <div className="mt-6 flex items-center gap-3" role="alert">
                 <p className="text-sm text-destructive">{error || deleteError}</p>
-                <Button variant="ghost" size="icon-sm" aria-label="Retry loading agents" onClick={() => void loadWorkspace(true)}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Retry loading agents"
+                  onClick={() => void loadWorkspace(true)}
+                >
                   <RotateCw size={16} />
                 </Button>
               </div>
@@ -239,19 +361,28 @@ export function AgentsPage() {
 
             {!ready && (
               <div className="flex items-center gap-3 py-16" role="status">
-                <Loader2 size={18} className="animate-spin" style={{ color: "var(--settings-muted)" }} />
-                <span className="text-sm" style={{ color: "var(--settings-muted)" }}>Loading…</span>
+                <Loader2
+                  size={18}
+                  className="animate-spin"
+                  style={{ color: "var(--settings-muted)" }}
+                />
+                <span className="text-sm" style={{ color: "var(--settings-muted)" }}>
+                  Loading…
+                </span>
               </div>
             )}
 
-            {[{ title: "Yours", list: personal }, { title: "Specialists", list: catalogue }, { title: "Images & video", list: media }].map(
-              group =>
-                group.list.length ? (
-                  <section key={group.title} className="mt-8">
-                    <h2 className="gx-section-title">{group.title}</h2>
-                    <ul className="gx-card agx-card">{group.list.map(item)}</ul>
-                  </section>
-                ) : null,
+            {[
+              { title: "Yours", list: personal },
+              { title: "Specialists", list: catalogue },
+              { title: "Images & video", list: media },
+            ].map((group) =>
+              group.list.length ? (
+                <section key={group.title} className="mt-8">
+                  <h2 className="gx-section-title">{group.title}</h2>
+                  <ul className="gx-card agx-card">{group.list.map(item)}</ul>
+                </section>
+              ) : null,
             )}
 
             {ready && !filtered.length && !error && (
@@ -272,6 +403,8 @@ export function AgentsPage() {
 
 export function AgentNewPage() {
   const navigate = useNavigate();
-  useEffect(() => { navigate("/chat", { replace: true, state: { agentCreation: true } }); }, [navigate]);
+  useEffect(() => {
+    navigate("/chat", { replace: true, state: { agentCreation: true } });
+  }, [navigate]);
   return null;
 }
