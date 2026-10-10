@@ -131,7 +131,7 @@
 .gx-tone-red .gx-tile { background: color-mix(in oklch, var(--settings-red) 14%, transparent); color: var(--settings-red); }
 
 .gx-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.gx-row-label { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-row-label { font-size: 15px; font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
 .gx-row-hint { font-size: 13px; line-height: 1.4; color: var(--settings-muted); }
 .gx-row-trailing {
   flex-shrink: 0; max-width: 55%; display: flex; align-items: center; gap: 6px;
