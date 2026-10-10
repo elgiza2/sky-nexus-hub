@@ -6,13 +6,10 @@
 - Every button on the billing page works for real (bill sheet, statement rows, auto-pay cancel, help, back) + glass styling
 - Shared glass primitives built (src/styles/settings-glass.css + SubShell.tsx + ProfileGlassShell.tsx)
 - Main settings home (mobile + desktop) restored to its original design and icons — do not restyle it again
+- Settings sub-pages converted to the glass design: memory, composer, language, security, privacy, help, support, contact, passwords, skills (list/new/library), cloud browser, data category, desktop bridge
+- Agents page (/agents) redesigned: glass rows, one distinct icon per agent (chosen from its name/description/prompt, deterministic fallback), colour-tinted tiles, loading spinner instead of the animated orb — the orb stays only inside the conversation
+- All temporary /glass-check-* preview routes removed from AppRoutes.tsx
 
 ## Open
-- Redesign every settings sub-page with the shared glass design (same sheet/slide opening animation, clean icons)
-  - EXCLUDED: the main settings home page (keep exactly as-is) and the Integrations page
-  - In progress: memory, composer/customization, language (subagent finished — verify)
-  - In progress: security, privacy, help, support, contact (subagent running)
-  - In progress: skills, passwords, desktop bridge, cloud browser, data category (subagent running)
-  - Still to do: profile edit, AI personalization, data controls, notifications, referrals, delete account, system status, capabilities, image models, mail
-- Redesign the Agents page (/agents) clean, with a distinct icon per agent instead of the robot icon; the robot icon stays only inside the conversation
-- Verify each converted page visually, then report
+- Restyle the remaining settings pages with the same glass design: profile edit, AI personalization, data controls, notifications, referrals, delete account, system status, capabilities, image models, mail
+- EXCLUDED from any restyle: the main settings home page (keep exactly as-is) and the Integrations page
