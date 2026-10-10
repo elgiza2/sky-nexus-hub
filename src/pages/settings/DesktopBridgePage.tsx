@@ -43,12 +43,12 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
       onClick={onChange}
       className={[
         "relative inline-flex h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200",
-        checked ? "bg-primary" : "bg-[color:var(--mn-press)]",
+        checked ? "bg-primary" : "bg-[color:var(--settings-line)]",
       ].join(" ")}
     >
       <span
         className={[
-          "inline-block h-[26px] w-[26px] rounded-full bg-[color:var(--mn-fg)] transition-transform duration-200",
+          "inline-block h-[26px] w-[26px] rounded-full bg-[color:var(--settings-surface)] transition-transform duration-200",
           checked ? "translate-x-[22px]" : "translate-x-[2px]",
         ].join(" ")}
         style={{ marginTop: 2 }}
@@ -57,7 +57,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
   );
 }
 
-const card = "rounded-2xl border border-border/60 bg-card/60 p-4 space-y-3";
+const card = "gx-card gx-card-pad";
 
 export default function DesktopBridgePage() {
   const [devices, setDevices] = useState<LocalDevice[]>([]);
@@ -161,10 +161,11 @@ export default function DesktopBridgePage() {
       subtitle="اربط الكمبيوتر بحسابك وخلي الوكيل يشتغل عليه بالصلاحيات اللي تختارها"
       backTo="/settings"
     >
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="gx-card gx-loading">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading…</span>
           </div>
         ) : (
           <>
@@ -360,7 +361,11 @@ export default function DesktopBridgePage() {
 
                 <section className={card}>
                   <h2 className="text-sm font-semibold">السجل</h2>
-                  {commands.length === 0 && <p className="text-[12.5px] text-muted-foreground">لا يوجد أوامر بعد.</p>}
+                  {commands.length === 0 && (
+                    <div className="gx-empty">
+                      <span>لا يوجد أوامر بعد.</span>
+                    </div>
+                  )}
                   {commands.map((command) => (
                     <div key={command.id} className="rounded-xl border border-border/50 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
