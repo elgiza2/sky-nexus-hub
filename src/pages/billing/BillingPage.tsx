@@ -273,7 +273,7 @@ const BillingPage = () => {
   );
 
   const saveOffer = (
-    <Card className="px-5 py-5">
+    <Card className="px-4 py-4">
       <p className="text-[15px] font-semibold text-foreground">{SAVE_OFFER.titleEn}</p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{SAVE_OFFER.bodyEn}</p>
 
@@ -309,7 +309,7 @@ const BillingPage = () => {
   );
 
   const cancelForm = (
-    <Card className="px-5 py-5">
+    <Card className="px-4 py-4">
       <p className="text-[14px] font-semibold text-foreground">{copy("Why are you cancelling?")}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {REASONS.map((r) => (
