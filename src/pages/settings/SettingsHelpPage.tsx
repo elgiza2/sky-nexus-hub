@@ -1,7 +1,7 @@
-/** @doc Help Center — Obsidian glass minimalism, matching Help & Support. */
+/** @doc Help Center — glass sheet: search box, accordion FAQ sections. */
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronDown, Search } from "lucide-react";
 import { goBackOr } from "@/lib/navigation";
 
 const sections = [
@@ -72,6 +72,26 @@ const sections = [
   },
 ];
 
+/* Page-local: accordion rows need an expanding answer row, which gx-row doesn't cover. */
+const helpCss = `
+.help-faq-item + .help-faq-item { border-top: 1px solid var(--settings-line); }
+.help-faq-q {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 56px; padding: 12px 16px; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: 14.5px; font-weight: 500; color: var(--settings-ink); text-align: start;
+  -webkit-tap-highlight-color: transparent;
+}
+.help-faq-q:active { background: var(--settings-line); }
+.help-faq-chev { width: 16px; height: 16px; flex-shrink: 0; color: var(--settings-muted); transition: transform 0.2s ease; }
+.help-faq-chev.open { transform: rotate(180deg); }
+.help-faq-a-wrap { display: grid; transition: grid-template-rows 0.25s ease; }
+.help-faq-a-wrap .help-faq-a-inner { overflow: hidden; }
+.help-faq-a { margin: 0; padding: 0 16px 16px; font-size: 13.5px; line-height: 1.6; color: var(--settings-muted); }
+.help-search { display: flex; align-items: center; gap: 10px; }
+.help-search input { flex: 1; background: transparent; border: 0; outline: none; font: inherit; font-size: 14.5px; color: var(--settings-ink); }
+.help-search input::placeholder { color: var(--settings-muted); opacity: 0.7; }
+`;
+
 export default function SettingsHelpPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -86,95 +106,70 @@ export default function SettingsHelpPage() {
   }, [query]);
 
   return (
-    <div
-      className="min-h-screen w-full bg-background text-foreground"
-      style={{ fontFamily: '"DM Sans", "Inter", system-ui, sans-serif' }}
-    >
-      <div className="mx-auto w-full max-w-md px-6 py-8">
-        {/* Top bar */}
-        <div className="mb-8 flex items-center">
+    <div className="gx-root">
+      <style>{helpCss}</style>
+      <div className="gx-screen">
+        <header className="gx-top">
           <button
-            onClick={() => goBackOr(navigate, "/settings/support")}
+            type="button"
             aria-label="Back"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/40 text-foreground transition-colors hover:bg-background/60 active:scale-95"
+            onClick={() => goBackOr(navigate, "/settings/support")}
+            className="gx-hbtn"
           >
-            <ArrowLeft className="h-[17px] w-[17px]" strokeWidth={2.2} />
+            <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
           </button>
-        </div>
-
-        {/* Header */}
-        <header className="mb-6 px-2">
-          <h1
-            className="text-[32px] leading-tight font-semibold tracking-tight text-foreground"
-            style={{ fontFamily: '"Space Grotesk", "Inter", system-ui, sans-serif' }}
-          >
-            Help Center
-          </h1>
         </header>
 
-        {/* Search */}
-        <div className="mb-8 flex items-center gap-3 rounded-[18px] border border-border bg-card px-4 py-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-muted-foreground">
-            <circle cx="11" cy="11" r="7" />
-            <path strokeLinecap="round" d="m20 20-3.5-3.5" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search articles"
-            className="flex-1 bg-transparent text-[14.5px] text-foreground outline-none placeholder:text-muted-foreground"
-          />
-        </div>
+        <h1 className="gx-title">Help Center</h1>
 
-        {/* Sections */}
-        {filtered.map((sec) => (
-          <section key={sec.title} className="mb-8 flex flex-col gap-3">
-            <h2
-              className="px-2 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground"
-              style={{ fontFamily: '"Space Grotesk", "Inter", system-ui, sans-serif' }}
-            >
-              {sec.title}
-            </h2>
-            <div className="overflow-hidden rounded-[24px] border border-border bg-background/40">
-              {sec.items.map((it, i) => {
-                const key = `${sec.title}-${i}`;
-                const open = openKey === key;
-                return (
-                  <div
-                    key={key}
-                    className={`${i > 0 ? "border-t border-border" : ""}`}
-                  >
-                    <button
-                      onClick={() => setOpenKey(open ? null : key)}
-                      className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-background/60 active:scale-[0.99]"
-                    >
-                      <span className="text-[14.5px] font-medium text-foreground">{it.q}</span>
-                      <ChevronDown
-                        className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-                        strokeWidth={2}
-                      />
-                    </button>
-                    <div
-                      className="grid transition-[grid-template-rows] duration-300 ease-out"
-                      style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-                    >
-                      <div className="overflow-hidden">
-                        <p className="px-5 pb-4 text-[13.5px] leading-[1.6] text-muted-foreground">{it.a}</p>
+        <div className="gx-content">
+          <div className="gx-card gx-card-pad help-search">
+            <Search className="h-4 w-4 shrink-0 text-[color:var(--settings-muted)]" strokeWidth={2} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search articles"
+            />
+          </div>
+
+          {filtered.map((sec) => (
+            <section key={sec.title} className="gx-section">
+              <h2 className="gx-section-title">{sec.title}</h2>
+              <div className="gx-card">
+                {sec.items.map((it, i) => {
+                  const key = `${sec.title}-${i}`;
+                  const open = openKey === key;
+                  return (
+                    <div key={key} className="help-faq-item">
+                      <button
+                        type="button"
+                        onClick={() => setOpenKey(open ? null : key)}
+                        className="help-faq-q"
+                      >
+                        <span>{it.q}</span>
+                        <ChevronDown className={`help-faq-chev ${open ? "open" : ""}`} strokeWidth={2} />
+                      </button>
+                      <div className="help-faq-a-wrap" style={{ gridTemplateRows: open ? "1fr" : "0fr" }}>
+                        <div className="help-faq-a-inner">
+                          <p className="help-faq-a">{it.a}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ))}
+                  );
+                })}
+              </div>
+            </section>
+          ))}
 
-        {filtered.length === 0 && (
-          <div className="rounded-[24px] border border-border bg-background/40 p-8 text-center">
-            <p className="text-[15px] font-semibold text-foreground">No matches</p>
-            <span className="mt-1 block text-[13px] text-muted-foreground">Try a different keyword.</span>
-          </div>
-        )}
+          {filtered.length === 0 && (
+            <div className="gx-card gx-empty">
+              <p className="text-[15px] font-semibold text-[color:var(--settings-ink)]">No matches</p>
+              <span className="text-[13px] text-[color:var(--settings-muted)]">Try a different keyword.</span>
+            </div>
+          )}
+        </div>
+
+        <div className="gx-spacer" />
       </div>
     </div>
   );

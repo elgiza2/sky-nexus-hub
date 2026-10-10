@@ -326,9 +326,9 @@ export default function DataCategoryPage() {
   if (!cfg) {
     return (
       <SubShell title={"Data controls"} backTo="/settings/data">
-        <SubCard>
-          <p className="text-[13px] text-[color:var(--mn-muted)]">{"Unknown section"}</p>
-        </SubCard>
+        <div className="gx-card gx-empty">
+          <p>{"Unknown section"}</p>
+        </div>
       </SubShell>
     );
   }
@@ -339,13 +339,14 @@ export default function DataCategoryPage() {
   return (
     <SubShell title={isAr ? cfg.titleAr : cfg.titleEn} backTo="/settings/data">
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-5 h-5 animate-spin text-[color:var(--mn-muted)]" />
+        <div className="gx-card gx-loading">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading…</span>
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Icon className="w-9 h-9 text-[color:var(--mn-faint)]" strokeWidth={1.4} />
-          <p className="text-[13px] text-[color:var(--mn-muted)]">{isAr ? cfg.emptyAr : cfg.emptyEn}</p>
+        <div className="gx-card gx-empty">
+          <Icon className="w-7 h-7" strokeWidth={1.4} />
+          <p>{isAr ? cfg.emptyAr : cfg.emptyEn}</p>
         </div>
       ) : isGrid ? (
         <div className="grid grid-cols-3 gap-1.5">
@@ -363,7 +364,7 @@ export default function DataCategoryPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-[14px] overflow-hidden bg-[var(--mn-card)] divide-y divide-[color:var(--mn-sep)]">
+        <div className="gx-card">
           {items.map((it) => (
             <ListRow
               key={it.id}

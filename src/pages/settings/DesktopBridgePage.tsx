@@ -170,19 +170,20 @@ export default function DesktopBridgePage() {
         ) : (
           <>
             <section className={card}>
-              <h2 className="text-sm font-semibold">إضافة جهاز</h2>
+              <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>إضافة جهاز</h2>
               <div className="flex gap-2">
                 <input
                   value={newName}
                   onChange={(event) => setNewName(event.target.value)}
                   placeholder="اسم الجهاز (مثال: لابتوب الشغل)"
-                  className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm"
+                  className="gx-input flex-1"
                 />
                 <button
                   type="button"
                   onClick={onCreate}
                   disabled={busy}
-                  className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  className="gx-pill shrink-0"
+                  style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }}
                 >
                   كود ربط
                 </button>
@@ -266,13 +267,13 @@ export default function DesktopBridgePage() {
                       value={device.work_dir ?? ""}
                       onChange={(event) => patch({ work_dir: event.target.value })}
                       placeholder="C:\\Users\\me\\megsy"
-                      className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-sm"
+                      className="gx-input"
                     />
                   </div>
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">الصلاحيات</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>الصلاحيات</h2>
                   {CAPS.map((cap) => (
                     <div key={cap.key} className="flex items-center justify-between gap-3">
                       <div>
@@ -296,7 +297,7 @@ export default function DesktopBridgePage() {
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">نمط الموافقة</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>نمط الموافقة</h2>
                   {MODES.map((mode) => (
                     <button
                       key={mode.key}
@@ -337,7 +338,7 @@ export default function DesktopBridgePage() {
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">تنفيذ أمر</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>تنفيذ أمر</h2>
                   <div className="flex gap-2">
                     <input
                       value={cmdText}
@@ -346,13 +347,14 @@ export default function DesktopBridgePage() {
                         if (event.key === "Enter") void send();
                       }}
                       placeholder="dir"
-                      className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 font-mono text-[13px]"
+                      className="gx-input flex-1 font-mono text-[13px]"
                     />
                     <button
                       type="button"
                       onClick={send}
                       disabled={busy || !cmdText.trim()}
-                      className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                      className="gx-pill shrink-0"
+                      style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }}
                     >
                       إرسال
                     </button>
@@ -360,7 +362,7 @@ export default function DesktopBridgePage() {
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">السجل</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>السجل</h2>
                   {commands.length === 0 && (
                     <div className="gx-empty">
                       <span>لا يوجد أوامر بعد.</span>
