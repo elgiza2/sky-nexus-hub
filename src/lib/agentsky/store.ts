@@ -37,15 +37,22 @@ export function loadWorkspace(force = false) {
   const generation = ++loadGeneration;
   const request = (async () => {
     try {
-      const [b, s] = await Promise.all([agentApi.bootstrap(), agentApi.sessions()]);
+      // A transient sessions failure must not blank the agents directory.
+      const [bootstrapResult, sessionsResult] = await Promise.allSettled([
+        agentApi.bootstrap(),
+        agentApi.sessions(),
+      ]);
       if (generation !== loadGeneration) return;
+      if (bootstrapResult.status === "rejected") throw bootstrapResult.reason;
+      const b = bootstrapResult.value;
+      const sessions = sessionsResult.status === "fulfilled" ? sessionsResult.value.sessions : [];
       set({
         ready: true,
         error: null,
         agents: b.agents,
         tier: b.tier,
         models: b.models,
-        sessions: s.sessions,
+        sessions,
       });
     } catch (e: unknown) {
       if (generation === loadGeneration) {

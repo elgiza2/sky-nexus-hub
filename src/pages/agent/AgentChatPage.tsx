@@ -51,7 +51,7 @@ export default function AgentChatPage() {
     try {
       const r = await agentApi.createSession({ agentId: agent?.id, text });
       workspace.upsertSession(r.session);
-      nav(`/chat/${r.session.id}`);
+      nav(`/agents/chat/${r.session.id}`);
     } catch (e: any) {
       setStartError(e.message);
     } finally {

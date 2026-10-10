@@ -197,7 +197,7 @@ export function AgentsPage() {
           <Button
             variant="neutral"
             size="sm"
-            onClick={() => nav(locked ? "/pricing" : `/chat?agent=${encodeURIComponent(a.id)}`)}
+            onClick={() => nav(locked ? "/pricing" : `/agents/chat?agent=${encodeURIComponent(a.id)}`)}
           >
             {locked ? <><Lock size={14} />Pro</> : <><span className="agx-open-label">Open chat</span><ArrowUpRight size={14} /></>}
           </Button>

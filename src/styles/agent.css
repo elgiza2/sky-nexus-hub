@@ -153,6 +153,26 @@
 .ag-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ag-topbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--ag-line); min-height: 56px; }
 .ag-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+.agent-glass-shell { background: var(--settings-backdrop) !important; }
+.agent-glass-shell > aside { border-inline-end: 1px solid var(--settings-line); background: color-mix(in oklch, var(--settings-backdrop) 78%, transparent); }
+.agent-glass-main { background: color-mix(in oklch, var(--settings-backdrop) 88%, transparent); }
+.agent-glass-header {
+  background: color-mix(in oklch, var(--settings-surface) 72%, transparent);
+  border-color: var(--settings-line) !important;
+  backdrop-filter: var(--settings-frost);
+  box-shadow: 0 1px 0 color-mix(in oklch, white 12%, transparent);
+}
+.plus-settings-menu { color: var(--settings-ink); }
+.plus-settings-menu .plus-row { min-height: 52px; border-radius: 14px; color: var(--settings-ink); }
+.plus-settings-menu .plus-row:hover { background: var(--settings-line); }
+.plus-settings-menu .plus-row svg { color: var(--settings-muted); }
+.plus-settings-grid > button {
+  background: var(--settings-surface) !important;
+  border-color: var(--settings-line) !important;
+  backdrop-filter: var(--settings-frost);
+  box-shadow: var(--settings-shadow);
+}
+.plus-settings-grid > button:hover { background: var(--settings-line) !important; }
 .ag-column { width: 100%; max-width: 760px; margin: 0 auto; padding: 24px 18px 40px; }
 .ag-drawer-mask { position: fixed; inset: 0; background: hsl(240 10% 5% / .35); z-index: 40; }
 .ag-drawer { position: fixed; inset-block: 0; inset-inline-start: 0; z-index: 41; box-shadow: var(--ag-shadow); }

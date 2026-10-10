@@ -128,13 +128,13 @@ const PlusMain = (p: PlusContentProps) => {
   ];
 
   return (
-    <motion.div key="main" {...fadeProps(-8)} className="flex flex-col gap-2 pb-1">
+    <motion.div key="main" {...fadeProps(-8)} className="plus-settings-menu flex flex-col gap-2 pb-1">
       <div
         dir={isArabic ? "rtl" : "ltr"}
         className="flex flex-col gap-2 px-1 py-2"
         style={{ fontFamily: mobileFont }}
       >
-        <div className="grid grid-cols-2 gap-2 px-0">
+        <div className="plus-settings-grid grid grid-cols-2 gap-2 px-0">
           <button
             data-no-neo
             type="button"
