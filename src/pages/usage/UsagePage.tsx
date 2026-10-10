@@ -56,7 +56,7 @@ const fmtDate = (s: string | null | undefined, lang: AuthLang) =>
 const money = (cents: number | null, currency: string | null) =>
   cents ? `${(cents / 100).toFixed(0)} ${currency || "EGP"}` : "—";
 
-/* ── One statement row: icon tile, label over value, optional chevron ── */
+/* ── One statement row: tinted icon tile, label over value, optional chevron ── */
 const Row = ({
   icon: Icon,
   label,
@@ -77,25 +77,25 @@ const Row = ({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`bill-row bill-tone-${tone} ${onClick ? "bill-row-tap" : ""}`}
+      className={`gx-row gx-tone-${tone} ${onClick ? "gx-row-tap" : ""}`}
     >
-      <span className="bill-tile">
-        <Icon className="bill-tile-icon" strokeWidth={1.7} />
+      <span className="gx-tile">
+        <Icon strokeWidth={1.7} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-medium">{label}</span>
-        <span className="bill-value mt-0.5 block">{value}</span>
+      <span className="gx-row-body">
+        <span className="gx-row-label">{label}</span>
+        <span className="gx-row-hint">{value}</span>
       </span>
-      {chevron && <ChevronRight className="bill-chev rtl:rotate-180" strokeWidth={1.9} />}
+      {chevron && <ChevronRight className="gx-chev rtl:rotate-180" strokeWidth={1.9} />}
     </Tag>
   );
 };
 
 /* ── Label / value line inside the bill sheet ── */
 const Fact = ({ label, value }: { label: string; value: string }) => (
-  <div className="bill-fact">
-    <span className="bill-fact-label">{label}</span>
-    <span className="bill-fact-value">{value}</span>
+  <div className="gx-fact">
+    <span className="gx-fact-label">{label}</span>
+    <span className="gx-fact-value">{value}</span>
   </div>
 );
 
@@ -155,8 +155,7 @@ const UsagePage = () => {
   }, []);
 
   const sub = subs[0] ?? null;
-  const isActive =
-    !cancelled && (sub?.status === "active" || sub?.status === "trialing");
+  const isActive = !cancelled && (sub?.status === "active" || sub?.status === "trialing");
   const amountLabel = sub?.amount_cents
     ? money(sub.amount_cents, sub.currency)
     : `${credits.toLocaleString(locale(lang))} MC`;
@@ -205,7 +204,9 @@ const UsagePage = () => {
         { label: copy("Credit balance"), value: bal },
         {
           label: copy("Used today"),
-          value: overview ? `${Math.round(overview.spentToday)} / ${Math.round(overview.dailyAllowance)}` : "—",
+          value: overview
+            ? `${Math.round(overview.spentToday)} / ${Math.round(overview.dailyAllowance)}`
+            : "—",
         },
         {
           label: copy("Used this month"),
@@ -236,32 +237,40 @@ const UsagePage = () => {
   }, [openBill, credits, lang, isActive, sub, amountLabel, overview, refreshIn, copy]);
 
   return (
-    <div className="bill-root" dir={ar ? "rtl" : "ltr"}>
-      <style>{billCss}</style>
+    <div className="gx-root" dir={ar ? "rtl" : "ltr"}>
+      <div className="gx-screen">
+        <header className="gx-top">
+          <button
+            type="button"
+            aria-label={copy("Back")}
+            onClick={() => navigate("/settings")}
+            className="gx-hbtn"
+          >
+            <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            aria-label={copy("Help")}
+            onClick={() => navigate("/support")}
+            className="gx-hbtn"
+          >
+            <HelpCircle className="gx-hicon" strokeWidth={1.8} />
+          </button>
+        </header>
 
-      <header className="bill-top">
-        <button type="button" aria-label={copy("Back")} onClick={() => navigate("/settings")} className="bill-hbtn">
-          <ChevronLeft className="bill-hicon rtl:rotate-180" strokeWidth={2} />
-        </button>
-        <button type="button" aria-label={copy("Help")} onClick={() => navigate("/support")} className="bill-hbtn">
-          <HelpCircle className="bill-hicon" strokeWidth={1.8} />
-        </button>
-      </header>
-
-      <main className="bill-main">
-        <h1 className="bill-title">{copy("Billing")}</h1>
+        <h1 className="gx-title">{copy("Billing")}</h1>
 
         {loading ? (
-          <div className="bill-card bill-loading">
+          <div className="gx-card gx-loading">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>{copy("Loading…")}</span>
           </div>
         ) : signedOut ? (
-          <div className="bill-card bill-empty">
+          <div className="gx-card gx-empty">
             <p>{copy("Sign in to see your credits")}</p>
             <button
               type="button"
-              className="bill-pill"
+              className="gx-pill"
               onClick={() => navigate("/auth?redirect=/usage")}
             >
               {copy("Sign in")}
@@ -269,7 +278,7 @@ const UsagePage = () => {
           </div>
         ) : (
           <>
-            <section className="bill-card">
+            <section className="gx-card">
               <Row
                 icon={CalendarDays}
                 tone="blue"
@@ -298,8 +307,8 @@ const UsagePage = () => {
               />
             </section>
 
-            <h2 className="bill-sec">{copy("Past statements")}</h2>
-            <section className="bill-card">
+            <h2 className="gx-section-title mt-7">{copy("Past statements")}</h2>
+            <section className="gx-card">
               {subs.length ? (
                 subs.map((s) => (
                   <Row
@@ -312,26 +321,32 @@ const UsagePage = () => {
                   />
                 ))
               ) : (
-                <p className="bill-none">{copy("No statements yet")}</p>
+                <p className="px-4 py-5 text-[14px] text-[color:var(--settings-muted)]">
+                  {copy("No statements yet")}
+                </p>
               )}
             </section>
 
-            <div className="bill-foot">
-              <button type="button" className="bill-pill bill-pill-wide" onClick={() => setOpenBill(sub ?? "current")}>
+            <div className="mt-auto pt-8 pb-7">
+              <button
+                type="button"
+                className="gx-pill gx-pill-wide"
+                onClick={() => setOpenBill(sub ?? "current")}
+              >
                 {copy("View bill")}
               </button>
             </div>
           </>
         )}
-      </main>
+      </div>
 
       {/* ── Bill sheet ── */}
       {openBill && (
-        <div className="bill-scrim" onClick={() => setOpenBill(null)}>
-          <div className="bill-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="bill-sheet-bar" />
-            <div className="bill-sheet-head">
-              <h3 className="bill-sheet-title">
+        <div className="gx-scrim" onClick={() => setOpenBill(null)}>
+          <div className="gx-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="gx-sheet-bar" />
+            <div className="gx-sheet-head">
+              <h3 className="gx-sheet-title">
                 {openBill === "current" || !openBill
                   ? copy("Current bill")
                   : fmtDate(openBill.created_at, lang)}
@@ -340,19 +355,23 @@ const UsagePage = () => {
                 type="button"
                 aria-label={copy("Close")}
                 onClick={() => setOpenBill(null)}
-                className="bill-hbtn bill-hbtn-sm"
+                className="gx-hbtn gx-hbtn-sm"
               >
-                <X className="bill-hicon" strokeWidth={2} />
+                <X className="gx-hicon" strokeWidth={2} />
               </button>
             </div>
 
-            <div className="bill-sheet-body">
+            <div className="gx-sheet-body">
               {billFacts.map((f) => (
                 <Fact key={f.label} label={f.label} value={f.value} />
               ))}
             </div>
 
-            <button type="button" className="bill-pill bill-pill-wide" onClick={() => navigate("/pricing")}>
+            <button
+              type="button"
+              className="gx-pill gx-pill-wide"
+              onClick={() => navigate("/pricing")}
+            >
               {copy("Buy credits")}
             </button>
           </div>
@@ -393,96 +412,3 @@ const UsagePage = () => {
 };
 
 export default UsagePage;
-
-const billCss = `
-.bill-root {
-  min-height: 100dvh;
-  background: var(--settings-backdrop);
-  background-attachment: fixed;
-  color: var(--settings-ink);
-  font-family: -apple-system, "SF Pro Display", Inter, sans-serif;
-  display: flex; flex-direction: column;
-}
-.bill-top {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: max(14px, env(safe-area-inset-top)) 16px 6px;
-}
-.bill-hbtn {
-  width: 44px; height: 44px; padding: 0; display: inline-grid; place-items: center;
-  border: 0; border-radius: 50%; cursor: pointer;
-  background: var(--settings-surface); color: var(--settings-ink);
-  backdrop-filter: var(--settings-frost); box-shadow: var(--settings-shadow);
-  transition: transform .2s cubic-bezier(.22,1,.36,1), background .2s;
-}
-.bill-hbtn:active { transform: scale(.92); background: var(--settings-line); }
-.bill-hbtn-sm { width: 36px; height: 36px; }
-.bill-hicon { width: 22px; height: 22px; }
-.bill-main { width: 100%; max-width: 520px; margin: 0 auto; padding: 8px 20px 0; flex: 1; display: flex; flex-direction: column; }
-.bill-title { margin: 6px 0 18px; font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
-.bill-card {
-  background: var(--settings-surface); border-radius: 22px; overflow: hidden;
-  backdrop-filter: var(--settings-frost); box-shadow: var(--settings-shadow);
-}
-.bill-loading { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 92px; font-size: 14px; color: var(--settings-muted); }
-.bill-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 30px 20px; font-size: 15px; }
-.bill-row {
-  position: relative; width: 100%; display: flex; align-items: center; gap: 13px;
-  min-height: 62px; padding: 10px 16px; border: 0; background: transparent;
-  color: var(--settings-ink); text-align: start; font-family: inherit; cursor: default;
-}
-.bill-row + .bill-row::before {
-  content: ""; position: absolute; top: 0; inset-inline-start: 60px; inset-inline-end: 0;
-  height: 1px; background: var(--settings-line);
-}
-.bill-row-tap { cursor: pointer; transition: background .2s; }
-.bill-row-tap:active { background: var(--settings-line); }
-.bill-tile {
-  width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center;
-  border-radius: 11px; background: var(--settings-line); color: var(--settings-muted);
-}
-.bill-tile-icon { width: 17px; height: 17px; }
-.bill-tone-blue .bill-tile { background: color-mix(in oklch, var(--settings-blue) 14%, transparent); color: var(--settings-blue); }
-.bill-tone-violet .bill-tile { background: color-mix(in oklch, var(--settings-violet) 14%, transparent); color: var(--settings-violet); }
-.bill-tone-green .bill-tile { background: color-mix(in oklch, var(--settings-green) 16%, transparent); color: var(--settings-green); }
-.bill-tone-yellow .bill-tile { background: color-mix(in oklch, var(--settings-yellow) 18%, transparent); color: var(--settings-yellow); }
-.bill-value { font-size: 13.5px; color: var(--settings-muted); font-variant-numeric: tabular-nums; }
-.bill-chev { width: 19px; height: 19px; flex-shrink: 0; color: var(--settings-muted); opacity: .55; }
-.bill-sec { margin: 26px 4px 10px; font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
-.bill-none { padding: 18px 16px; font-size: 14px; color: var(--settings-muted); }
-.bill-foot { margin-top: auto; padding: 30px 0 max(26px, env(safe-area-inset-bottom)); }
-.bill-pill {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  height: 52px; padding: 0 22px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--settings-surface); color: var(--settings-ink);
-  font-family: inherit; font-size: 16px; font-weight: 600;
-  backdrop-filter: var(--settings-frost); box-shadow: var(--settings-shadow);
-  transition: transform .2s cubic-bezier(.22,1,.36,1), background .2s;
-}
-.bill-pill:active { transform: scale(.985); background: var(--settings-line); }
-.bill-pill-wide { width: 100%; }
-.bill-scrim {
-  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center;
-  background: color-mix(in oklch, oklch(.2 .005 255) 45%, transparent);
-  backdrop-filter: blur(6px); animation: bill-fade .25s ease both;
-}
-.bill-sheet {
-  width: 100%; max-width: 520px; padding: 10px 20px max(24px, env(safe-area-inset-bottom));
-  background: var(--settings-backdrop); background-attachment: fixed;
-  border-radius: 26px 26px 0 0; box-shadow: var(--settings-shadow);
-  animation: bill-sheet-in .42s cubic-bezier(.22,1,.36,1) both;
-}
-.bill-sheet-bar { width: 38px; height: 4px; margin: 0 auto 12px; border-radius: 999px; background: var(--settings-line); }
-.bill-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.bill-sheet-title { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
-.bill-sheet-body { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; padding: 4px 0; }
-.bill-fact { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 46px; font-size: 15px; }
-.bill-fact + .bill-fact { border-top: 1px solid var(--settings-line); }
-.bill-fact-label { color: var(--settings-muted); }
-.bill-fact-value { font-weight: 600; text-transform: capitalize; font-variant-numeric: tabular-nums; }
-@keyframes bill-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes bill-sheet-in { from { opacity: .5; translate: 0 12%; } to { opacity: 1; translate: 0 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .bill-scrim, .bill-sheet { animation: none; }
-  .bill-hbtn, .bill-pill, .bill-row-tap { transition: none; }
-}
-`;
