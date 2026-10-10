@@ -181,8 +181,11 @@ const ManusSettingsMobile = () => {
           <Button variant="ghost" type="button" className="ms-hbtn" aria-label={authT("back")} onClick={() => navigate("/")}>
             {isAr ? <ChevronRight className="ms-hicon" /> : <ChevronLeft className="ms-hicon" />}
           </Button>
-          <h1 className="ms-brand">{tx("Settings")}</h1>
+          <Button variant="ghost" type="button" className="ms-hbtn" aria-label={tx("Help")} onClick={() => navigate("/settings/support")}>
+            <HelpCircle className="ms-hicon" />
+          </Button>
         </header>
+        <h1 className="ms-brand">{tx("Settings")}</h1>
         <main className="ms-body">
           <div className="ms-card ms-profile-group">
             <Button variant="ghost" type="button" className="ms-profile" onClick={() => navigate("/settings/profile/edit")}>
