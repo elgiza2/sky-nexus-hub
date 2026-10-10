@@ -118,6 +118,22 @@ const UsagePage = () => {
   useEffect(() => {
     let dead = false;
     (async () => {
+      /* __TEMP_DEMO__ */
+      if (new URLSearchParams(window.location.search).has("demo")) {
+        setCredits(1240);
+        setOverview({
+          credits: 1240, plan: "pro", dailyAllowance: 100, claimedToday: true, grantedToday: 100,
+          nextRefresh: new Date(Date.now() + 5 * 3600e3).toISOString(), spentToday: 38, tasksToday: 4,
+          spentThisMonth: 620, freeToday: {}, dailyCredits: 100, bonusCredits: 40, planCredits: 1000,
+          purchasedCredits: 100,
+        } as CreditOverview);
+        setSubs([
+          { id: "s1", plan: "pro", status: "active", current_period_end: new Date(Date.now() + 18 * 864e5).toISOString(), amount_cents: 4000, currency: "USD", created_at: new Date("2026-09-22T10:00:00Z").toISOString() },
+          { id: "s2", plan: "pro", status: "cancelled", current_period_end: new Date("2026-09-22T10:00:00Z").toISOString(), amount_cents: 4000, currency: "USD", created_at: new Date("2026-08-22T10:00:00Z").toISOString() },
+        ]);
+        setLoading(false);
+        return;
+      }
       const {
         data: { user },
       } = await supabase.auth.getUser();
