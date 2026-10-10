@@ -11,6 +11,7 @@
         "@ffmpeg/ffmpeg": "^0.12.15",
         "@ffmpeg/util": "^0.12.2",
         "@hookform/resolvers": "^5.2.2",
+        "@lobehub/fluent-emoji": "^4.1.1",
         "@lobehub/icons": "^5.18.0",
         "@monaco-editor/react": "^4.7.0",
         "@radix-ui/react-accordion": "^1.2.20",
@@ -366,6 +367,10 @@
     "@lit-labs/ssr-dom-shim": ["@lit-labs/ssr-dom-shim@1.6.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@lit-labs/ssr-dom-shim/-/ssr-dom-shim-1.6.0.tgz", {}, "sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ=="],
 
     "@lit/reactive-element": ["@lit/reactive-element@2.1.2", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@lit/reactive-element/-/reactive-element-2.1.2.tgz", { "dependencies": { "@lit-labs/ssr-dom-shim": "^1.5.0" } }, "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="],
+
+    "@lobehub/emojilib": ["@lobehub/emojilib@1.0.0", "", {}, "sha512-s9KnjaPjsEefaNv150G3aifvB+J3P4eEKG+epY9zDPS2BeB6+V2jELWqAZll+nkogMaVovjEE813z3V751QwGw=="],
+
+    "@lobehub/fluent-emoji": ["@lobehub/fluent-emoji@4.1.1", "", { "dependencies": { "@lobehub/emojilib": "^1.0.0", "antd-style": "^4.1.0", "emoji-regex": "^10.6.0", "es-toolkit": "^1.43.0", "lucide-react": "^0.562.0", "url-join": "^5.0.0" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "sha512-UkkZzkHETucttukk8Gzj87WigbXgkwxkt68DP5IcIYGGo8tHnP3xoYn6YfwzPycuYRA7MUCh1DCHgiBAHmSASQ=="],
 
     "@lobehub/icons": ["@lobehub/icons@5.23.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@lobehub/icons/-/icons-5.23.0.tgz", { "dependencies": { "antd-style": "^4.1.0", "es-toolkit": "^1.52.0", "lucide-react": "^0.469.0", "polished": "^4.3.1" }, "peerDependencies": { "@lobehub/ui": "^5.54.0", "antd": "^6.1.1", "react": "^19.0.0", "react-dom": "^19.0.0" } }, "sha512-lHWX1WCSRWjMbkrrZmoJOMCXEa7ZWKJswmqpSGS8bLAfi5qzUcx24KUEzUo6p51tS3iAyB3bFIWR3+RqcUsOPw=="],
 
@@ -1296,6 +1301,8 @@
     "embla-carousel-reactive-utils": ["embla-carousel-reactive-utils@8.6.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/embla-carousel-reactive-utils/-/embla-carousel-reactive-utils-8.6.0.tgz", { "peerDependencies": { "embla-carousel": "8.6.0" } }, "sha512-fMVUDUEx0/uIEDM0Mz3dHznDhfX+znCCDCeIophYb1QGVM7YThSWX+wz11zlYwWFOr74b4QLGg0hrGPJeG2s4A=="],
 
     "emoji-mart": ["emoji-mart@5.6.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/emoji-mart/-/emoji-mart-5.6.0.tgz", {}, "sha512-eJp3QRe79pjwa+duv+n7+5YsNhRcMl812EcFVwrnRvYKoNPoQb5qxU8DG6Bgwji0akHdp6D4Ln6tYLG58MFSow=="],
+
+    "emoji-regex": ["emoji-regex@10.6.0", "", {}, "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="],
 
     "enhanced-resolve": ["enhanced-resolve@5.26.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/enhanced-resolve/-/enhanced-resolve-5.26.0.tgz", { "dependencies": { "graceful-fs": "^4.2.4", "tapable": "^2.3.3" } }, "sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw=="],
 
@@ -2398,6 +2405,8 @@
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/eslint-visitor-keys/-/eslint-visitor-keys-3.4.3.tgz", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
     "@eslint/eslintrc/globals": ["globals@14.0.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/globals/-/globals-14.0.0.tgz", {}, "sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ=="],
+
+    "@lobehub/fluent-emoji/lucide-react": ["lucide-react@0.562.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-82hOAu7y0dbVuFfmO4bYF1XEwYk/mEbM5E+b1jgci/udUBEE/R7LF5Ip0CCEmXe8AybRM8L+04eP+LGZeDvkiw=="],
 
     "@lobehub/icons/lucide-react": ["lucide-react@0.469.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/lucide-react/-/lucide-react-0.469.0.tgz", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-28vvUnnKQ/dBwiCQtwJw7QauYnE7yd2Cyp4tTTJpvglX4EMpbflcdBgrgToX2j71B3YvugK/NH3BGUk+E/p/Fw=="],
 

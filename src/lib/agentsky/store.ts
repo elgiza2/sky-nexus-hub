@@ -61,13 +61,24 @@ export function loadWorkspace(force = false) {
   return request;
 }
 
-function syncWorkspaceOwner(userId: string | null) {
+function syncWorkspaceOwner(userId: string | null, deferLoad = false) {
   if (workspaceOwner === userId) return;
   workspaceOwner = userId;
   loadGeneration++;
   loading = null;
   set(emptyState());
-  if (userId) void loadWorkspace(true);
+  if (userId) {
+    if (deferLoad) {
+      // Supabase invokes auth listeners while holding its internal auth lock.
+      // Agent requests call getSession() to attach a token, so start them only
+      // after the listener returns and Supabase has released that lock.
+      globalThis.setTimeout(() => {
+        if (workspaceOwner === userId) void loadWorkspace(true);
+      }, 0);
+    } else {
+      void loadWorkspace(true);
+    }
+  }
 }
 
 function startAuthSync() {
@@ -76,7 +87,7 @@ function startAuthSync() {
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
-    syncWorkspaceOwner(session?.user.id ?? null);
+    syncWorkspaceOwner(session?.user.id ?? null, true);
   });
   // Supabase also emits INITIAL_SESSION, but getSession covers clients where
   // that event fires before this listener is installed.
