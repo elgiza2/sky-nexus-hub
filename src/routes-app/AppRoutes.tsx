@@ -148,6 +148,7 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
     {/* ── Billing hub — one page, animated inner views ───────── */}
     <Route element={<AnimatedShell />}>
       <Route path="/settings/billing" element={<Navigate to="/usage" replace />} />
+      <Route path="/usage-preview-check" element={<UsagePage />} />
       <Route path="/billing/success" element={<BillingSuccessPage />} />
       <Route path="/suc" element={<BillingSuccessPage />} />
       <Route path="/settings/referrals" element={<Navigate to="/referrals" replace />} />
