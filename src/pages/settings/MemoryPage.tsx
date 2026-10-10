@@ -1,7 +1,7 @@
 /** @doc Memory — what Megsy remembers about the user (user_knowledge): add, edit, toggle, delete, search. */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Brain, Loader2, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Brain, ChevronLeft, Loader2, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyTurnContextChanged } from "@/lib/chat/turnContext";
@@ -170,90 +170,81 @@ export default function MemoryPage() {
   };
 
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="min-h-[100dvh] bg-background text-foreground">
-      <div className="mx-auto w-full max-w-2xl px-5 pb-28 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
-        <div className="flex items-center justify-between">
+    <div className="gx-root" dir={ar ? "rtl" : "ltr"}>
+      <style>{memoryCss}</style>
+      <div className="gx-screen">
+        <header className="gx-top">
           <button
             type="button"
             aria-label="Back"
             onClick={() => navigate("/settings", { replace: true })}
-            className="grid h-10 w-10 place-items-center rounded-full text-foreground/80 transition-colors hover:bg-muted"
+            className="gx-hbtn"
           >
-            <ArrowLeft className={`h-5 w-5 ${ar ? "rotate-180" : ""}`} />
+            <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
           </button>
-          <button
-            type="button"
-            onClick={() => setDraft({ name: "", use_when: "", content: "" })}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-[13px] font-bold text-background transition-transform hover:scale-[1.03] active:scale-95"
-          >
-            <Plus className="h-4 w-4" /> {t.add}
-          </button>
-        </div>
-
-        <div className="mt-6 flex items-center gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-muted">
-            <Brain className="h-6 w-6" />
-          </span>
-          <div>
-            <h1 className="text-[26px] font-bold leading-tight tracking-tight">{t.title}</h1>
-            <p className="text-[13px] text-muted-foreground">{t.sub}</p>
+          <div className="gx-top-trail">
+            <button type="button" onClick={() => setDraft({ name: "", use_when: "", content: "" })} className="gx-pill mem-add">
+              <Plus className="h-4 w-4" /> {t.add}
+            </button>
           </div>
-        </div>
+        </header>
 
-        {rows.length > 0 && (
-          <div className="relative mt-6">
-            <Search className="absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t.search}
-              className="h-11 w-full rounded-full bg-muted/70 pe-4 ps-11 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
-            />
-          </div>
-        )}
+        <h1 className="gx-title">{t.title}</h1>
+        <p className="gx-sub">{t.sub}</p>
 
-        <div className="mt-6">
+        <div className="gx-content">
+          {rows.length > 0 && (
+            <div className="gx-field">
+              <div className="mem-search">
+                <Search className="mem-search-icon" />
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={t.search}
+                  className="gx-input mem-search-input"
+                />
+              </div>
+            </div>
+          )}
+
           {loading ? (
-            <div className="grid h-40 place-items-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="gx-card gx-loading">
+              <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : rows.length === 0 ? (
-            <div className="flex flex-col items-center rounded-[32px] bg-card px-6 py-14 text-center ring-1 ring-border/60">
-              <span className="grid h-16 w-16 place-items-center rounded-[22px] bg-muted">
-                <Sparkles className="h-7 w-7 text-muted-foreground" />
+            <div className="gx-card gx-empty">
+              <span className="gx-tile mem-empty-tile">
+                <Sparkles strokeWidth={1.7} />
               </span>
-              <p className="mt-5 text-[16px] font-bold">{t.empty}</p>
-              <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-muted-foreground">{t.emptySub}</p>
+              <p className="mem-empty-title">{t.empty}</p>
+              <p>{t.emptySub}</p>
               <button
                 type="button"
                 onClick={() => setDraft({ name: "", use_when: "", content: "" })}
-                className="mt-6 inline-flex h-11 items-center gap-1.5 rounded-full bg-foreground px-6 text-[14px] font-bold text-background transition-transform hover:scale-[1.03] active:scale-95"
+                className="gx-pill"
               >
                 <Plus className="h-4 w-4" /> {t.add}
               </button>
             </div>
           ) : shown.length === 0 ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">{t.noResults}</p>
+            <p className="gx-empty">{t.noResults}</p>
           ) : (
-            <ul className="space-y-2.5">
+            <section className="gx-card">
               {shown.map((r) => (
-                <li
-                  key={r.id}
-                  className={`flex items-start gap-3 rounded-[24px] bg-card p-4 ring-1 ring-border/60 transition-opacity ${r.enabled ? "" : "opacity-60"}`}
-                >
-                  <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-foreground">
-                    <Brain className="h-4.5 w-4.5" />
+                <div key={r.id} className={`gx-row gx-tone-violet ${r.enabled ? "" : "mem-row-off"}`}>
+                  <span className="gx-tile">
+                    <Brain strokeWidth={1.7} />
                   </span>
                   <button
                     type="button"
                     onClick={() => setDraft({ id: r.id, name: r.name, use_when: r.use_when, content: r.content })}
-                    className="min-w-0 flex-1 text-start"
+                    className="gx-row-body mem-row-btn"
                   >
-                    <p className="truncate text-[14.5px] font-semibold">{r.name || t.untitled}</p>
-                    <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">{r.content}</p>
-                    <p className="mt-2 truncate text-[12px] text-muted-foreground/80">
+                    <span className="gx-row-label">{r.name || t.untitled}</span>
+                    <span className="gx-row-hint mem-row-content">{r.content}</span>
+                    <span className="gx-row-hint mem-row-when">
                       {t.when}: {r.use_when}
-                    </p>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -261,80 +252,67 @@ export default function MemoryPage() {
                     aria-checked={r.enabled}
                     aria-label={r.enabled ? t.on : t.off}
                     onClick={() => toggle(r)}
-                    className={`relative mt-1.5 h-6 w-10 shrink-0 rounded-full transition-colors ${r.enabled ? "bg-foreground" : "bg-muted"}`}
+                    className={`mem-switch ${r.enabled ? "is-on" : ""}`}
                   >
-                    <span
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-all ${
-                        r.enabled ? "start-[18px]" : "start-0.5"
-                      }`}
-                    />
+                    <span className="mem-switch-knob" />
                   </button>
-                </li>
+                </div>
               ))}
-            </ul>
+            </section>
           )}
         </div>
+        <div className="gx-spacer" />
       </div>
 
       {draft && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setDraft(null)} />
-          <div className="relative w-full max-w-lg rounded-t-[28px] bg-card p-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] ring-1 ring-border/60 sm:rounded-[28px]">
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setDraft(null)}
-                className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
-              >
-                <X className="h-5 w-5" />
+        <div className="gx-scrim" onClick={() => setDraft(null)}>
+          <div className="gx-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="gx-sheet-bar" />
+            <div className="gx-sheet-head">
+              <button type="button" aria-label="Close" onClick={() => setDraft(null)} className="gx-hbtn gx-hbtn-sm">
+                <X className="gx-hicon" strokeWidth={2} />
               </button>
-              <h2 className="text-[15px] font-semibold">{draft.id ? t.edit : t.add}</h2>
-              <button
-                type="button"
-                onClick={save}
-                disabled={saving}
-                className="h-9 rounded-full bg-foreground px-4 text-[13px] font-bold text-background disabled:opacity-60"
-              >
+              <h3 className="gx-sheet-title">{draft.id ? t.edit : t.add}</h3>
+              <button type="button" onClick={save} disabled={saving} className="gx-pill gx-hbtn-sm mem-save-pill">
                 {saving ? t.saving : t.save}
               </button>
             </div>
-            <div className="mt-5 space-y-4">
-              <Field label={t.name}>
+
+            <div className="gx-sheet-body mem-fields">
+              <div className="gx-field">
+                <span className="gx-field-label">{t.name}</span>
                 <input
                   value={draft.name}
                   maxLength={120}
                   placeholder={t.namePh}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="h-11 w-full rounded-2xl bg-muted/70 px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  className="gx-input"
                 />
-              </Field>
-              <Field label={`${t.when} *`}>
+              </div>
+              <div className="gx-field">
+                <span className="gx-field-label">{t.when} *</span>
                 <textarea
                   value={draft.use_when}
                   maxLength={500}
                   rows={2}
                   placeholder={t.whenPh}
                   onChange={(e) => setDraft({ ...draft, use_when: e.target.value })}
-                  className="w-full resize-none rounded-2xl bg-muted/70 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  className="gx-input mem-textarea"
                 />
-              </Field>
-              <Field label={`${t.content} *`}>
+              </div>
+              <div className="gx-field">
+                <span className="gx-field-label">{t.content} *</span>
                 <textarea
                   value={draft.content}
                   maxLength={5000}
                   rows={5}
                   placeholder={t.contentPh}
                   onChange={(e) => setDraft({ ...draft, content: e.target.value })}
-                  className="w-full resize-none rounded-2xl bg-muted/70 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  className="gx-input mem-textarea"
                 />
-              </Field>
+              </div>
               {draft.id && (
-                <button
-                  type="button"
-                  onClick={() => remove(draft.id!)}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-destructive hover:bg-destructive/10"
-                >
+                <button type="button" onClick={() => remove(draft.id!)} className="gx-pill gx-pill-danger mem-del-btn">
                   <Trash2 className="h-4 w-4" /> {t.del}
                 </button>
               )}
@@ -346,11 +324,30 @@ export default function MemoryPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block px-1 text-[12px] font-medium text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
+const memoryCss = `
+.mem-add { min-height: 40px; padding: 0 16px; font-size: 13px; }
+.mem-search { position: relative; display: flex; align-items: center; }
+.mem-search-icon { position: absolute; inset-inline-start: 14px; width: 16px; height: 16px; color: var(--settings-muted); pointer-events: none; }
+.mem-search-input { padding-inline-start: 40px; border-radius: 999px; }
+.mem-empty-tile { width: 56px; height: 56px; border-radius: 18px; }
+.mem-empty-tile > svg { width: 26px; height: 26px; }
+.mem-empty-title { font-size: 16px; font-weight: 700; color: var(--settings-ink); }
+.mem-row-off { opacity: 0.55; }
+.mem-row-btn { background: transparent; border: 0; cursor: pointer; text-align: start; padding: 0; font: inherit; }
+.mem-row-content { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mem-row-when { opacity: 0.8; }
+.mem-switch {
+  position: relative; width: 40px; height: 24px; flex-shrink: 0; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--settings-line); transition: background 0.2s;
 }
+.mem-switch.is-on { background: var(--settings-violet); }
+.mem-switch-knob {
+  position: absolute; top: 2px; inset-inline-start: 2px; width: 20px; height: 20px; border-radius: 999px;
+  background: var(--settings-surface); box-shadow: var(--settings-shadow); transition: inset-inline-start 0.2s;
+}
+.mem-switch.is-on .mem-switch-knob { inset-inline-start: 18px; }
+.mem-save-pill { width: auto; min-height: 40px; padding: 0 18px; font-size: 13px; }
+.mem-fields { gap: 16px; }
+.mem-textarea { resize: none; }
+.mem-del-btn { width: auto; min-height: 40px; padding: 0 16px; font-size: 13px; align-self: flex-start; }
+`;
