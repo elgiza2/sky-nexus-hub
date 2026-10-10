@@ -1,6 +1,6 @@
 /** @doc Language settings — English or Egyptian Arabic, big cards with cartoon waving flags. */
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check } from "lucide-react";
+import { ChevronLeft, Check } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { AVAILABLE_LANGS, setUserLang, translateExactText, useUserLang, type AuthLang } from "@/lib/authI18n";
@@ -64,58 +64,78 @@ export default function LanguagePage() {
   };
 
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="min-h-[100dvh] bg-background text-foreground">
-      <div className="mx-auto w-full max-w-xl px-5 pb-24 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={() => navigate("/settings", { replace: true })}
-          className="grid h-10 w-10 place-items-center rounded-full text-foreground/80 transition-colors hover:bg-muted"
-        >
-          <ArrowLeft className={`h-5 w-5 ${ar ? "rotate-180" : ""}`} />
-        </button>
-        <h1 className="mt-6 text-[30px] font-bold tracking-tight">{tx("Language")}</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">{tx("Pick how Megsy talks to you.")}</p>
+    <div className="gx-root" dir={ar ? "rtl" : "ltr"}>
+      <style>{languageCss}</style>
+      <div className="gx-screen">
+        <header className="gx-top">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate("/settings", { replace: true })}
+            className="gx-hbtn"
+          >
+            <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
+          </button>
+        </header>
 
-        <div className="mt-8 grid grid-cols-2 gap-4">
-          {AVAILABLE_LANGS.map((l, i) => {
-            const Flag = FLAGS[l.code] ?? FlagGB;
-            const active = lang === l.code;
-            return (
-              <motion.button
-                key={l.code}
-                type="button"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => pick(l.code as AuthLang)}
-                className={`relative flex flex-col items-center rounded-[32px] px-4 pb-6 pt-7 transition-all ${
-                  active
-                    ? "bg-card ring-2 ring-foreground"
-                    : "bg-card ring-1 ring-border/60 hover:ring-border"
-                }`}
-              >
-                {active && (
-                  <span className="absolute end-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-foreground text-background shadow">
-                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                  </span>
-                )}
-                <motion.span
-                  className="block h-24 w-28 drop-shadow-md"
-                  animate={active ? { rotate: [0, -4, 3, 0] } : { rotate: 0 }}
-                  transition={{ duration: 1.6, repeat: active ? Infinity : 0, ease: "easeInOut" }}
-                  style={{ transformOrigin: "10% 90%" }}
+        <h1 className="gx-title">{tx("Language")}</h1>
+        <p className="gx-sub">{tx("Pick how Megsy talks to you.")}</p>
+
+        <div className="gx-content">
+          <div className="lang-grid">
+            {AVAILABLE_LANGS.map((l, i) => {
+              const Flag = FLAGS[l.code] ?? FlagGB;
+              const active = lang === l.code;
+              return (
+                <motion.button
+                  key={l.code}
+                  type="button"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => pick(l.code as AuthLang)}
+                  className={`gx-card lang-card ${active ? "gx-card-selected" : ""}`}
                 >
-                  <Flag />
-                </motion.span>
-                <span className="mt-4 text-[17px] font-bold">{l.native}</span>
-                <span className="mt-0.5 text-[12.5px] text-muted-foreground">{l.label}</span>
-              </motion.button>
-            );
-          })}
+                  {active && (
+                    <span className="lang-check">
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                    </span>
+                  )}
+                  <motion.span
+                    className="lang-flag"
+                    animate={active ? { rotate: [0, -4, 3, 0] } : { rotate: 0 }}
+                    transition={{ duration: 1.6, repeat: active ? Infinity : 0, ease: "easeInOut" }}
+                    style={{ transformOrigin: "10% 90%" }}
+                  >
+                    <Flag />
+                  </motion.span>
+                  <span className="lang-native">{l.native}</span>
+                  <span className="lang-label">{l.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
+        <div className="gx-spacer" />
       </div>
     </div>
   );
 }
+
+const languageCss = `
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.lang-card {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  padding: 26px 16px 22px; border: 0; cursor: pointer; font: inherit; color: inherit;
+}
+.lang-check {
+  position: absolute; inset-inline-end: 12px; top: 12px;
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px;
+  background: var(--settings-violet); color: var(--settings-surface);
+  box-shadow: var(--settings-shadow);
+}
+.lang-flag { display: block; width: 7rem; height: 6rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18)); }
+.lang-native { margin-top: 16px; font-size: 17px; font-weight: 700; }
+.lang-label { margin-top: 2px; font-size: 12.5px; color: var(--settings-muted); }
+`;
