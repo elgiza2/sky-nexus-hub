@@ -1,6 +1,6 @@
 /** @doc Unified mobile shell for settings sub-pages — the same glass chrome the
  * billing page uses: sheet entry, big title, frosted cards, tinted icon tiles. */
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from "react";
 
@@ -107,7 +107,7 @@ export const GlassRow = ({
     {trailing !== undefined ? (
       <span className="gx-row-trailing">{trailing}</span>
     ) : (
-      <span className="gx-chev" aria-hidden />
+      <ChevronRight className="gx-chev" strokeWidth={1.9} aria-hidden />
     )}
   </button>
 );
