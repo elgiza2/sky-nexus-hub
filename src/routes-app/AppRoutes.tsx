@@ -183,6 +183,7 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
     <Route path="/glass-check-cloud" element={<CloudBrowserPage />} />
     <Route path="/glass-check-data" element={<DataCategoryPage />} />
     <Route path="/glass-check-bridge" element={<DesktopBridgePage />} />
+    <Route path="/glass-check-agents" element={<AgentsPage />} />
     <Route
       path="/settings/customization"
       element={
