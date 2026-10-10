@@ -24,7 +24,7 @@ registerRoute(/^\/settings\/security$/, () => import("@/pages/settings/SecurityS
 registerRoute(/^\/settings\/profile\/edit$/, () => import("@/pages/settings/ProfileEditPage"));
 
 // -- Billing / referrals ---------------------------------------------------
-registerRoute(/^\/billing(\/|$)/, () => import("@/pages/billing/BillingPage"));
+registerRoute(/^\/usage(\/|$)/, () => import("@/pages/usage/UsagePage"));
 registerRoute(/^\/billing\/success$/, () => import("@/pages/billing/BillingSuccessPage"));
 registerRoute(/^\/referrals(\/|$)/, () => import("@/pages/billing/ReferralsPage"));
 registerRoute(/^\/referrals\/resources$/, () => import("@/pages/billing/ReferralResourcesPage"));

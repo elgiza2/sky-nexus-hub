@@ -132,7 +132,7 @@ export function DesktopChatHeader(props: DesktopChatHeaderProps) {
         {chatUserId && !creditsLoading && credits !== null ? (
           <button
             type="button"
-            onClick={() => navigate("/settings/billing")}
+            onClick={() => navigate("/usage")}
             aria-label={`${uiT("Credits", lang)}: ${credits}`}
             title={uiT("Credits", lang)}
             className="inline-flex items-center gap-1.5 h-9 px-3 rounded-2xl border border-border bg-muted/40 text-[12.5px] font-medium text-foreground/90 hover:bg-muted transition-colors tabular-nums"

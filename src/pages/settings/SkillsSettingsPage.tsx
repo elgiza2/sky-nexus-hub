@@ -321,22 +321,22 @@ export default function SkillsSettingsPage() {
       />
 
       {/* Search */}
-      <div className="flex items-center gap-2.5 h-12 px-4 rounded-full bg-[color:var(--mn-sep)]/60 focus-within:bg-[var(--mn-card)] transition-colors">
+      <div className="gx-input flex items-center gap-2.5">
         <Search
-          className="w-[17px] h-[17px] text-[color:var(--mn-muted)] shrink-0"
+          className="w-[17px] h-[17px] text-[color:var(--settings-muted)] shrink-0"
           strokeWidth={1.9}
         />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search skills"
-          className="flex-1 min-w-0 bg-transparent outline-none text-[14.5px] text-[color:var(--mn-fg)] placeholder:text-[color:var(--mn-muted)]"
+          className="flex-1 min-w-0 bg-transparent outline-none text-[14.5px] text-[color:var(--settings-ink)] placeholder:text-[color:var(--settings-muted)]"
         />
         {query && (
           <button
             onClick={() => setQuery("")}
             aria-label="Clear search"
-            className="h-6 w-6 rounded-full grid place-items-center text-[color:var(--mn-muted)] hover:bg-[color:var(--mn-sep)]"
+            className="h-6 w-6 rounded-full grid place-items-center text-[color:var(--settings-muted)] hover:bg-[color:var(--settings-line)]"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -347,15 +347,15 @@ export default function SkillsSettingsPage() {
       <div className="grid grid-cols-2 gap-2.5">
         <button
           onClick={() => navigate("/settings/skills/library")}
-          className="rounded-[18px] bg-[var(--mn-card)] px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
+          className="gx-card gx-tone-violet px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
         >
-          <span className="w-9 h-9 rounded-[12px] grid place-items-center bg-[color:var(--mn-sep)]">
-            <Blocks className="w-[18px] h-[18px] text-[color:var(--mn-fg)]" strokeWidth={1.8} />
+          <span className="gx-tile">
+            <Blocks strokeWidth={1.8} />
           </span>
-          <span className="mt-2.5 block text-[13.5px] font-semibold text-[color:var(--mn-fg)]">
+          <span className="mt-2.5 block text-[13.5px] font-semibold text-[color:var(--settings-ink)]">
             {isArabicUi ? "المكتبة" : "Library"}
           </span>
-          <span className="block text-[11.5px] text-[color:var(--mn-muted)]">
+          <span className="block text-[11.5px] text-[color:var(--settings-muted)]">
             {librarySkills.length + GITHUB_SKILLS.length > 0
               ? isArabicUi
                 ? `${librarySkills.length + GITHUB_SKILLS.length} جاهزة`
@@ -368,22 +368,19 @@ export default function SkillsSettingsPage() {
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-[18px] bg-[var(--mn-card)] px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
+          className="gx-card gx-tone-blue px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
         >
-          <span className="w-9 h-9 rounded-[12px] grid place-items-center bg-[color:var(--mn-sep)]">
+          <span className="gx-tile">
             {importing ? (
-              <Loader2 className="w-[18px] h-[18px] animate-spin text-[color:var(--mn-fg)]" />
+              <Loader2 className="animate-spin" />
             ) : (
-              <Paperclip
-                className="w-[18px] h-[18px] text-[color:var(--mn-fg)]"
-                strokeWidth={1.8}
-              />
+              <Paperclip strokeWidth={1.8} />
             )}
           </span>
-          <span className="mt-2.5 block text-[13.5px] font-semibold text-[color:var(--mn-fg)]">
+          <span className="mt-2.5 block text-[13.5px] font-semibold text-[color:var(--settings-ink)]">
             {isArabicUi ? "استيراد" : "Import"}
           </span>
-          <span className="block text-[11.5px] text-[color:var(--mn-muted)]">
+          <span className="block text-[11.5px] text-[color:var(--settings-muted)]">
             {isArabicUi ? "من ملف .zip" : "From a .zip file"}
           </span>
         </button>
@@ -400,11 +397,10 @@ export default function SkillsSettingsPage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "shrink-0 h-8 px-3.5 rounded-full text-[12.5px] transition-colors",
-                tab === t.id
-                  ? "bg-[color:var(--mn-fg)] text-[color:var(--mn-card)] font-semibold"
-                  : "bg-[color:var(--mn-sep)]/60 text-[color:var(--mn-muted)] font-medium",
+                "gx-pill shrink-0",
+                tab === t.id ? "font-semibold" : "font-medium opacity-70",
               )}
+              style={{ minHeight: 32, padding: "0 14px", fontSize: 12.5 }}
             >
               {t.label}
               {t.count > 0 && <span className="ms-1 tabular-nums opacity-60">{t.count}</span>}
@@ -415,17 +411,14 @@ export default function SkillsSettingsPage() {
 
       {/* My skills — grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-2.5">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-[132px] rounded-[18px] bg-[var(--mn-card)] animate-pulse" />
-          ))}
+        <div className="gx-card gx-loading">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading…</span>
         </div>
       ) : visible.length === 0 ? (
-        <div className="text-center py-14 px-6 rounded-[22px] bg-[var(--mn-card)]">
-          <div className="mx-auto w-11 h-11 rounded-full bg-[color:var(--mn-sep)] grid place-items-center mb-3">
-            <Blocks className="w-5 h-5 text-[color:var(--mn-muted)]" />
-          </div>
-          <p className="text-[15px] font-semibold text-[color:var(--mn-fg)]">
+        <div className="gx-card gx-empty">
+          <Blocks className="w-6 h-6" strokeWidth={1.5} />
+          <p className="text-[15px] font-semibold text-[color:var(--settings-ink)]">
             {tab === "enabled"
               ? isArabicUi
                 ? "مفيش مهارات شغالة"
@@ -438,7 +431,7 @@ export default function SkillsSettingsPage() {
                   ? "لسه مفيش مهارات"
                   : "No skills yet"}
           </p>
-          <p className="text-[12.5px] mt-1.5 text-[color:var(--mn-muted)] max-w-[280px] mx-auto leading-relaxed">
+          <p className="max-w-[280px] mx-auto leading-relaxed">
             {tab === "enabled"
               ? isArabicUi
                 ? "شغّل واحدة من تحت."
@@ -447,14 +440,13 @@ export default function SkillsSettingsPage() {
                 ? "ضيف أول مهارة من المكتبة أو استورد ملف .zip."
                 : "Add your first skill from the library or import a .zip."}
           </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            <button
-              onClick={() => navigate("/settings/skills/library")}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px] font-medium bg-[color:var(--mn-cta-bg)] text-[color:var(--mn-cta-fg)]"
-            >
-              {isArabicUi ? "المكتبة الرسمية" : "Official library"}
-            </button>
-          </div>
+          <button
+            onClick={() => navigate("/settings/skills/library")}
+            className="gx-pill"
+            style={{ minHeight: 36, padding: "0 16px", fontSize: 13 }}
+          >
+            {isArabicUi ? "المكتبة الرسمية" : "Official library"}
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2.5">

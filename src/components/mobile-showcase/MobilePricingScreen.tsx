@@ -65,7 +65,7 @@ export default function MobilePricingScreen({ isYearly, onToggleYearly, onSubscr
               </Button>;
             })}
           </div>
-          <Button variant="neutral" className="botanical-subscribe" disabled={loadingTier === "pro"} onClick={() => subscribed ? navigate("/settings/billing") : onSubscribe("pro", { trial: false })}>
+          <Button variant="neutral" className="botanical-subscribe" disabled={loadingTier === "pro"} onClick={() => subscribed ? navigate("/usage") : onSubscribe("pro", { trial: false })}>
             {loadingTier === "pro" ? <Loader2 className="animate-spin" /> : <>{subscribed ? (isAr ? "إدارة الاشتراك" : "Manage subscription") : (isAr ? "اشترك الآن" : "Subscribe")}<ChevronRight className="rtl-flip" /></>}
           </Button>
         </div>

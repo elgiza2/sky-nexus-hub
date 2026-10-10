@@ -33,7 +33,6 @@ import {
   AcceptInvitePage,
   ReferralRedirectPage,
   // billing hub
-  BillingPage,
   BillingSuccessPage,
   ReferralsPage,
   ReferralsDashboardTab,
@@ -148,14 +147,7 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
 
     {/* ── Billing hub — one page, animated inner views ───────── */}
     <Route element={<AnimatedShell />}>
-      <Route
-        path="/settings/billing"
-        element={
-          <ProtectedRoute>
-            <BillingPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/settings/billing" element={<Navigate to="/usage" replace />} />
       <Route path="/billing/success" element={<BillingSuccessPage />} />
       <Route path="/suc" element={<BillingSuccessPage />} />
       <Route path="/settings/referrals" element={<Navigate to="/referrals" replace />} />
@@ -511,7 +503,7 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
     <Route path="/megsy" element={<Navigate to="/megsy-model" replace />} />
     <Route path="/features" element={<Navigate to="/features-guide" replace />} />
     <Route path="/compliance" element={<Navigate to="/privacy" replace />} />
-    <Route path="/billing" element={<Navigate to="/settings/billing" replace />} />
+    <Route path="/billing" element={<Navigate to="/usage" replace />} />
     <Route path="/k" element={<KPage />} />
     <Route path="/billing/referrals" element={<Navigate to="/referrals" replace />} />
     <Route

@@ -1,9 +1,8 @@
 /** @doc Settings → Passwords: every login the agent created for the user, plus manual entries. */
 import { useCallback, useEffect, useState } from "react";
-import { Copy, Eye, EyeOff, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff, KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { SubShell } from "@/components/settings/SubShell";
-import { Input } from "@/components/ui/input";
+import { SubShell, SubSection } from "@/components/settings/SubShell";
 import {
   deleteCredential,
   generatePassword,
@@ -64,112 +63,120 @@ export default function PasswordsPage() {
   };
 
   return (
-    <SubShell title="Passwords">
-      <p className="px-1 text-[13px] leading-relaxed text-[color:var(--mn-faint)]">
-        Every account the agent creates is registered with your Megsy email and a
-        strong password, and it is saved here so you can come back to it anytime.
-      </p>
-
-      <section className="overflow-hidden rounded-[20px] bg-[var(--mn-card)]">
-        {loading ? (
-          <div className="px-5 py-[18px] text-[14px] text-[color:var(--mn-faint)]">Loading…</div>
-        ) : rows.length === 0 ? (
-          <div className="px-5 py-[18px] text-[14px] text-[color:var(--mn-faint)]">
-            No saved passwords yet.
-          </div>
-        ) : (
-          rows.map((row, i) => (
-            <div key={row.id}>
-              {i > 0 && <div className="mx-5 h-px bg-[color:var(--mn-sep)]" />}
-              <div className="flex flex-col gap-1 px-5 py-[16px]">
-                <div className="flex items-center gap-2">
-                  <span className="flex-1 truncate text-[15px] text-[color:var(--mn-fg)]">
-                    {row.site}
+    <SubShell
+      title="Passwords"
+      subtitle="Every account the agent creates is registered with your Megsy email and a strong password, and it is saved here so you can come back to it anytime."
+    >
+      <SubSection title="Saved logins">
+        <div className="gx-card">
+          {loading ? (
+            <div className="gx-loading">{"Loading…"}</div>
+          ) : rows.length === 0 ? (
+            <div className="gx-empty">
+              <KeyRound className="w-6 h-6" strokeWidth={1.6} />
+              <span>No saved passwords yet.</span>
+            </div>
+          ) : (
+            rows.map((row) => (
+              <div key={row.id} className="gx-row gx-tone-blue">
+                <span className="gx-tile">
+                  <KeyRound strokeWidth={1.7} />
+                </span>
+                <span className="gx-row-body">
+                  <span className="gx-row-label">{row.site}</span>
+                  <span className="gx-row-hint">{row.login_email}</span>
+                  <span className="gx-row-hint font-mono">
+                    {shown[row.id] ? row.password : "••••••••••••"}
                   </span>
+                </span>
+                <span className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     aria-label="Show password"
                     onClick={() => setShown((s) => ({ ...s, [row.id]: !s[row.id] }))}
-                    className="text-[color:var(--mn-faint)] transition-colors hover:text-[color:var(--mn-fg)]"
+                    className="gx-hbtn gx-hbtn-sm"
                   >
-                    {shown[row.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {shown[row.id] ? (
+                      <EyeOff className="gx-hicon" strokeWidth={1.8} />
+                    ) : (
+                      <Eye className="gx-hicon" strokeWidth={1.8} />
+                    )}
                   </button>
                   <button
                     type="button"
                     aria-label="Copy password"
                     onClick={() => void copy(row.password)}
-                    className="text-[color:var(--mn-faint)] transition-colors hover:text-[color:var(--mn-fg)]"
+                    className="gx-hbtn gx-hbtn-sm"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="gx-hicon" strokeWidth={1.8} />
                   </button>
                   <button
                     type="button"
                     aria-label="Delete"
                     onClick={() => void remove(row.id)}
-                    className="text-[color:var(--mn-faint)] transition-colors hover:text-destructive"
+                    className="gx-hbtn gx-hbtn-sm"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="gx-hicon" strokeWidth={1.8} />
                   </button>
-                </div>
-                <span className="text-[13px] text-[color:var(--mn-faint)]">{row.login_email}</span>
-                <span className="font-mono text-[13px] text-[color:var(--mn-faint)]">
-                  {shown[row.id] ? row.password : "••••••••••••"}
                 </span>
               </div>
-            </div>
-          ))
-        )}
-      </section>
+            ))
+          )}
+        </div>
+      </SubSection>
 
-      {adding ? (
-        <section className="flex flex-col gap-2 rounded-[20px] bg-[var(--mn-card)] p-4">
-          <Input
-            placeholder="Site (example.com)"
-            value={draft.site}
-            onChange={(e) => setDraft((d) => ({ ...d, site: e.target.value }))}
-          />
-          <Input
-            placeholder="Email"
-            value={draft.login_email}
-            onChange={(e) => setDraft((d) => ({ ...d, login_email: e.target.value }))}
-          />
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Password"
-              value={draft.password}
-              onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
-            />
-            <button
-              type="button"
-              aria-label="Generate password"
-              onClick={() => setDraft((d) => ({ ...d, password: generatePassword() }))}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[color:var(--mn-faint)] hover:text-[color:var(--mn-fg)]"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
+      <SubSection title="Add a password">
+        {adding ? (
+          <div className="gx-card gx-card-pad">
+            <div className="gx-field">
+              <input
+                className="gx-input"
+                placeholder="Site (example.com)"
+                value={draft.site}
+                onChange={(e) => setDraft((d) => ({ ...d, site: e.target.value }))}
+              />
+            </div>
+            <div className="gx-field">
+              <input
+                className="gx-input"
+                placeholder="Email"
+                value={draft.login_email}
+                onChange={(e) => setDraft((d) => ({ ...d, login_email: e.target.value }))}
+              />
+            </div>
+            <div className="gx-field">
+              <div className="flex items-center gap-2">
+                <input
+                  className="gx-input"
+                  placeholder="Password"
+                  value={draft.password}
+                  onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  aria-label="Generate password"
+                  onClick={() => setDraft((d) => ({ ...d, password: generatePassword() }))}
+                  className="gx-hbtn shrink-0"
+                >
+                  <RefreshCw className="gx-hicon" strokeWidth={1.8} />
+                </button>
+              </div>
+            </div>
+            <div className="gx-actions pt-1">
+              <button type="button" onClick={() => void add()} className="gx-pill">
+                Save
+              </button>
+              <button type="button" onClick={() => setAdding(false)} className="gx-pill">
+                Cancel
+              </button>
+            </div>
           </div>
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => void add()} className="text-[14px] text-primary">
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => setAdding(false)}
-              className="text-[14px] text-[color:var(--mn-faint)]"
-            >
-              Cancel
-            </button>
-          </div>
-        </section>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="flex items-center gap-2 self-start px-1 text-[14px] text-primary"
-        >
-          <Plus className="h-4 w-4" /> Add password
-        </button>
-      )}
+        ) : (
+          <button type="button" onClick={() => setAdding(true)} className="gx-pill gx-pill-wide">
+            <Plus className="gx-hicon" strokeWidth={2} /> Add password
+          </button>
+        )}
+      </SubSection>
     </SubShell>
   );
 }

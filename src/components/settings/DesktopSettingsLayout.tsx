@@ -42,7 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "overview", label: "Overview", path: "/settings", Icon: AccountIcon },
       { id: "profile", label: "Profile", path: "/settings/profile", Icon: AccountIcon },
-      { id: "billing", label: "Plan & Billing", path: "/settings/billing", Icon: BillingIcon },
+      { id: "billing", label: "Plan & Billing", path: "/usage", Icon: BillingIcon },
     ],
   },
   {

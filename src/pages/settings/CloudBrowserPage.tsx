@@ -1,8 +1,7 @@
 /** @doc Cloud browser settings — session persistence and download controls, stored per account. */
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
-import { SubShell } from "@/components/settings/SubShell";
+import { Download, LogIn } from "lucide-react";
+import { SubShell, SubSection } from "@/components/settings/SubShell";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyTurnContextChanged } from "@/lib/chat/turnContext";
 
@@ -19,12 +18,12 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
       onClick={onChange}
       className={[
         "relative inline-flex h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200",
-        checked ? "bg-primary" : "bg-[color:var(--mn-press)]",
+        checked ? "bg-primary" : "bg-[color:var(--settings-line)]",
       ].join(" ")}
     >
       <span
         className={[
-          "inline-block h-[26px] w-[26px] rounded-full bg-[color:var(--mn-fg)] transition-transform duration-200",
+          "inline-block h-[26px] w-[26px] rounded-full bg-[color:var(--settings-surface)] transition-transform duration-200",
           checked ? "translate-x-[22px]" : "translate-x-[2px]",
         ].join(" ")}
         style={{ marginTop: 2 }}
@@ -34,7 +33,6 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 }
 
 export default function CloudBrowserPage() {
-  const navigate = useNavigate();
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [allowDownloads, setAllowDownloads] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -89,38 +87,49 @@ export default function CloudBrowserPage() {
   };
 
   return (
-    <SubShell title="Cloud browser">
-      <section className="rounded-[20px] overflow-hidden bg-[var(--mn-card)]">
-        <div className="flex items-center gap-4 px-5 py-[18px]">
-          <span className="flex-1 text-[15px] leading-snug text-[color:var(--mn-fg)]">
-            Keep me signed in across tasks
-          </span>
-          <Toggle
-            checked={keepSignedIn}
-            onChange={() => {
-              const next = !keepSignedIn;
-              setKeepSignedIn(next);
-              void persist({ keepSignedIn: next, allowDownloads });
-            }}
-            label="Keep me signed in across tasks"
-          />
+    <SubShell title="Cloud browser" subtitle="Session persistence and download controls for the cloud browser.">
+      <SubSection title="Session">
+        <div className="gx-card">
+          <div className="gx-row gx-tone-blue">
+            <span className="gx-tile">
+              <LogIn strokeWidth={1.7} />
+            </span>
+            <span className="gx-row-body">
+              <span className="gx-row-label">Keep me signed in across tasks</span>
+            </span>
+            <span className="gx-row-trailing">
+              <Toggle
+                checked={keepSignedIn}
+                onChange={() => {
+                  const next = !keepSignedIn;
+                  setKeepSignedIn(next);
+                  void persist({ keepSignedIn: next, allowDownloads });
+                }}
+                label="Keep me signed in across tasks"
+              />
+            </span>
+          </div>
+          <div className="gx-row gx-tone-green">
+            <span className="gx-tile">
+              <Download strokeWidth={1.7} />
+            </span>
+            <span className="gx-row-body">
+              <span className="gx-row-label">Allow file downloads during tasks</span>
+            </span>
+            <span className="gx-row-trailing">
+              <Toggle
+                checked={allowDownloads}
+                onChange={() => {
+                  const next = !allowDownloads;
+                  setAllowDownloads(next);
+                  void persist({ keepSignedIn, allowDownloads: next });
+                }}
+                label="Allow file downloads during tasks"
+              />
+            </span>
+          </div>
         </div>
-        <div className="h-px bg-[color:var(--mn-sep)] mx-5" />
-        <div className="flex items-center gap-4 px-5 py-[18px]">
-          <span className="flex-1 text-[15px] leading-snug text-[color:var(--mn-fg)]">
-            Allow file downloads during tasks
-          </span>
-          <Toggle
-            checked={allowDownloads}
-            onChange={() => {
-              const next = !allowDownloads;
-              setAllowDownloads(next);
-              void persist({ keepSignedIn, allowDownloads: next });
-            }}
-            label="Allow file downloads during tasks"
-          />
-        </div>
-      </section>
+      </SubSection>
     </SubShell>
   );
 }

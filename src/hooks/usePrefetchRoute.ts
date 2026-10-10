@@ -19,8 +19,8 @@ const importForPath = (key: string): Promise<unknown> | null => {
   if (key.startsWith("/settings/referrals")) {
     return import("@/pages/billing/ReferralsPage");
   }
-  if (key.startsWith("/settings/billing")) {
-    return import("@/pages/billing/BillingPage");
+  if (key.startsWith("/settings/billing") || key.startsWith("/usage")) {
+    return import("@/pages/usage/UsagePage");
   }
   if (key.startsWith("/settings/profile/edit")) {
     return import("@/pages/settings/ProfileEditPage");

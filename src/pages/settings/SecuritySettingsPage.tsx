@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
 import {
   SubShell,
   SubSection,
@@ -17,17 +16,10 @@ import {
   SubRow,
   DangerCallout,
 } from "@/components/settings/SubShell";
-import ProfileGlassShell, {
-  GlassSection,
-  GlassCard,
-  GlassRow,
-} from "@/components/profile/ProfileGlassShell";
-import { IOS26_ICONS } from "@/assets/ios26-icons";
 import { signOutEverywhere } from "@/lib/signOutEverywhere";
 
 const SecuritySettingsPage = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const [userEmail, setUserEmail] = useState("");
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
@@ -52,59 +44,6 @@ const SecuritySettingsPage = () => {
     await signOutEverywhere();
   };
 
-  const goBack = () => navigate("/settings");
-
-  if (isMobile) {
-    return (
-      <ProfileGlassShell
-        title="Security"
-        subtitle="Manage sign-in credentials, two-factor auth and your session."
-        onBack={goBack}
-      >
-        <GlassSection title="Sign-in" index="01">
-          <GlassCard>
-            <GlassRow
-              icon={<img loading="lazy" decoding="async" src={IOS26_ICONS.privacy} alt="" />}
-              label="Email"
-              hint={userEmail || "Update primary email"}
-              onClick={() => navigate("/settings/change-email")}
-            />
-            <GlassRow
-              icon={<KeyRound className="w-[18px] h-[18px]" />}
-              label="Password"
-              hint="Rotate your account password"
-              onClick={() => navigate("/settings/change-password")}
-            />
-            <GlassRow
-              icon={<ShieldEllipsis className="w-[18px] h-[18px]" />}
-              label="Two-factor auth"
-              trailing={twoFactorEnabled ? "On" : "Off"}
-              onClick={() => navigate("/settings/two-factor")}
-            />
-          </GlassCard>
-        </GlassSection>
-
-        <GlassSection title="Session" index="02">
-          <GlassCard>
-            <GlassRow
-              icon={<img loading="lazy" decoding="async" src={IOS26_ICONS.logout} alt="" />}
-              label="Sign out"
-              danger
-              onClick={handleLogout}
-            />
-            <GlassRow
-              icon={<UserRoundX className="w-[18px] h-[18px]" />}
-              label="Delete account"
-              hint="Permanent — 30-day recovery"
-              danger
-              onClick={() => navigate("/settings/delete-account")}
-            />
-          </GlassCard>
-        </GlassSection>
-      </ProfileGlassShell>
-    );
-  }
-
   return (
     <SubShell
       title="Security"
@@ -119,27 +58,18 @@ const SecuritySettingsPage = () => {
             onClick={() => navigate("/settings/change-email")}
           />
           <SubRow
-            icon={ShieldEllipsis}
+            icon={KeyRound}
             label="Change password"
             hint="Update your account password"
             onClick={() => navigate("/settings/change-password")}
           />
           <SubRow
-            icon={KeyRound}
+            icon={ShieldEllipsis}
             label="Two-factor authentication"
             hint={twoFactorEnabled ? "Enabled — OTP required at sign-in" : "Disabled — tap to set up"}
             onClick={() => navigate("/settings/two-factor")}
-            trailing={
-              <span
-                className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
-                  twoFactorEnabled
-                    ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/[0.08]"
-                    : "text-muted-foreground border-border"
-                }`}
-              >
-                {twoFactorEnabled ? "On" : "Off"}
-              </span>
-            }
+            trailing={twoFactorEnabled ? "On" : "Off"}
+            tone={twoFactorEnabled ? "green" : "neutral"}
           />
         </SubRowList>
       </SubSection>
@@ -157,12 +87,10 @@ const SecuritySettingsPage = () => {
           action={
             <button
               onClick={() => navigate("/settings/delete-account")}
-              className="h-9 px-4 text-[13px] font-medium rounded-full border border-rose-500/40 text-rose-300 hover:bg-rose-500/[0.08] transition"
+              className="gx-pill gx-pill-danger"
             >
-              <span className="inline-flex items-center gap-1.5">
-                <UserRoundX className="w-3.5 h-3.5" />
-                Delete
-              </span>
+              <UserRoundX className="h-3.5 w-3.5" strokeWidth={1.9} />
+              Delete
             </button>
           }
         />

@@ -42,7 +42,7 @@ export default function SkillsNewPage() {
       backTo="/chat"
     >
       <SubSection title="Describe the expert" description="One or two sentences is enough — you can refine everything after.">
-        <div className="relative rounded-[14px] bg-[var(--mn-card)]">
+        <div className="gx-card relative">
           <textarea
             ref={ref}
             value={value}
@@ -59,7 +59,7 @@ export default function SkillsNewPage() {
             }}
             rows={1}
             placeholder="A no-nonsense legal advisor who cites case law…"
-            className="w-full resize-none bg-transparent outline-none text-[14.5px] leading-relaxed px-4 pt-4 pb-14 text-[color:var(--mn-fg)] placeholder:text-[color:var(--mn-muted)]"
+            className="w-full resize-none bg-transparent outline-none text-[14.5px] leading-relaxed px-4 pt-4 pb-14 text-[color:var(--settings-ink)] placeholder:text-[color:var(--settings-muted)]"
           />
           <button
             onClick={() => start(value)}
@@ -75,11 +75,7 @@ export default function SkillsNewPage() {
       <SubSection title="Inspiration" description="Tap one to jump into the designer with a starting brief.">
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => start(s)}
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-[var(--mn-card)] text-[12.5px] font-medium text-[color:var(--mn-muted)] hover:text-[color:var(--mn-fg)] transition-colors"
-            >
+            <button key={s} onClick={() => start(s)} className="gx-pill" style={{ minHeight: 36, padding: "0 14px", fontSize: 12.5 }}>
               <Sparkles className="w-3 h-3 text-primary" /> {s}
             </button>
           ))}

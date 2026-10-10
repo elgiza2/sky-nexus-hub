@@ -43,12 +43,12 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
       onClick={onChange}
       className={[
         "relative inline-flex h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200",
-        checked ? "bg-primary" : "bg-[color:var(--mn-press)]",
+        checked ? "bg-primary" : "bg-[color:var(--settings-line)]",
       ].join(" ")}
     >
       <span
         className={[
-          "inline-block h-[26px] w-[26px] rounded-full bg-[color:var(--mn-fg)] transition-transform duration-200",
+          "inline-block h-[26px] w-[26px] rounded-full bg-[color:var(--settings-surface)] transition-transform duration-200",
           checked ? "translate-x-[22px]" : "translate-x-[2px]",
         ].join(" ")}
         style={{ marginTop: 2 }}
@@ -57,7 +57,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
   );
 }
 
-const card = "rounded-2xl border border-border/60 bg-card/60 p-4 space-y-3";
+const card = "gx-card gx-card-pad";
 
 export default function DesktopBridgePage() {
   const [devices, setDevices] = useState<LocalDevice[]>([]);
@@ -161,27 +161,29 @@ export default function DesktopBridgePage() {
       subtitle="اربط الكمبيوتر بحسابك وخلي الوكيل يشتغل عليه بالصلاحيات اللي تختارها"
       backTo="/settings"
     >
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="gx-card gx-loading">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading…</span>
           </div>
         ) : (
           <>
             <section className={card}>
-              <h2 className="text-sm font-semibold">إضافة جهاز</h2>
+              <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>إضافة جهاز</h2>
               <div className="flex gap-2">
                 <input
                   value={newName}
                   onChange={(event) => setNewName(event.target.value)}
                   placeholder="اسم الجهاز (مثال: لابتوب الشغل)"
-                  className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm"
+                  className="gx-input flex-1"
                 />
                 <button
                   type="button"
                   onClick={onCreate}
                   disabled={busy}
-                  className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  className="gx-pill shrink-0"
+                  style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }}
                 >
                   كود ربط
                 </button>
@@ -265,13 +267,13 @@ export default function DesktopBridgePage() {
                       value={device.work_dir ?? ""}
                       onChange={(event) => patch({ work_dir: event.target.value })}
                       placeholder="C:\\Users\\me\\megsy"
-                      className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-sm"
+                      className="gx-input"
                     />
                   </div>
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">الصلاحيات</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>الصلاحيات</h2>
                   {CAPS.map((cap) => (
                     <div key={cap.key} className="flex items-center justify-between gap-3">
                       <div>
@@ -295,7 +297,7 @@ export default function DesktopBridgePage() {
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">نمط الموافقة</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>نمط الموافقة</h2>
                   {MODES.map((mode) => (
                     <button
                       key={mode.key}
@@ -336,7 +338,7 @@ export default function DesktopBridgePage() {
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">تنفيذ أمر</h2>
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>تنفيذ أمر</h2>
                   <div className="flex gap-2">
                     <input
                       value={cmdText}
@@ -345,13 +347,14 @@ export default function DesktopBridgePage() {
                         if (event.key === "Enter") void send();
                       }}
                       placeholder="dir"
-                      className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 font-mono text-[13px]"
+                      className="gx-input flex-1 font-mono text-[13px]"
                     />
                     <button
                       type="button"
                       onClick={send}
                       disabled={busy || !cmdText.trim()}
-                      className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                      className="gx-pill shrink-0"
+                      style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }}
                     >
                       إرسال
                     </button>
@@ -359,8 +362,12 @@ export default function DesktopBridgePage() {
                 </section>
 
                 <section className={card}>
-                  <h2 className="text-sm font-semibold">السجل</h2>
-                  {commands.length === 0 && <p className="text-[12.5px] text-muted-foreground">لا يوجد أوامر بعد.</p>}
+                  <h2 className="gx-section-title" style={{margin:0,fontSize:16}}>السجل</h2>
+                  {commands.length === 0 && (
+                    <div className="gx-empty">
+                      <span>لا يوجد أوامر بعد.</span>
+                    </div>
+                  )}
                   {commands.map((command) => (
                     <div key={command.id} className="rounded-xl border border-border/50 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
