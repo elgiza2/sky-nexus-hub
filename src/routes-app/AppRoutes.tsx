@@ -168,22 +168,6 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
         </ProtectedRoute>
       }
     />
-    <Route path="/glass-check-memory" element={<MemoryPage />} />
-    <Route path="/glass-check-custom" element={<CustomizationPage />} />
-    <Route path="/glass-check-lang" element={<LanguagePage />} />
-    <Route path="/glass-check-security" element={<SecuritySettingsPage />} />
-    <Route path="/glass-check-privacy" element={<SettingsPrivacyPage />} />
-    <Route path="/glass-check-help" element={<SettingsHelpPage />} />
-    <Route path="/glass-check-support" element={<SettingsSupportPage />} />
-    <Route path="/glass-check-contact" element={<SettingsContactPage />} />
-    <Route path="/glass-check-passwords" element={<PasswordsPage />} />
-    <Route path="/glass-check-skills" element={<SkillsSettingsPage />} />
-    <Route path="/glass-check-skills-new" element={<SkillsNewPage />} />
-    <Route path="/glass-check-skills-lib" element={<SkillsLibraryPage />} />
-    <Route path="/glass-check-cloud" element={<CloudBrowserPage />} />
-    <Route path="/glass-check-data" element={<DataCategoryPage />} />
-    <Route path="/glass-check-bridge" element={<DesktopBridgePage />} />
-    <Route path="/glass-check-agents" element={<AgentsPage />} />
     <Route
       path="/settings/customization"
       element={
