@@ -1,13 +1,13 @@
 # Roadmap
 
 ## Done
-- Billing page redesign to match the reference screenshot (single flat statement layout)
-- Merge into ONE page: /usage is the only billing page; /settings/billing + /billing redirect to it; duplicate page deleted
+- Billing page redesign to match the reference screenshot
+- ONE billing page: /usage is the only one; /settings/billing + /billing redirect to it; duplicate deleted
+- Every button on the billing page works for real (bill sheet, statement rows, auto-pay cancel, help, back) + glass styling
 
 ## Open
-- Make every button on the billing page do something real (no "coming soon" toasts):
-  - "View bill" + each past-statement row open a real statement/bill detail (plan, amount, period, status, credits)
-  - "Auto pay" row: real cancel-subscription flow (already wired to kashier-checkout) — keep
-  - Back / Help rows go to real existing routes (verify /support exists)
-- Clean glass design pass on the billing page: translucent surfaces, thin borders, soft shadows, tidy spacing
-- Verify visually with a temporary signed-in render, then remove the temp route
+- Redesign ALL settings pages with the same glass design: translucent cards, thin tinted icon tiles, same sheet/slide opening animation, clean icons
+  - Shared glass primitives first (top bar, card, row, sheet, pill) so every page matches exactly
+  - Pages: settings home (mobile + desktop), profile edit, customization, AI personalization, security, data controls, notifications, support/help, referrals, delete account
+- Remove the temporary demo-data flag and the temporary preview route before finishing
+- Verify each converted page visually, then report
