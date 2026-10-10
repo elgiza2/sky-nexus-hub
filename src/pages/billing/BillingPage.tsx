@@ -203,25 +203,17 @@ const BillingPage = () => {
   /* ── Sections ─────────────────────────────────────────────────── */
 
   const creditsCard = (
-    <Card className="px-5 py-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            {copy("Message credits")}
-          </p>
-          <p className="mt-2 flex items-baseline gap-2 text-foreground" dir="ltr">
-            <span className="text-[40px] font-semibold leading-none tracking-[-0.03em]">
-              {credits.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US")}
-            </span>
-            <span className="text-[14px] font-medium text-muted-foreground">MC</span>
-          </p>
-          <p className="mt-2 text-[12.5px] text-muted-foreground">{copy("Available on your account")}</p>
-        </div>
-        <span className="shrink-0 rounded-full border border-border px-3 py-1 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-foreground">
-          {plan}
+    <Card className="px-4 py-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {copy("Message credits")}
+      </p>
+      <p className="mt-1.5 flex items-baseline gap-1.5 text-foreground" dir="ltr">
+        <span className="text-[28px] font-semibold leading-none tracking-[-0.03em]">
+          {credits.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US")}
         </span>
-      </div>
-      <div className="mt-5 flex gap-2">
+        <span className="text-[12.5px] font-medium text-muted-foreground">MC</span>
+      </p>
+      <div className="mt-4 flex gap-2">
         <PrimaryButton onClick={() => navigate("/pricing")}>{copy("Top up")}</PrimaryButton>
         <GhostButton onClick={() => navigate("/settings/referrals")}>
           {copy("Earn free MC")}
@@ -358,7 +350,7 @@ const BillingPage = () => {
   const cancelFlow = SAVE_OFFER.enabled && step === "offer" ? saveOffer : cancelForm;
 
   const sections = (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {creditsCard}
       {progressCard}
 
