@@ -171,6 +171,11 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
     <Route path="/glass-check-memory" element={<MemoryPage />} />
     <Route path="/glass-check-custom" element={<CustomizationPage />} />
     <Route path="/glass-check-lang" element={<LanguagePage />} />
+    <Route path="/glass-check-security" element={<SecuritySettingsPage />} />
+    <Route path="/glass-check-privacy" element={<SettingsPrivacyPage />} />
+    <Route path="/glass-check-help" element={<SettingsHelpPage />} />
+    <Route path="/glass-check-support" element={<SettingsSupportPage />} />
+    <Route path="/glass-check-contact" element={<SettingsContactPage />} />
     <Route
       path="/settings/customization"
       element={
