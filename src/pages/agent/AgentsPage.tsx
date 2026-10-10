@@ -127,14 +127,17 @@ const AGENT_CSS = `
   }
   .agx-tile svg { width: 19px; height: 19px; stroke-width: 1.7; }
   .agx-chip {
+    flex-shrink: 0; white-space: nowrap;
     font-size: 11px; font-weight: 650; letter-spacing: .02em;
     padding: 2px 8px; border-radius: 999px;
     color: var(--settings-muted);
     background: var(--settings-line);
   }
+  .agx-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .agx-card { animation: agx-in .45s cubic-bezier(.22,1,.36,1) both; }
   @keyframes agx-in { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
   @media(prefers-reduced-motion:reduce) { .agx-card { animation: none; } }
+  @media(max-width:520px) { .agx-open-label { display: none; } }
 `;
 
 export function AgentsPage() {
@@ -157,8 +160,8 @@ export function AgentsPage() {
       <li key={a.id} className="gx-row gx-row-tap" style={{ ["--agx" as any]: TINT[a.color] }}>
         <span className="agx-tile"><Icon /></span>
         <span className="gx-row-body">
-          <span className="gx-row-label flex items-center gap-2">
-            <span className="truncate">{a.name}</span>
+          <span className="gx-row-label flex min-w-0 items-center gap-2">
+            <span className="agx-name">{a.name}</span>
             {a.isDefault && <span className="agx-chip">Main</span>}
             {active > 0 && <span className="agx-chip">{active} live</span>}
           </span>
@@ -196,7 +199,7 @@ export function AgentsPage() {
             size="sm"
             onClick={() => nav(locked ? "/pricing" : `/chat?agent=${encodeURIComponent(a.id)}`)}
           >
-            {locked ? <><Lock size={14} />Pro</> : <>Open chat<ArrowUpRight size={14} /></>}
+            {locked ? <><Lock size={14} />Pro</> : <><span className="agx-open-label">Open chat</span><ArrowUpRight size={14} /></>}
           </Button>
         </span>
       </li>
