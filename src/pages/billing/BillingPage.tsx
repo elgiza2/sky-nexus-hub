@@ -1,18 +1,22 @@
 /**
- * @doc Subscription management — clean, fully localized, theme-token only.
- * Shows credits, plan state, the referral progress bar (how many members are
- * still needed for free Pro) and the cancellation / retention flow.
+ * @doc Billing — minimal statement-style page (Cash App reference design).
+ * Clean white sheet: big title, thin outlined icon rows (renewal, amount,
+ * auto pay), past statements list, and one large rounded "View bill" button.
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  CalendarDays,
+  Wallet,
+  RefreshCcw,
+  FileText,
+  ChevronRight,
+  HelpCircle,
+  ChevronLeft,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { SubShell } from "@/components/settings/SubShell";
-import ReferralProgressBar from "@/components/billing/ReferralProgressBar";
-import { useReferralMilestone } from "@/hooks/useReferralMilestone";
 import { translateExactText, useUserLang, type AuthLang } from "@/lib/authI18n";
-import { SAVE_OFFER, saveOfferPrice } from "@/data/pricingData";
 
 type Sub = {
   plan: string | null;
@@ -20,117 +24,60 @@ type Sub = {
   current_period_end: string | null;
   amount_cents: number | null;
   currency: string | null;
+  created_at: string | null;
 };
 
 const fmtDate = (s: string | null | undefined, lang: AuthLang) =>
   s
     ? new Date(s).toLocaleDateString(lang === "ar-eg" ? "ar-EG" : "en-US", {
-        month: "short",
+        month: "long",
         day: "numeric",
         year: "numeric",
       })
     : "—";
 
-const REASONS = [
-  "Too expensive",
-  "Not using it enough",
-  "Missing features",
-  "Found an alternative",
-  "Other",
-];
-
-/* ── Small presentational primitives (theme tokens only) ─────────── */
-
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`rounded-[14px] border border-border bg-background ${className}`}>{children}</div>
-);
-
-const Row = ({
+/* ── Row with a thin outlined icon, label over value, optional chevron ── */
+const IconRow = ({
+  icon: Icon,
   label,
-  hint,
+  value,
   onClick,
-  danger,
 }: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   label: string;
-  hint?: string;
+  value: string;
   onClick?: () => void;
-  danger?: boolean;
 }) => {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-start transition ${
-        onClick ? "hover:bg-foreground/[0.04] active:scale-[0.995]" : ""
+      className={`flex w-full items-center gap-4 py-4 text-start ${
+        onClick ? "transition active:opacity-60" : ""
       }`}
     >
-      <span className="min-w-0">
-        <span
-          className={`block text-[14.5px] font-medium ${danger ? "text-destructive" : "text-foreground"}`}
-        >
-          {label}
-        </span>
-        {hint && <span className="mt-0.5 block text-[12.5px] text-muted-foreground">{hint}</span>}
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border">
+        <Icon className="h-[18px] w-[18px] text-foreground" strokeWidth={1.6} />
       </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium text-foreground">{label}</span>
+        <span className="mt-0.5 block text-[13.5px] text-muted-foreground">{value}</span>
+      </span>
+      {onClick && (
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground rtl:rotate-180" strokeWidth={1.8} />
+      )}
     </Tag>
   );
 };
 
-const PrimaryButton = ({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    className="inline-flex h-[40px] flex-1 items-center justify-center rounded-[12px] bg-foreground px-4 text-[13.5px] font-semibold text-background transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
-  >
-    {children}
-  </button>
-);
-
-const GhostButton = ({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    className="inline-flex h-[40px] flex-1 items-center justify-center rounded-[12px] border border-border bg-background px-4 text-[13.5px] font-medium text-foreground transition hover:bg-foreground/[0.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
-  >
-    {children}
-  </button>
-);
-
 const BillingPage = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const lang = useUserLang();
   const copy = (s: string) => translateExactText(s, lang);
-  const milestone = useReferralMilestone();
 
   const [credits, setCredits] = useState(0);
-  const [plan, setPlan] = useState("Free");
   const [sub, setSub] = useState<Sub | null>(null);
-
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [step, setStep] = useState<"offer" | "reason">("offer");
-  const [reason, setReason] = useState("");
-  const [improvement, setImprovement] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -140,16 +87,13 @@ const BillingPage = () => {
       if (!user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("credits, plan")
+        .select("credits")
         .eq("id", user.id)
         .single();
-      if (profile) {
-        setCredits(Number(profile.credits) || 0);
-        setPlan(profile.plan || "Free");
-      }
+      if (profile) setCredits(Number(profile.credits) || 0);
       const { data: subData } = await supabase
         .from("subscriptions")
-        .select("plan, status, current_period_end, amount_cents, currency")
+        .select("plan, status, current_period_end, amount_cents, currency, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -159,323 +103,85 @@ const BillingPage = () => {
   }, []);
 
   const isActive = sub?.status === "active" || sub?.status === "trialing";
-  const priceLabel = sub?.amount_cents
+  const amountLabel = sub?.amount_cents
     ? `${(sub.amount_cents / 100).toFixed(0)} ${sub.currency || "EGP"}`
-    : null;
-  const monthlyPrice = sub?.amount_cents ? Math.round(sub.amount_cents / 100) : null;
-  const halfPrice = monthlyPrice ? saveOfferPrice(monthlyPrice) : null;
-
-  const sendSupportRequest = async (subject: string, message: string, success: string) => {
-    setSubmitting(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not signed in");
-      const { error } = await supabase
-        .from("contact_submissions")
-        .insert({ user_id: user.id, subject, message } as never);
-      if (error) throw error;
-      toast.success(copy(success));
-      setCancelOpen(false);
-      setStep("offer");
-      setReason("");
-      setImprovement("");
-    } catch (e) {
-      toast.error(copy("Could not submit request"));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitCancel = () => {
-    if (!reason) {
-      toast.error(copy("Please tell us why you're cancelling"));
-      return;
-    }
-    void sendSupportRequest(
-      "Subscription cancellation",
-      `Reason: ${reason}\n\nHow we can improve:\n${improvement || "—"}`,
-      "Cancellation request sent. Our team will reach out shortly.",
-    );
-  };
-
-  /* ── Sections ─────────────────────────────────────────────────── */
-
-  const creditsCard = (
-    <Card className="px-4 py-4">
-      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {copy("Message credits")}
-      </p>
-      <p className="mt-1.5 flex items-baseline gap-1.5 text-foreground" dir="ltr">
-        <span className="text-[28px] font-semibold leading-none tracking-[-0.03em]">
-          {credits.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US")}
-        </span>
-        <span className="text-[12.5px] font-medium text-muted-foreground">MC</span>
-      </p>
-      <div className="mt-4 flex gap-2">
-        <PrimaryButton onClick={() => navigate("/pricing")}>{copy("Top up")}</PrimaryButton>
-        <GhostButton onClick={() => navigate("/settings/referrals")}>
-          {copy("Earn free MC")}
-        </GhostButton>
-      </div>
-    </Card>
-  );
-
-  const progressCard = (
-    <ReferralProgressBar
-      referrals={milestone.referrals}
-    />
-  );
-
-  const planCard = (
-    <Card className="divide-y divide-border">
-      <Row
-        label={copy("Status")}
-        hint={
-          isActive
-            ? priceLabel
-              ? `${copy(String(sub?.status))} · ${priceLabel}`
-              : copy(String(sub?.status))
-            : copy("No active subscription")
-        }
-      />
-      {isActive && sub?.current_period_end && (
-        <Row label={copy("Next renewal")} hint={fmtDate(sub.current_period_end, lang)} />
-      )}
-    </Card>
-  );
-
-  const manageCard = (
-    <Card className="divide-y divide-border">
-      <Row
-        label={isActive ? copy("Change plan") : copy("Upgrade plan")}
-        hint={copy("View pricing and switch plans")}
-        onClick={() => navigate("/pricing")}
-      />
-      <Row
-        label={copy("Referrals")}
-        hint={copy("Invite friends and unlock bonuses")}
-        onClick={() => navigate("/settings/referrals")}
-      />
-      {isActive && !cancelOpen && (
-        <Row
-          danger
-          label={copy("Cancel subscription")}
-          hint={copy("We'll ask a quick question")}
-          onClick={() => {
-            setStep("offer");
-            setCancelOpen(true);
-          }}
-        />
-      )}
-    </Card>
-  );
-
-  const saveOffer = (
-    <Card className="px-4 py-4">
-      <p className="text-[15px] font-semibold text-foreground">{SAVE_OFFER.titleEn}</p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{SAVE_OFFER.bodyEn}</p>
-
-      {halfPrice != null && monthlyPrice != null && (
-        <div className="mt-4 rounded-[14px] border border-border px-4 py-3" dir="ltr">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[24px] font-semibold text-foreground">
-              {halfPrice} {sub?.currency || "EGP"}
-            </span>
-            <span className="text-[13px] text-muted-foreground line-through">
-              {monthlyPrice} {sub?.currency || "EGP"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 flex gap-2">
-        <PrimaryButton
-          disabled={submitting}
-          onClick={() =>
-            void sendSupportRequest(
-              "Retention offer — 50% for 2 months",
-              `Customer accepted the retention offer: ${SAVE_OFFER.discountPercent}% off for ${SAVE_OFFER.months} months on plan ${sub?.plan || plan}.`,
-              "Your discount request is in — we'll apply it within a few minutes.",
-            )
-          }
-        >
-          {submitting ? copy("Sending…") : SAVE_OFFER.discountCtaEn}
-        </PrimaryButton>
-        <GhostButton onClick={() => setStep("reason")}>{copy("No thanks, cancel")}</GhostButton>
-      </div>
-    </Card>
-  );
-
-  const cancelForm = (
-    <Card className="px-4 py-4">
-      <p className="text-[14px] font-semibold text-foreground">{copy("Why are you cancelling?")}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {REASONS.map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => setReason(r)}
-            className={`rounded-full border px-3.5 py-2 text-[12.5px] font-medium transition ${
-              reason === r
-                ? "border-foreground bg-foreground text-background"
-                : "border-border text-foreground hover:bg-foreground/[0.05]"
-            }`}
-          >
-            {copy(r)}
-          </button>
-        ))}
-      </div>
-
-      <label className="mt-4 block text-[12.5px] text-muted-foreground">
-        {copy("How can we improve?")}
-      </label>
-      <textarea
-        value={improvement}
-        onChange={(e) => setImprovement(e.target.value)}
-        rows={3}
-        className="mt-2 w-full resize-y rounded-[14px] border border-border bg-background px-3.5 py-3 text-[13.5px] text-foreground outline-none transition focus:border-foreground/40"
-      />
-
-      <div className="mt-4 flex gap-2">
-        <GhostButton onClick={() => setCancelOpen(false)}>{copy("Keep plan")}</GhostButton>
-        <PrimaryButton onClick={submitCancel} disabled={submitting}>
-          {submitting ? copy("Sending…") : copy("Confirm cancel")}
-        </PrimaryButton>
-      </div>
-    </Card>
-  );
-
-  const cancelFlow = SAVE_OFFER.enabled && step === "offer" ? saveOffer : cancelForm;
-
-  const fmtN = (n: number) => n.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US");
-  const Head = ({ title, action }: { title: string; action?: React.ReactNode }) => (
-    <div className="flex items-center justify-between border-b border-border pb-2.5">
-      <h2 className="text-[16px] font-medium text-foreground">{title}</h2>
-      {action}
-    </div>
-  );
-  const Line = ({ label, value, badge }: { label: string; value: React.ReactNode; badge?: string }) => (
-    <div className="flex items-center justify-between py-1.5 text-[13.5px]">
-      <span className="flex items-center gap-1.5 text-foreground/80">
-        {label}
-        {badge && (
-          <span className="rounded-[4px] bg-foreground px-1 text-[9.5px] font-semibold leading-[14px] text-background">
-            {badge}
-          </span>
-        )}
-      </span>
-      <span className="text-foreground/70" dir="ltr">{value}</span>
-    </div>
-  );
-  const LinkBtn = ({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full items-center justify-between rounded-[10px] border border-border bg-muted/50 px-3.5 py-3 text-[13.5px] font-medium transition active:scale-[0.99] ${danger ? "text-destructive" : "text-foreground"}`}
-    >
-      {label}
-      <span aria-hidden className="text-muted-foreground">↗</span>
-    </button>
-  );
-  const goal = 5;
-  const refs = Math.min(milestone.referrals ?? 0, goal);
-
-  const sections = (
-    <div className="flex flex-col gap-6">
-      <section>
-        <Head
-          title={copy("Available credits")}
-          action={
-            <button
-              type="button"
-              onClick={() => navigate("/pricing")}
-              className="rounded-full bg-foreground px-3.5 py-1.5 text-[12.5px] font-medium text-background active:scale-95"
-            >
-              {copy("Add credits")}
-            </button>
-          }
-        />
-        <div className="pt-2">
-          <Line label={copy("Plan")} value={copy(sub?.plan || plan)} badge={isActive ? "Pro" : undefined} />
-          <Line label={copy("Status")} value={isActive ? copy(String(sub?.status)) : copy("No active subscription")} />
-          {isActive && sub?.current_period_end && (
-            <Line label={copy("Next renewal")} value={fmtDate(sub.current_period_end, lang)} />
-          )}
-          <Line label={copy("Total available credits")} value={`${fmtN(credits)} MC`} />
-        </div>
-      </section>
-
-      <section>
-        <Head title={copy("Referrals")} />
-        <div className="pt-2">
-          <div className="flex items-center justify-between py-1.5 text-[13.5px]">
-            <span className="text-foreground/80">{copy("Free Pro progress")}</span>
-            <span className="flex items-center gap-2 text-foreground/70" dir="ltr">
-              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                <span className="block h-full bg-foreground" style={{ width: `${(refs / goal) * 100}%` }} />
-              </span>
-              {refs} / {goal}
-            </span>
-          </div>
-          <div className="mt-2">
-            <LinkBtn label={copy("Invite friends")} onClick={() => navigate("/settings/referrals")} />
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <Head title={copy("Plan settings")} />
-        <div className="flex flex-col gap-2 pt-3">
-          <LinkBtn label={isActive ? copy("Change plan") : copy("Upgrade plan")} onClick={() => navigate("/pricing")} />
-          {isActive && !cancelOpen && (
-            <LinkBtn danger label={copy("Cancel subscription")} onClick={() => { setStep("offer"); setCancelOpen(true); }} />
-          )}
-        </div>
-      </section>
-
-      {isActive && cancelOpen && (
-        <section>
-          <Head title={step === "offer" ? copy("Wait — an offer for you") : copy("Before you go")} />
-          <div className="pt-3">{cancelFlow}</div>
-        </section>
-      )}
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <div className="min-h-[100dvh] bg-background text-foreground">
-        <header
-          className="sticky top-0 z-10 flex items-center gap-2 bg-background px-4 pb-3"
-          style={{ paddingTop: "max(env(safe-area-inset-top), 14px)" }}
-        >
-          <button
-            type="button"
-            aria-label={copy("Back")}
-            onClick={() => navigate("/settings")}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition active:scale-95"
-          >
-            <span aria-hidden className="text-[18px] leading-none rtl:rotate-180">
-              ‹
-            </span>
-          </button>
-          <h1 className="text-[17px] font-semibold tracking-[-0.01em]">{copy("Subscription")}</h1>
-        </header>
-        <main className="mx-auto w-full max-w-[520px] px-4 pb-16 pt-2">{sections}</main>
-      </div>
-    );
-  }
+    : `${credits.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US")} MC`;
 
   return (
-    <SubShell
-      title={copy("Subscription")}
-      subtitle={copy("Manage your plan and message credits.")}
-      backTo="/settings"
-    >
-      {sections}
-    </SubShell>
+    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
+      {/* Top bar: back + help */}
+      <header
+        className="flex items-center justify-between px-4 pb-2"
+        style={{ paddingTop: "max(env(safe-area-inset-top), 14px)" }}
+      >
+        <button
+          type="button"
+          aria-label={copy("Back")}
+          onClick={() => navigate("/settings")}
+          className="flex h-10 w-10 items-center justify-center rounded-full transition active:opacity-60"
+        >
+          <ChevronLeft className="h-6 w-6 text-foreground rtl:rotate-180" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          aria-label={copy("Help")}
+          onClick={() => navigate("/support")}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition active:opacity-60"
+        >
+          <HelpCircle className="h-5 w-5 text-foreground" strokeWidth={1.8} />
+        </button>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-[520px] flex-1 flex-col px-5">
+        <h1 className="mt-2 text-[30px] font-bold tracking-[-0.02em] text-foreground">
+          {copy("Billing")}
+        </h1>
+
+        {/* Statement rows */}
+        <div className="mt-4">
+          <IconRow
+            icon={CalendarDays}
+            label={copy("Next renewal")}
+            value={isActive && sub?.current_period_end ? fmtDate(sub.current_period_end, lang) : copy("No active subscription")}
+          />
+          <IconRow icon={Wallet} label={copy("Amount")} value={amountLabel} />
+          <IconRow
+            icon={RefreshCcw}
+            label={copy("Auto pay")}
+            value={isActive ? copy("On") : copy("Off")}
+            onClick={() => navigate("/pricing")}
+          />
+        </div>
+
+        {/* Past statements */}
+        <h2 className="mt-10 text-[20px] font-bold tracking-[-0.01em] text-foreground">
+          {copy("Past statements")}
+        </h2>
+        <div className="mt-2">
+          {sub?.created_at ? (
+            <IconRow
+              icon={FileText}
+              label={fmtDate(sub.created_at, lang)}
+              value={sub.amount_cents ? `${(sub.amount_cents / 100).toFixed(0)} ${sub.currency || "EGP"}` : copy("Free")}
+              onClick={() => toast.info(copy("Statement details coming soon"))}
+            />
+          ) : (
+            <p className="py-4 text-[13.5px] text-muted-foreground">{copy("No statements yet")}</p>
+          )}
+        </div>
+
+        {/* View bill */}
+        <div className="mt-auto pb-10 pt-10">
+          <button
+            type="button"
+            onClick={() => navigate("/pricing")}
+            className="flex h-[54px] w-full items-center justify-center rounded-full bg-muted text-[16px] font-semibold text-foreground transition active:scale-[0.99] active:opacity-80"
+          >
+            {copy("View bill")}
+          </button>
+        </div>
+      </main>
+    </div>
   );
 };
 
