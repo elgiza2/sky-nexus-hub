@@ -42,7 +42,7 @@ const REASONS = [
 /* ── Small presentational primitives (theme tokens only) ─────────── */
 
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`rounded-[18px] border border-border bg-background ${className}`}>{children}</div>
+  <div className={`rounded-[14px] border border-border bg-background ${className}`}>{children}</div>
 );
 
 const Row = ({
@@ -61,7 +61,7 @@ const Row = ({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-start transition ${
+      className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-start transition ${
         onClick ? "hover:bg-foreground/[0.04] active:scale-[0.995]" : ""
       }`}
     >
@@ -90,7 +90,7 @@ const PrimaryButton = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="inline-flex h-[48px] flex-1 items-center justify-center rounded-[14px] bg-foreground px-5 text-[14.5px] font-semibold text-background transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+    className="inline-flex h-[40px] flex-1 items-center justify-center rounded-[12px] bg-foreground px-4 text-[13.5px] font-semibold text-background transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
   >
     {children}
   </button>
@@ -109,7 +109,7 @@ const GhostButton = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="inline-flex h-[48px] flex-1 items-center justify-center rounded-[14px] border border-border bg-background px-5 text-[14.5px] font-medium text-foreground transition hover:bg-foreground/[0.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+    className="inline-flex h-[40px] flex-1 items-center justify-center rounded-[12px] border border-border bg-background px-4 text-[13.5px] font-medium text-foreground transition hover:bg-foreground/[0.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
   >
     {children}
   </button>
@@ -203,25 +203,17 @@ const BillingPage = () => {
   /* ── Sections ─────────────────────────────────────────────────── */
 
   const creditsCard = (
-    <Card className="px-5 py-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            {copy("Message credits")}
-          </p>
-          <p className="mt-2 flex items-baseline gap-2 text-foreground" dir="ltr">
-            <span className="text-[40px] font-semibold leading-none tracking-[-0.03em]">
-              {credits.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US")}
-            </span>
-            <span className="text-[14px] font-medium text-muted-foreground">MC</span>
-          </p>
-          <p className="mt-2 text-[12.5px] text-muted-foreground">{copy("Available on your account")}</p>
-        </div>
-        <span className="shrink-0 rounded-full border border-border px-3 py-1 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-foreground">
-          {plan}
+    <Card className="px-4 py-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {copy("Message credits")}
+      </p>
+      <p className="mt-1.5 flex items-baseline gap-1.5 text-foreground" dir="ltr">
+        <span className="text-[28px] font-semibold leading-none tracking-[-0.03em]">
+          {credits.toLocaleString(lang === "ar-eg" ? "ar-EG" : "en-US")}
         </span>
-      </div>
-      <div className="mt-5 flex gap-2">
+        <span className="text-[12.5px] font-medium text-muted-foreground">MC</span>
+      </p>
+      <div className="mt-4 flex gap-2">
         <PrimaryButton onClick={() => navigate("/pricing")}>{copy("Top up")}</PrimaryButton>
         <GhostButton onClick={() => navigate("/settings/referrals")}>
           {copy("Earn free MC")}
@@ -281,7 +273,7 @@ const BillingPage = () => {
   );
 
   const saveOffer = (
-    <Card className="px-5 py-5">
+    <Card className="px-4 py-4">
       <p className="text-[15px] font-semibold text-foreground">{SAVE_OFFER.titleEn}</p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{SAVE_OFFER.bodyEn}</p>
 
@@ -317,7 +309,7 @@ const BillingPage = () => {
   );
 
   const cancelForm = (
-    <Card className="px-5 py-5">
+    <Card className="px-4 py-4">
       <p className="text-[14px] font-semibold text-foreground">{copy("Why are you cancelling?")}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {REASONS.map((r) => (
@@ -358,7 +350,7 @@ const BillingPage = () => {
   const cancelFlow = SAVE_OFFER.enabled && step === "offer" ? saveOffer : cancelForm;
 
   const sections = (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {creditsCard}
       {progressCard}
 
