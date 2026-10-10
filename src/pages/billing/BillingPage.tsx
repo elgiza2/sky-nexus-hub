@@ -42,7 +42,7 @@ const REASONS = [
 /* ── Small presentational primitives (theme tokens only) ─────────── */
 
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`rounded-[18px] border border-border bg-background ${className}`}>{children}</div>
+  <div className={`rounded-[14px] border border-border bg-background ${className}`}>{children}</div>
 );
 
 const Row = ({
@@ -61,7 +61,7 @@ const Row = ({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-start transition ${
+      className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-start transition ${
         onClick ? "hover:bg-foreground/[0.04] active:scale-[0.995]" : ""
       }`}
     >
@@ -90,7 +90,7 @@ const PrimaryButton = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="inline-flex h-[48px] flex-1 items-center justify-center rounded-[14px] bg-foreground px-5 text-[14.5px] font-semibold text-background transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+    className="inline-flex h-[40px] flex-1 items-center justify-center rounded-[12px] bg-foreground px-4 text-[13.5px] font-semibold text-background transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
   >
     {children}
   </button>
@@ -109,7 +109,7 @@ const GhostButton = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="inline-flex h-[48px] flex-1 items-center justify-center rounded-[14px] border border-border bg-background px-5 text-[14.5px] font-medium text-foreground transition hover:bg-foreground/[0.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+    className="inline-flex h-[40px] flex-1 items-center justify-center rounded-[12px] border border-border bg-background px-4 text-[13.5px] font-medium text-foreground transition hover:bg-foreground/[0.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
   >
     {children}
   </button>
