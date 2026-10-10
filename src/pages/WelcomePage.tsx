@@ -2,17 +2,26 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUserLang } from "@/lib/authI18n";
-import artSky from "@/assets/Explore_Desktop_01-1.avif.asset.json";
-import artStorm from "@/assets/Explore_Desktop_03-1.avif.asset.json";
-import artEmber from "@/assets/desktop-nano-banana-pro-inspiration-gallery-img-6.avif.asset.json";
+import artSky from "@/assets/welcome-1-restored.webp";
+import artStorm from "@/assets/welcome-2-restored.webp";
+import artEmber from "@/assets/welcome-3-restored.webp";
 
 export const WELCOME_SEEN_KEY = "megsy_welcome_seen_v1";
 
 const SLIDES = {
   en: [
-    { t: "One calm place\nfor all your work.", d: "Chat, write and think with one AI agent that truly understands you." },
-    { t: "Create anything\nyou can imagine.", d: "Images, slides and websites — made in seconds from a single message." },
-    { t: "Your agent,\nalways by your side.", d: "Megsy Computer handles the busywork so you can focus on what matters." },
+    {
+      t: "One calm place\nfor all your work.",
+      d: "Chat, write and think with one AI agent that truly understands you.",
+    },
+    {
+      t: "Create anything\nyou can imagine.",
+      d: "Images, slides and websites — made in seconds from a single message.",
+    },
+    {
+      t: "Your agent,\nalways by your side.",
+      d: "Megsy Computer handles the busywork so you can focus on what matters.",
+    },
   ],
   "ar-eg": [
     { t: "مكان هادي واحد\nلكل شغلك.", d: "اتكلم واكتب وفكّر مع وكيل ذكي واحد فاهمك بجد." },
@@ -20,9 +29,8 @@ const SLIDES = {
     { t: "وكيلك\nدايمًا جنبك.", d: "ميغسي كمبيوتر بيخلّص الشغل المتعب وانت ركّز في المهم." },
   ],
 };
-// Every visit rotates the pool: a random image starts, then the rest follow in order.
-const POOL = [artSky.url, artStorm.url, artEmber.url];
-const IMAGES = POOL.map((_, k) => POOL[(Math.floor(Math.random() * POOL.length) + k) % POOL.length]);
+// Keep each restored image paired with its matching slide copy on every visit.
+const IMAGES = [artSky, artStorm, artEmber];
 
 export default function WelcomePage() {
   const lang = useUserLang();
@@ -39,7 +47,11 @@ export default function WelcomePage() {
   }, []);
 
   const finish = async () => {
-    try { localStorage.setItem(WELCOME_SEEN_KEY, "1"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(WELCOME_SEEN_KEY, "1");
+    } catch {
+      /* ignore */
+    }
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase.auth.getSession();
