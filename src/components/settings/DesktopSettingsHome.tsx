@@ -85,7 +85,7 @@ export function DesktopSettingsHome() {
       title: tx("Account"),
       rows: [
         { icon: AccountIcon, label: tx("Profile"), path: "/settings/profile" },
-        { icon: BillingIcon, label: tx("Plan & billing"), path: "/settings/billing" },
+        { icon: BillingIcon, label: tx("Plan & billing"), path: "/usage" },
       ],
     },
     {
@@ -150,7 +150,7 @@ export function DesktopSettingsHome() {
       {/* Upgrade CTA */}
       {isFree && (
         <Button variant="ghost"
-          onClick={() => go("/settings/billing")}
+          onClick={() => go("/usage")}
           className="group relative w-full rounded-2xl px-5 py-4 flex items-center gap-3.5 text-left text-foreground overflow-hidden border border-border bg-card hover:bg-muted transition-colors"
         >
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-foreground/15 border border-foreground/25 backdrop-blur">

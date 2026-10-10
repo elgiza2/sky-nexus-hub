@@ -128,7 +128,7 @@ export default function CommandPalette() {
     { id: "s-cust", label: "Composer", icon: Palette, run: go("/settings/customization") },
     { id: "s-ai", label: "AI Personalization", icon: Sparkles, run: go("/settings/ai-personalization") },
     { id: "s-mcp", label: "MCP Servers", icon: Plug, keywords: "tools integrations", run: go("/settings/mcp") },
-    { id: "s-bill", label: "Billing", icon: CreditCard, run: go("/settings/billing") },
+    { id: "s-bill", label: "Billing", icon: CreditCard, run: go("/usage") },
     { id: "s-sec", label: "Security", icon: Shield, run: go("/settings/security") },
     { id: "s-help", label: "Help", icon: FileText, run: go("/settings/help") },
   ];

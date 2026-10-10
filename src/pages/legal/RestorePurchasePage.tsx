@@ -96,7 +96,7 @@ export default function RestorePurchasePage() {
                   available on this device.
                 </p>
                 <Link
-                  to="/settings/billing"
+                  to="/usage"
                   className="inline-flex h-10 items-center rounded-full border border-border px-5 text-sm font-semibold"
                 >
                   Manage billing

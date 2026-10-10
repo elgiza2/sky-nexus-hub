@@ -228,7 +228,7 @@ const BillingSuccessPage = () => {
                     : t("Continue to dashboard", "الانتقال للوحة التحكم")}
                 </button>
                 <button
-                  onClick={() => navigate("/settings/billing")}
+                  onClick={() => navigate("/usage")}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 text-sm font-medium text-black/65 transition hover:bg-black/[0.03]"
                 >
                   <ExternalLink className="h-4 w-4" />
@@ -246,7 +246,7 @@ const BillingSuccessPage = () => {
                   {t("Refresh status", "تحديث الحالة")}
                 </button>
                 <button
-                  onClick={() => navigate("/settings/billing")}
+                  onClick={() => navigate("/usage")}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 text-sm font-medium text-black/65"
                 >
                   {t("View billing", "عرض الفوترة")}
