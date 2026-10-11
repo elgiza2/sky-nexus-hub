@@ -50,13 +50,15 @@ const ProfileGlassShell = ({ title, subtitle, onBack, trailing, children }: Shel
 
 export const GlassSection = ({
   title,
+  className = "",
   children,
 }: {
   title?: string;
   index?: string;
+  className?: string;
   children: ReactNode;
 }) => (
-  <section className="gx-section">
+  <section className={`gx-section ${className}`}>
     {title && <h2 className="gx-section-title">{title}</h2>}
     {children}
   </section>

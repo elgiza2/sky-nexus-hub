@@ -3,8 +3,9 @@
  * the icons actually on screen are downloaded. Agents with no published logo —
  * starting with Megsy itself — get the robot. */
 import { lazy, Suspense, useMemo, type ComponentType } from "react";
-import { Bot, Clapperboard, Sparkles } from "lucide-react";
-import type { AgentInfo } from "@/lib/agentsky/client";
+import { Clapperboard, Sparkles } from "lucide-react";
+import type { AgentColor, AgentInfo } from "@/lib/agentsky/client";
+import { AgentOrb } from "./AgentOrb";
 
 type IconModule = { default: ComponentType<any> & { Color?: ComponentType<any> } };
 
@@ -150,8 +151,9 @@ function lazyBrand(key: string) {
 
 /** Megsy's own mark. It belongs to the main agent alone, so every other
  *  logo-less agent gets its own generic mark instead of borrowing it. */
-export function RobotMark({ size = 21, className }: { size?: number; className?: string }) {
-  return <Bot className={className} width={size} height={size} strokeWidth={1.7} aria-hidden />;
+/** Megsy's own mark: the same orb creature the chat page greets you with. */
+export function MegsyMark({ color = "aurora", size = 28, className }: { color?: AgentColor; size?: number; className?: string }) {
+  return <AgentOrb color={color} size={size} state="idle" className={className} />;
 }
 
 const GenericMark = ({ kind, size, className }: { kind: "media" | "agent"; size: number; className?: string }) =>
@@ -168,7 +170,7 @@ export function AgentIcon({ agent, size = 23, className }: { agent: AgentInfo; s
   );
   const kind = agent.mediaOnly ? "media" : "agent";
   const fallback = agent.isDefault ? (
-    <RobotMark size={size - 2} className={className} />
+    <MegsyMark color={agent.color} size={size + 5} className={className} />
   ) : (
     <GenericMark kind={kind} size={size - 3} className={className} />
   );

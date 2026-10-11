@@ -1,5 +1,7 @@
-/** @doc Referral earnings — verified invites and the credits they earned (20 each). */
-import { useUserLang } from "@/lib/authI18n";
+/** @doc Referral earnings — verified invites and the credits they earned (20 each).
+ *  Rendered with the shared glass vocabulary so it matches every settings surface. */
+import { translateExactText, useUserLang } from "@/lib/authI18n";
+import { GlassCard } from "@/components/profile/ProfileGlassShell";
 
 export const CREDITS_PER_REFERRAL = 20;
 
@@ -11,23 +13,26 @@ export default function ReferralProgressBar({
   className?: string;
 }) {
   const lang = useUserLang();
-  const isAr = String(lang).startsWith("ar");
+  const copy = (t: string) => translateExactText(t, lang);
   const earned = referrals * CREDITS_PER_REFERRAL;
+
   return (
-    <section className={`grid grid-cols-2 gap-2 ${className}`}>
-      <div className="rounded-[14px] border border-border bg-background px-4 py-3">
-        <p className="text-[11.5px] text-muted-foreground">{isAr ? "الإحالات" : "Referrals"}</p>
-        <p className="mt-0.5 text-[18px] font-semibold tabular-nums text-foreground" dir="ltr">{referrals}</p>
+    <GlassCard className={`gx-card-pad ${className}`}>
+      <div className="gx-fact">
+        <span className="gx-fact-label">{copy("Referrals")}</span>
+        <span className="gx-fact-value" dir="ltr">
+          {referrals}
+        </span>
       </div>
-      <div className="rounded-[14px] border border-border bg-background px-4 py-3">
-        <p className="text-[11.5px] text-muted-foreground">{isAr ? "الكريدت اللي كسبته" : "Credits earned"}</p>
-        <p className="mt-0.5 text-[18px] font-semibold tabular-nums text-foreground" dir="ltr">+{earned}</p>
+      <div className="gx-fact">
+        <span className="gx-fact-label">{copy("Credits earned")}</span>
+        <span className="gx-fact-value" dir="ltr">
+          +{earned}
+        </span>
       </div>
-      <p className="col-span-2 px-1 text-[11.5px] leading-relaxed text-muted-foreground">
-        {isAr
-          ? "بيتحسب الصاحب بعد أول استخدام حقيقي ليه (صورة أو فيديو أو مهمة)."
-          : "A friend counts after their first real use (an image, a video or an agent task)."}
+      <p className="gx-field-hint">
+        {copy("A friend counts after their first real use (an image, a video or an agent task).")}
       </p>
-    </section>
+    </GlassCard>
   );
 }

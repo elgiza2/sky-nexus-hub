@@ -101,6 +101,9 @@ export function AgentsPage() {
     const live = sessions.filter((s) => s.agentId === a.id && s.status === "running").length;
     const locked = !a.isDefault && !canUseAgent(tier, !!a.mediaOnly, now);
     const brand = agentBrandKey(a);
+    // Brand logos and Megsy's own orb bring their own colours — only the
+    // generic marks sit on the agent's tint.
+    const plainTile = !!brand || a.isDefault;
     const hint = a.isDefault
       ? "Your everyday partner"
       : a.mediaOnly
@@ -111,7 +114,7 @@ export function AgentsPage() {
     return (
       <li key={a.id} className="gx-row agx-row" style={{ ["--agx" as any]: TINT[a.color] }}>
         <button type="button" className="agx-hit" onClick={open} aria-label={`Open ${a.name}`}>
-          <span className={`agx-tile${brand ? " agx-tile-brand" : ""}`}>
+          <span className={`agx-tile${plainTile ? " agx-tile-brand" : ""}`}>
             <AgentIcon agent={a} />
           </span>
           <span className="gx-row-body">

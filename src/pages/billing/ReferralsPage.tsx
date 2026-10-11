@@ -6,14 +6,12 @@ import {
   createContext,
   useContext,
 } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
+import { ChevronLeft, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { translateExactText, useUserLang } from "@/lib/authI18n";
 
 import { supabase } from "@/integrations/supabase/client";
-import AppSidebar from "@/components/layout/AppSidebar";
-import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
-import MobileSidebarButton from "@/components/shared/MobileSidebarButton";
 import { safeCopyText } from "@/lib/safeClipboard";
 import {
   useReferralMilestone,
@@ -21,19 +19,6 @@ import {
 } from "@/hooks/useReferralMilestone";
 
 
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState<boolean>(
-    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
-  );
-  useEffect(() => {
-    const mql = window.matchMedia("(min-width: 1024px)");
-    const on = () => setIsDesktop(mql.matches);
-    mql.addEventListener("change", on);
-    on();
-    return () => mql.removeEventListener("change", on);
-  }, []);
-  return isDesktop;
-}
 
 export const WHATSAPP_PHONE = "201098821812";
 export const PROMOTER_MESSAGE =
@@ -252,8 +237,6 @@ export const useReferrals = () => useContext(ReferralsCtx) ?? REFERRALS_FALLBACK
 
 const ReferralsPage = () => {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const onRewards = pathname.endsWith("/rewards");
   const lang = useUserLang();
   const milestone = useReferralMilestone();
   const [userId, setUserId] = useState<string | null>(null);
@@ -264,10 +247,6 @@ const ReferralsPage = () => {
   const [tasks, setTasks] = useState<RewardTask[]>([]);
   const [userTasks, setUserTasks] = useState<UserTask[]>([]);
   const [justCopied, setJustCopied] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isDesktop = useIsDesktop();
-  const [sidebarCollapsed] = useSidebarCollapsed();
-  const sidebarWidth = sidebarCollapsed ? 60 : 320;
 
   const loadData = useCallback(async () => {
     try {
@@ -427,67 +406,47 @@ const ReferralsPage = () => {
     }
   };
 
-  const actionBar = (
-    <div className="flex flex-col gap-2.5 pb-[max(env(safe-area-inset-bottom),14px)]">
-          <button
-            type="button"
-            onClick={shareLink}
-            disabled={!link}
-            className="inline-flex h-[52px] w-full items-center justify-center rounded-[16px] bg-foreground px-5 text-[15px] font-semibold text-background transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {translateExactText("Invite friends", lang)}
-          </button>
-    </div>
-  );
+  const back = () => (window.history.length > 1 ? navigate(-1) : navigate("/chat"));
 
-  const content = (
-    <div className={`mx-auto flex min-h-[100dvh] w-full max-w-[620px] flex-col px-5 ${onRewards ? "pb-10" : "pb-0"} ${onRewards ? "pt-3" : "pt-[calc(max(env(safe-area-inset-top),0.25rem)+52px)]"} md:pt-7`}>
-      {onRewards || isDesktop ? null : (
-        <div
-          className="fixed inset-x-0 z-30 flex min-h-[44px] items-center bg-background px-3 py-1.5 pt-[max(env(safe-area-inset-top),0.25rem)]"
-          style={{ top: "var(--promo-banner-h, 0px)" }}
-        >
-          <MobileSidebarButton onClick={() => setSidebarOpen(true)} />
-        </div>
-      )}
-
-      <div className="flex flex-1 flex-col">
-        <Outlet />
-        <div className="flex-1" />
-        {onRewards ? null : actionBar}
-      </div>
-    </div>
-  );
   return (
     <ReferralsCtx.Provider value={ctx}>
-      {isDesktop ? (
-        <div className="referrals-desktop-shell flex h-[100dvh] w-full overflow-hidden bg-background text-foreground">
-          <aside
-            style={{ width: 320, minWidth: 320, flexBasis: 320 }}
-            className="relative z-40 hidden shrink-0 overflow-hidden transition-[width,min-width,flex-basis] duration-300 md:flex"
-          >
-            <AppSidebar open inline forceExpanded onClose={() => {}} onNewChat={() => navigate("/")} />
-          </aside>
-          <main className="relative min-w-0 flex-1 overflow-y-auto bg-background">
-            <div className="referrals-desktop-content">{content}</div>
-          </main>
-        </div>
-      ) : (
-        <div className="min-h-[100dvh] bg-background text-foreground">
-          {/* Same overlay sidebar the chat page uses on mobile. */}
-          <div className="md:hidden">
-            <AppSidebar
-              open={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-              onNewChat={() => navigate("/")}
-              currentMode="chat"
-            />
+      <div className="gx-root" dir={lang === "ar-eg" ? "rtl" : "ltr"}>
+        <div className="gx-screen">
+          <header className="gx-top">
+            <button type="button" onClick={back} aria-label="Back" className="gx-hbtn">
+              <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
+            </button>
+            <div className="gx-top-trail">
+              <button
+                type="button"
+                onClick={shareLink}
+                disabled={!link}
+                aria-label="Share invite link"
+                className="gx-hbtn gx-hbtn-sm"
+              >
+                <Share2 className="gx-hicon" strokeWidth={2} />
+              </button>
+            </div>
+          </header>
+
+          <h1 className="gx-title">{translateExactText("Invite friends", lang)}</h1>
+          <p className="gx-sub">
+            {translateExactText(
+              "Earn 20 credits for every friend who joins with your link and makes their first real use. Each required step adds 10 more.",
+              lang,
+            )}
+          </p>
+
+          <div className="gx-content">
+            <Outlet />
+            <button type="button" onClick={shareLink} disabled={!link} className="gx-pill gx-pill-wide">
+              <Share2 size={17} />
+              {translateExactText("Invite friends", lang)}
+            </button>
           </div>
-          {content}
+          <div className="gx-spacer" />
         </div>
-      )}
-
-
+      </div>
     </ReferralsCtx.Provider>
   );
 };
