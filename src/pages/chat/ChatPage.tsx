@@ -3099,7 +3099,18 @@ const ChatPage = () => {
             scrollContainerRef={messagesContainerRef}
 
             setResearchDepth={setResearchDepth}
+            tab={mobileChatTab}
+            onTabChange={setMobileChatTab}
           />
+
+          {/* Agents half: same page, the next message goes to the picked agent */}
+          {mobileChatTab === "agents" && (
+            <ChatAgentsPanel
+              activeAgentId={urlAgentId}
+              onPick={pickAgentFromPanel}
+              onManage={() => navigate("/agents")}
+            />
+          )}
 
           {/* Desktop/mobile combined header: title dropdown, Unlock Pro, options */}
           <DesktopChatHeader
