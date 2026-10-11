@@ -8,8 +8,11 @@
 **1 MC = $0.01 of platform value.** Every action is priced in whole MC, and every price is
 derived from provider cost + a target gross margin, so the unit stops being an abstract number.
 
-Published anchor line for the pricing page: *"1 credit ≈ one premium image or ¼ of a 5-second
-video. Chat is always free."*
+Published anchor line for the pricing page: *"1 credit ≈ one chat message, half a standard image,
+or 1/20 of a 5-second video. Nothing on Megsy is unlimited."*
+
+**Decision (Oct 2026): nothing is free — chat included.** Chat is metered from day one, so the
+credit is the only way to use the product and the balance moves on every single action.
 
 ## 2. One table, one source of truth
 
@@ -31,7 +34,8 @@ Every edge function reads this table through one RPC: `spend(action_key, operati
 
 | Action | Unit | MC | Provider cost (est.) | Margin |
 |---|---|---|---|---|
-| Chat turn (text) | per turn | **0** (fair use, 200/day soft cap) | ~$0.002–0.02 | acquisition |
+| Chat turn — standard model | per turn | **1** | ~$0.002–0.008 | ~50% |
+| Chat turn — frontier/reasoning model | per turn | **3** | ~$0.01–0.02 | ~45% |
 | Web search inside a turn | per turn | 0 | ~$0.005 | bundled |
 | Image — standard | per image | **2** | $0.02–0.04 | ~40% |
 | Image — premium / 4K | per image | **5** | $0.05–0.09 | ~40% |
@@ -51,8 +55,9 @@ Every edge function reads this table through one RPC: `spend(action_key, operati
 
 Design rules baked in:
 
-1. **Chat is free, forever, on every plan.** It is the acquisition engine and the reason people
-   stay. Everything with a real provider cost is metered.
+1. **Every action is metered — chat included.** There is no unlimited surface anywhere in the
+   product. A message costs credits exactly like an image or a clip, and the balance visibly
+   moves with every turn, so the unit is anchored to the thing users do most.
 2. **One asset = one price.** No action may have two prices; the model catalogue references an
    `action_key`, it never carries its own price.
 3. **Charge on success, refund automatically on failure** — keep `charge_credits_once` +
@@ -75,8 +80,8 @@ Recommendation — three options, with the recommended one in bold:
 Why **1,500 MC on Pro**:
 
 - $15 ÷ 1,500 = **$0.010 per credit**, matching the published anchor exactly.
-- It buys a meaningful, easy-to-say mix: **75 short videos**, or **750 images**, or **187 deep
-  research runs**, or **250 premium decks** — or any combination.
+- It buys a meaningful, easy-to-say mix: **1,500 chat messages**, or **750 images**, or **75 short
+  videos**, or **187 deep research runs** — or any combination.
 - At a realistic 40–50% utilisation the blended provider cost lands near $6–7 on a $15 plan,
   keeping gross margin above 55%.
 - 1,000 → 1,500 is a 50% headline increase that costs us nothing until the credits are actually
