@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "./CardPreview";
-import PaymentMethodsShowcase from "./PaymentMethodsShowcase";
+import { BrandIcon } from "./PaymentMethodMark";
 import artCoat from "@/assets/orange-coat.png.asset.json";
 
 import {
@@ -16,7 +16,6 @@ import {
   type KashierOrder,
 } from "@/lib/payments/kashier";
 import { startDodoCheckout } from "@/lib/payments/dodo";
-import { PAYMENT_METHOD_COUNT, type PaymentMethod } from "@/lib/payments/paymentMethods";
 import type { PlanTier } from "@/data/pricingData";
 
 type Props = { open: boolean; tier: PlanTier; interval: "monthly" | "yearly"; onClose: () => void };
@@ -163,39 +162,29 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
     } else onClose();
   };
 
-  /**
-   * Picks a method from the full grid: in-app rails switch the active tile,
-   * everything else is handed to the Dodo Payments checkout.
-   */
-  const chooseMethod = async (picked: PaymentMethod) => {
+  /** Sends the customer to the Dodo Payments checkout for the extra methods. */
+  const startRedirect = async (methodId: string | null, label: string) => {
+    if (busy || walletWaiting || startingMethod) return;
+    setError(null);
     setMethodNote(null);
+    setStartingMethod(methodId ?? "more");
 
-    if (picked.rail === "internal") {
-      const tile = TILE_BY_METHOD_ID[picked.id];
-      if (tile) {
-        setError(null);
-        setMethod(tile);
-        return;
-      }
-      setMethodNote(
-        `${picked.label} is not switched on yet. Card, Apple Pay and mobile wallets work right now.`,
-      );
-      return;
-    }
-
-    setStartingMethod(picked.id);
-    const outcome = await startDodoCheckout({ tier, interval, methodId: picked.id });
+    const outcome = await startDodoCheckout({
+      tier,
+      interval,
+      methodId: methodId ?? undefined,
+    });
     setStartingMethod(null);
-    if (!outcome.ok) {
-      const { reason, message } = outcome;
-      setMethodNote(
-        reason === "not-configured"
-          ? `${picked.label} is being connected — it goes live shortly. Card, Apple Pay and mobile wallets work right now.`
-          : reason === "unauthenticated"
-            ? "Please sign in again to continue."
-            : message ?? "We couldn’t open that method. Please try another one.",
-      );
-    }
+    if (outcome.ok) return;
+
+    const { reason, message } = outcome;
+    setMethodNote(
+      reason === "not-configured"
+        ? `${label} is being connected — it goes live shortly. Card and Vodafone Cash work right now.`
+        : reason === "unauthenticated"
+          ? "Please sign in again to continue."
+          : message ?? "We couldn’t open the secure checkout. Please try again.",
+    );
   };
 
   const view = threeDsUrl ? "verify" : result === "success" ? "done" : stage;
@@ -265,16 +254,24 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
                     key={m.id}
                     type="button"
                     role="tab"
-                    aria-selected={method === m.id}
-                    data-selected={method === m.id}
-                    disabled={busy || walletWaiting}
+                    aria-selected={m.redirect === undefined && method === m.id}
+                    data-selected={m.redirect === undefined && method === m.id}
+                    disabled={busy || walletWaiting || startingMethod !== null}
                     onClick={() => {
+                      if (m.redirect !== undefined) {
+                        void startRedirect(m.redirect, m.label);
+                        return;
+                      }
                       setError(null);
                       setMethod(m.id);
                     }}
                     className="checkout-method"
                   >
-                    <TileLogo id={m.id} />
+                    {startingMethod === m.id ? (
+                      <Loader2 className="h-[22px] w-[22px] animate-spin" />
+                    ) : (
+                      <TileLogo id={m.id} />
+                    )}
                     <span>{m.label}</span>
                   </Button>
                 ))}
@@ -394,25 +391,14 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
                 )}
               </div>
 
-              <div className="mt-5 rounded-3xl border border-white/25 bg-background/85 p-4 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70">
-                  All payment methods ({PAYMENT_METHOD_COUNT})
-                </h2>
-
-                <div className="mt-3.5">
-                  <PaymentMethodsShowcase
-                    onSelect={chooseMethod}
-                    busyId={startingMethod}
-                    activeId={METHOD_ID_BY_TILE[method]}
-                  />
-                </div>
-
-                {methodNote && (
-                  <p role="status" className="mt-3 text-[12.5px] leading-relaxed text-foreground/60">
-                    {methodNote}
-                  </p>
-                )}
-              </div>
+              {methodNote && (
+                <p
+                  role="status"
+                  className="mt-4 text-center text-[12.5px] leading-relaxed text-foreground/75"
+                >
+                  {methodNote}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -497,27 +483,15 @@ function ApplePayPanel({
   );
 }
 
-type TileId = "visa" | "apple_pay" | "vodafone";
-const METHODS: Array<{ id: TileId; label: string }> = [
+type TileId = "visa" | "apple_pay" | "vodafone" | "google_pay" | "more";
+type Tile = { id: TileId; label: string; redirect?: string | null };
+const METHODS: Tile[] = [
   { id: "visa", label: "Card" },
   { id: "apple_pay", label: "Apple Pay" },
   { id: "vodafone", label: "Vodafone" },
+  { id: "google_pay", label: "Google Pay", redirect: "google_pay" },
+  { id: "more", label: "More", redirect: null },
 ];
-
-/** Which in-app tile a registry method opens. */
-const TILE_BY_METHOD_ID: Partial<Record<string, TileId>> = {
-  card: "visa",
-  meeza: "visa",
-  apple_pay: "apple_pay",
-  vodafone_cash: "vodafone",
-};
-
-/** Reverse map so the full grid can highlight the active method. */
-const METHOD_ID_BY_TILE: Record<TileId, string> = {
-  visa: "card",
-  apple_pay: "apple_pay",
-  vodafone: "vodafone_cash",
-};
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -543,6 +517,10 @@ function TileLogo({ id }: { id: TileId }) {
           <path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM11.5 3c.7-.9 1.2-2 1-3.2-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3.1 1.1.1 2.2-.6 2.9-1.4z" />
         </svg>
       );
+    case "google_pay":
+      return <BrandIcon slug="googlepay" className="h-[22px] w-[22px]" />;
+    case "more":
+      return <MoreHorizontal className="h-[22px] w-[22px]" strokeWidth={2} />;
     case "vodafone":
       return (
         <svg viewBox="0 0 24 24" className="h-[20px] w-[20px]">
