@@ -166,14 +166,37 @@ const ChatMessageItemImpl = ({
     msg.role === "assistant" &&
     (msg.mode === "images" || msg.mode === "video" || !!msg.mediaPlan || !!msg.videoJobId) &&
     !mediaDone;
+  const tailText = (value: string) => {
+    const t = value.replace(/\s+/g, " ").trim();
+    return t.length > 240 ? `…${t.slice(-240)}` : t;
+  };
+  // What the agent is thinking and doing right now — rendered live while it works.
+  const liveThought = (() => {
+    if (!isLastAssistant || !isThinking) return undefined;
+    const steps = msg.agentSkySteps ?? [];
+    for (let s = steps.length - 1; s >= 0; s -= 1) {
+      const step = steps[s];
+      if (step?.kind === "thought" && step.detail) return tailText(step.detail);
+    }
+    const last = steps[steps.length - 1];
+    if (last?.label) return tailText(last.label);
+    if (typeof searchStatus === "string" && searchStatus) return tailText(searchStatus);
+    if (Array.isArray(narrations)) {
+      const latest = narrations[narrations.length - 1];
+      if (typeof latest === "string" && latest) return tailText(latest);
+    }
+    return msg.reasoning ? tailText(msg.reasoning) : undefined;
+  })();
   const content = (
     <>
       {msg.role === "assistant" && msg.agentSkyState && <>
         <AgentPresence message={msg} />
         {!!msg.agentSkySteps?.length && <div className="px-3 md:px-12" data-agent-color={msg.agentSkyAgent?.color ?? "aurora"}><StepTimeline steps={msg.agentSkySteps} lang={/^[\u0600-\u06ff]/.test(msg.agentSkySteps[0]?.label ?? "") ? "ar" : "en"} /></div>}
       </>}
-      {msg.role === "assistant" && msg.agentSkyState && !msg.content ? null : showMediaSkeleton ? null : msg.role === "assistant" && msg.agentPending && !msg.computerTaskId && !msg.agentSkyState ? (
-        <AgentThinkingLine />
+      {msg.role === "assistant" && msg.agentSkyState && !msg.content ? (
+        liveThought ? <div className="px-3 md:px-12"><AgentThinkingLine text={liveThought} /></div> : null
+      ) : showMediaSkeleton ? null : msg.role === "assistant" && msg.agentPending && !msg.computerTaskId && !msg.agentSkyState ? (
+        <AgentThinkingLine text={liveThought} />
       ) : msg.role === "assistant" && msg.longRunId ? (
         <div className="flex flex-col gap-2">
           {typeof msg.content === "string" && msg.content.trim() ? (
@@ -208,12 +231,12 @@ const ChatMessageItemImpl = ({
           attachedImages={msg.attachedImages}
           attachedFiles={msg.attachedFiles}
           isStreaming={isStreamingThis}
-          isThinking={!msg.agentSkyState && isThinking && isLastAssistant}
+          isThinking={isThinking && isLastAssistant}
           searchStatus={isLastAssistant ? (searchStatus as any) : undefined}
           toolActivity={isLastAssistant ? (toolActivity as any) : null}
           parallelTasks={isLastAssistant ? (parallelTasks as any) : undefined}
           toolParts={msg.agentSkySessionId ? undefined : msg.toolParts}
-          reasoning={msg.agentSkyState ? undefined : msg.reasoning}
+          reasoning={msg.reasoning}
           interrupted={msg.interrupted}
           timing={msg.timing}
           modelLabel={msg.modelLabel}

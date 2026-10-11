@@ -1509,7 +1509,9 @@ const ChatMessage = ({
   // Internal tool/reasoning traces are never a user-facing answer. Keep the
   // data available for diagnostics, but do not expose prompts, file operations,
   // browser steps, or chain-of-thought in the chat transcript.
-  const exposeThinkingTrace = false;
+  // Product decision: the live trace IS the answer's context — the agent shows
+  // what it is thinking and doing while it works.
+  const exposeThinkingTrace = true;
   const showNarration =
     exposeThinkingTrace && role === "assistant" && isDeepResearch && narrations && narrations.length > 0;
   const isResearchActive = !!isStreaming || (!!isThinking && !content);
