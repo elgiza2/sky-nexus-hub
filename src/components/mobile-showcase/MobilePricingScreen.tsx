@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useUserLang } from "@/lib/authI18n";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { getDisplayPrice, getPlan, type PlanTier } from "@/data/pricingData";
-import artCoat from "@/assets/orange-coat.png.asset.json";
+import artCoat from "@/assets/plan-pro-vg.jpg";
 import MobileSidebarButton from "@/components/shared/MobileSidebarButton";
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
 export default function MobilePricingScreen({ isYearly, onToggleYearly, onSubscribe, loadingTier, onMenuClick }: Props) {
   const isAr = useUserLang() === "ar-eg";
   const navigate = useNavigate();
-  const artwork = useMemo(() => ({ ...artCoat, key: "coat" }), []);
+  const artwork = useMemo(() => ({ url: artCoat, key: "pro-plan" }), []);
   const { plan } = useUserPlan();
   const subscribed = plan === "pro" || plan === "max" || plan === "elite";
   const pro = getPlan("pro");
@@ -38,7 +38,7 @@ export default function MobilePricingScreen({ isYearly, onToggleYearly, onSubscr
   return (
     <section className="botanical-pricing" data-art={artwork.key} dir={isAr ? "rtl" : "ltr"} aria-label={isAr ? "اشتراك Megsy Pro" : "Megsy Pro subscription"}>
       <div className="botanical-art" aria-hidden="true">
-        <img src={artwork.url} alt="" fetchPriority="high" width={768} height={1376} />
+        <img src={artwork.url} alt="" fetchPriority="high" width={768} height={512} />
       </div>
       <div className="botanical-scrim" aria-hidden="true" />
       <div className="botanical-content">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "./CardPreview";
-import artCoat from "@/assets/orange-coat.png.asset.json";
+import artCoat from "@/assets/plan-pro-vg.jpg";
 
 import {
   type HostedMethod,
@@ -183,7 +183,7 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
   return (
     <section className="botanical-pricing megsy-checkout z-[120]" dir="ltr" aria-labelledby="checkout-title">
       <div aria-hidden="true" className="botanical-art">
-        <img src={artCoat.url} alt="" fetchPriority="high" width={768} height={1376} />
+        <img src={artCoat} alt="" fetchPriority="high" width={768} height={512} />
       </div>
       <div aria-hidden="true" className="botanical-scrim" />
       <div className="botanical-content botanical-checkout-content">
