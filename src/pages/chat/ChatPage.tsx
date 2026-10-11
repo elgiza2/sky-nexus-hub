@@ -2,7 +2,7 @@
 import SEOHead from "@/components/common/SEOHead";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
-import { useState, useRef, useEffect, useCallback, useMemo, Suspense, lazy, type FormEvent } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense, lazy, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { m as motion } from "framer-motion";
 import { toast } from "sonner";
@@ -211,17 +211,6 @@ const ChatGlobalModals = lazy(() =>
 );
 
 import { MobileChatHeaderMount } from "./components/MobileChatHeaderMount";
-import {
-  agentConversationKey,
-  agentsFromKey,
-  ensureAgentConversation,
-  agentWelcomeText,
-} from "@/lib/agentChat";
-import { AgentChatBar } from "./components/AgentChatBar";
-import { ComposerAgentPicker } from "./components/ComposerAgentPicker";
-import { promptUpgrade } from "@/lib/upgradeMoment";
-import { loadWorkspace, workspace, useWorkspaceStore } from "@/lib/agentsky/store";
-import type { AgentInfo } from "@/lib/agentsky/client";
 import { DesktopChatHeader } from "./components/DesktopChatHeader";
 import { ChatArtifactsCanvas } from "./components/ChatArtifactsCanvas";
 import { ChatMessagesArea, prewarmTranscript } from "./components/ChatMessagesArea";
@@ -393,32 +382,6 @@ const ChatPage = () => {
   const desktopSidebarWidth = isSidebarExpanded ? 320 : 60;
   const { plusMenuOpen, setPlusMenuOpen, plusView, setPlusView } = usePlusMenu();
   const isMobileViewport = useIsMobile();
-  // The chat page has two halves on phones: the conversation and the agents.
-  /** One AgentSky session per agent, so a team chat keeps every agent's thread. */
-  const agentSessionsRef = useRef<Record<string, string>>({});
-
-  const urlAgentIds = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const team = (params.get("agents") || "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    if (team.length) return team;
-    const single = params.get("agent");
-    return single ? [single] : [];
-  }, [location.search]);
-  const urlAgentId = urlAgentIds[0] ?? null;
-  const agentChatKey = urlAgentIds.length ? agentConversationKey(urlAgentIds) : null;
-  const { agents: workspaceAgents } = useWorkspaceStore();
-  const activeAgentInfos = urlAgentIds
-    .map((id) => workspaceAgents.find((agent) => agent.id === id))
-    .filter(Boolean) as AgentInfo[];
-  const pickAgentFromPanel = useCallback(
-    (agent: { id: string }) => {
-      navigate(`/chat?agent=${encodeURIComponent(agent.id)}`);
-    },
-    [navigate],
-  );
   // Edge-swipe to open the sidebar is owned by MobilePushShell.
   // A second copy used to run here and fought it for every touch,
   // which made buttons need two taps. Keep exactly one gesture owner.
@@ -507,19 +470,6 @@ const ChatPage = () => {
     // Only run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // /chat?agent=<id> is how the agents list and shared links start a chat with
-  // an agent. Everything stays on the one chat page; there is no separate one.
-  useEffect(() => {
-    const id = new URLSearchParams(location.search).get("agent");
-    if (!id) return;
-    const agent = getAgentById(id);
-    if (!agent) return;
-    setChatMode("normal");
-    setSelectedAgent(agent);
-    setSelectedModel(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
 
   // Agent picked from the model menu ("Agent" entry) — activate the Computer Agent.
   useEffect(() => {
@@ -1361,63 +1311,6 @@ const ChatPage = () => {
     window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
   }, [conversationId]);
 
-  // ── Agent chats ─────────────────────────────────────────────────────────
-  // One saved conversation per agent (or per team of agents). Opening an agent
-  // finds its thread, writes the first-run welcome once, then loads it — so the
-  // agent chat always looks the same as the last time it was used.
-  const agentChatOpenedRef = useRef<string | null>(null);
-  const agentChatPro = isProPlusPlan();
-  useEffect(() => {
-    if (!agentChatKey || !chatUserId) return;
-    if (agentChatOpenedRef.current === agentChatKey) return;
-    agentChatOpenedRef.current = agentChatKey;
-    let alive = true;
-    void (async () => {
-      try {
-        await loadWorkspace();
-      } catch {
-        /* keep the agents we already know about */
-      }
-      const ids = agentsFromKey(agentChatKey);
-      const known = ids.map((id) => workspace.agent(id));
-      const names = ids.map((id, index) => known[index]?.name || id);
-      const primary = known[0];
-      const target = {
-        id: ids[0],
-        name: names[0],
-        description: primary?.description,
-        mediaOnly: primary?.mediaOnly,
-        isDefault: primary?.isDefault,
-      };
-      const team = ids.length > 1;
-      const { id, created } = await ensureAgentConversation(
-        agentChatKey,
-        team ? `Team · ${names.join(" + ")}` : names[0],
-      );
-      if (!alive || !id) return;
-      if (created) {
-        await insertAssistantNarration(
-          id,
-          agentWelcomeText(target, { team, pro: agentChatPro }),
-          undefined,
-          {
-            agentSkyAgent: {
-              id: target.id,
-              name: target.name,
-              color: (primary?.color ?? "aurora") as never,
-            },
-            agentWelcome: true,
-          } as never,
-        );
-      }
-      if (alive && id !== conversationId) void loadConversation(id);
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentChatKey, chatUserId]);
-
   // On first mount, reopen the conversation referenced by `?c=<id>`.
   const restoredFromUrlRef = useRef(false);
   useEffect(() => {
@@ -1686,47 +1579,8 @@ const ChatPage = () => {
       const previousSessionId =
         [...messages].reverse().find((message) => message.agentSkySessionId)?.agentSkySessionId;
       const requestedAgentId = new URLSearchParams(location.search).get("agent") || undefined;
-      const teamAgentIds = (new URLSearchParams(location.search).get("agents") || "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean);
       const lastAgentId = [...messages].reverse().find((message) => message.agentSkyAgent)?.agentSkyAgent?.id;
       try {
-        if (teamAgentIds.length > 1) {
-          // A team turn: one user message, one answer per agent, each agent on
-          // its own AgentSky session so the team keeps its history.
-          for (let index = 0; index < teamAgentIds.length; index += 1) {
-            const teamAgentId = teamAgentIds[index];
-            await runAgentSkyTurn({
-              text,
-              userMsg,
-              localTurnId: `${localTurnId}-${teamAgentId}`,
-              sessionId: agentSessionsRef.current[teamAgentId],
-              agentId: teamAgentId,
-              appendUser: index === 0,
-              hasPriorTurns: messages.some(
-                (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
-              ),
-              lang: getUserLang() === "ar-eg" ? "ar" : "en",
-              images,
-              setMessages,
-              setInput,
-              setAttachedFiles,
-              setIsLoading,
-              setIsThinking,
-              abortControllerRef,
-              createOrUpdateConversation,
-              saveMessage,
-              ownInsertedIdsRef,
-              onRequests: () => undefined,
-              onSession: (sessionId) => {
-                agentSessionsRef.current[teamAgentId] = sessionId;
-                activeAgentSkySessionRef.current = sessionId;
-              },
-            });
-          }
-          return;
-        }
         await runAgentSkyTurn({
           text,
           userMsg,
@@ -2934,7 +2788,7 @@ const ChatPage = () => {
       // Open the tools panel as a proper full-height drawer. The previous
       // compact snap point hid the photo/file cards behind the composer and
       // made the menu look broken on short screens.
-      const expandedH = Math.min(430, vh - 24);
+      const expandedH = Math.min(340, vh - 24);
       const collapsedY = 0;
 
       return createPortal(
@@ -3165,8 +3019,6 @@ const ChatPage = () => {
 
         <motion.div
           data-chat-main="true"
-          data-chat-glass="true"
-          data-agent-chat={urlAgentIds.length ? "true" : undefined}
           data-chat-empty={messages.length === 0 && !loadingMessages ? "true" : "false"}
           data-chat-glow={hasActiveTaskGlow ? "true" : "false"}
           data-sidebar-open={sidebarOpen ? "true" : "false"}
@@ -3357,15 +3209,6 @@ const ChatPage = () => {
               saveMessage,
               handleSendWithText,
             }}
-            topSlot={
-              urlAgentIds.length ? (
-                <AgentChatBar
-                  agents={activeAgentInfos}
-                  team={urlAgentIds.length > 1}
-                  onSwitch={() => navigate("/agents")}
-                />
-              ) : null
-            }
             slotAfterMessages={
               coderRuns.length > 0 ? (
                 <Suspense fallback={null}>
@@ -3482,7 +3325,6 @@ const ChatPage = () => {
               composerModeBarChange,
             }}
             composerAnimatedInputProps={{
-              agentSlot: <ComposerAgentPicker activeAgentId={urlAgentId} />,
               input,
               setInput,
               handleSend,

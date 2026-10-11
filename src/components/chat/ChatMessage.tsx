@@ -506,9 +506,9 @@ const MarkdownRenderer = ({
         </em>
       ),
       a: ({ href, children }) =>
-        href === "/billing" || href === "/usage" ? (
+        href === "/billing" || href === "/settings/billing" ? (
           <Link
-            to="/usage"
+            to="/settings/billing"
             className="my-2 inline-flex items-center justify-center rounded-full bg-primary/90 text-primary-foreground px-4 py-2 text-sm font-semibold no-underline border border-primary/60 shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.6)] hover:bg-primary transition-colors"
           >
             {children}

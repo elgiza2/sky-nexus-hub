@@ -229,7 +229,7 @@ export default function MobileChatHeader({
             onClick={onOpenSidebar}
             aria-label="Open menu"
             data-testid="mobile-open-sidebar"
-            className="mch-glass-btn w-11 h-11 flex items-center justify-center text-foreground transition border-0"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-foreground transition bg-transparent border-0"
           >
             <MegsySidebarToggleIcon />
         </button>
@@ -247,9 +247,7 @@ export default function MobileChatHeader({
         {rightSlot}
 
         {chatUserId && !hasConversation && (
-          <span className="mch-glass-btn mch-glass-btn-slot">
-            <UpgradePlanButton variant="compact" hideCredits />
-          </span>
+          <UpgradePlanButton variant="compact" hideCredits />
         )}
 
 

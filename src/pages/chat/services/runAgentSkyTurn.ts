@@ -31,8 +31,6 @@ type Args = {
     metadata?: Record<string, unknown>,
   ) => Promise<string | undefined>;
   ownInsertedIdsRef: React.MutableRefObject<Set<string>>;
-  /** Team turns reuse one user message across several agents. */
-  appendUser?: boolean;
   onRequests: (requests: AgentRequest[]) => void;
   onSession: (sessionId: string) => void;
 };
@@ -54,7 +52,7 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
   const controller = new AbortController();
   args.abortControllerRef.current = controller;
   const update = (patch: Partial<Message>) => args.setMessages((prev) => prev.map((message) => message.clientId === assistantClientId ? { ...message, ...patch } : message));
-  args.setMessages((prev) => [...prev, ...(args.appendUser === false ? [] : [args.userMsg]), {
+  args.setMessages((prev) => [...prev, args.userMsg, {
     role: "assistant", content: "", clientId: assistantClientId, agentPending: true,
     agentSkyState: args.sessionId || args.hasPriorTurns ? "thinking" : "awakening", modelLabel: mediaTurn ? "higgsfield · Hypit" : "OpenClaw · gpt-5.6-luna",
     ...(mediaTurn ? { agentSkyAgent: { id: "higgsfield", name: "higgsfield", color: "sun" as const } } : {}),
