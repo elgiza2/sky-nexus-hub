@@ -24,7 +24,8 @@ export default function ReferralCreditRewards() {
   useEffect(() => {
     let dead = false;
     (async () => {
-      const { data } = await supabase
+      // The generated database types predate this table, so the read is untyped here.
+      const { data } = await (supabase as any)
         .from("referral_settings")
         .select("referrer_credits, referred_credits, milestone_refs, milestone_days, revenue_share_percent")
         .maybeSingle();
