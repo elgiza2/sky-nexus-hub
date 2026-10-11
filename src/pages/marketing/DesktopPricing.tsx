@@ -5,6 +5,7 @@ import { Check, Loader2, Plus, Minus, ArrowRight, ArrowLeft } from "lucide-react
 import { getDisplayPrice, type PlanCardConfig, type PlanTier } from "@/data/pricingData";
 import { translateExactText, useUserLang } from "@/lib/authI18n";
 import CreditPacks from "@/components/billing/CreditPacks";
+import PaymentMethodsShowcase from "@/components/billing/PaymentMethodsShowcase";
 import MobilePricingScreen from "@/components/mobile-showcase/MobilePricingScreen";
 
 type Props = {
@@ -47,6 +48,21 @@ export default function DesktopPricing({ plans, faqs, isYearly, setIsYearly, loa
           {t("Talk to us")}
         </a>
       </div>
+
+      {/* Payment methods */}
+      <section id="pricing-payments" className="grid gap-10 pt-20 md:grid-cols-[280px_1fr]">
+        <div>
+          <h2 className="text-[32px] leading-tight font-semibold tracking-[-0.03em]">
+            {t("Payment methods")}
+          </h2>
+          <p className="mt-3 text-[14px] leading-relaxed text-foreground/60">
+            {t(
+              "Pay with whatever you already use — cards, wallets, bank transfers and local methods from around the world.",
+            )}
+          </p>
+        </div>
+        <PaymentMethodsShowcase />
+      </section>
 
       {/* FAQ */}
       <section id="pricing-faq" className="grid grid-cols-[280px_1fr] gap-16 pt-20">

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "./CardPreview";
+import PaymentMethodsShowcase from "./PaymentMethodsShowcase";
 import artCoat from "@/assets/orange-coat.png.asset.json";
 
 import {
@@ -14,6 +15,8 @@ import {
   watchWalletPayment,
   type KashierOrder,
 } from "@/lib/payments/kashier";
+import { startDodoCheckout } from "@/lib/payments/dodo";
+import { PAYMENT_METHOD_COUNT, type PaymentMethod } from "@/lib/payments/paymentMethods";
 import type { PlanTier } from "@/data/pricingData";
 
 type Props = { open: boolean; tier: PlanTier; interval: "monthly" | "yearly"; onClose: () => void };
@@ -40,6 +43,9 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
   const [phone, setPhone] = useState("");
   const [walletWaiting, setWalletWaiting] = useState(false);
   const [applePay, setApplePay] = useState(false);
+  const [showAllMethods, setShowAllMethods] = useState(false);
+  const [startingMethod, setStartingMethod] = useState<string | null>(null);
+  const [methodNote, setMethodNote] = useState<string | null>(null);
   const stopWatchRef = useRef<(() => void) | null>(null);
 
   // Apple Pay exists only on Apple devices with a card in Wallet.
@@ -76,6 +82,9 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
       setStage("main");
       setPhone("");
       setWalletWaiting(false);
+      setShowAllMethods(false);
+      setStartingMethod(null);
+      setMethodNote(null);
     }
     if (!open) {
       stopWatchRef.current?.();
@@ -154,6 +163,42 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
       setStage("main");
       setError(null);
     } else onClose();
+  };
+
+  /**
+   * Picks a method from the full grid: in-app rails switch the active tile,
+   * everything else is handed to the Dodo Payments checkout.
+   */
+  const chooseMethod = async (picked: PaymentMethod) => {
+    setMethodNote(null);
+
+    if (picked.rail === "internal") {
+      const tile = TILE_BY_METHOD_ID[picked.id];
+      if (tile) {
+        setError(null);
+        setMethod(tile);
+        setShowAllMethods(false);
+        return;
+      }
+      setMethodNote(
+        `${picked.label} is not switched on yet. Card, Apple Pay and mobile wallets work right now.`,
+      );
+      return;
+    }
+
+    setStartingMethod(picked.id);
+    const outcome = await startDodoCheckout({ tier, interval, methodId: picked.id });
+    setStartingMethod(null);
+    if (!outcome.ok) {
+      const { reason, message } = outcome;
+      setMethodNote(
+        reason === "not-configured"
+          ? `${picked.label} is being connected — it goes live shortly. Card, Apple Pay and mobile wallets work right now.`
+          : reason === "unauthenticated"
+            ? "Please sign in again to continue."
+            : message ?? "We couldn’t open that method. Please try another one.",
+      );
+    }
   };
 
   const view = threeDsUrl ? "verify" : result === "success" ? "done" : stage;
@@ -351,6 +396,40 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
                   />
                 )}
               </div>
+
+              <div className="mt-6 border-t border-border/50 pt-5">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setShowAllMethods((value) => !value)}
+                  aria-expanded={showAllMethods}
+                  className="flex h-11 w-full items-center justify-between rounded-2xl border border-border/60 bg-card/40 px-4 text-[13.5px] font-medium text-foreground/85 hover:bg-muted/50"
+                >
+                  <span>All payment methods ({PAYMENT_METHOD_COUNT})</span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-foreground/50 transition-transform ${
+                      showAllMethods ? "rotate-180" : ""
+                    }`}
+                    strokeWidth={1.8}
+                  />
+                </Button>
+
+                {showAllMethods && (
+                  <div className="mt-4">
+                    <PaymentMethodsShowcase
+                      onSelect={chooseMethod}
+                      busyId={startingMethod}
+                      activeId={METHOD_ID_BY_TILE[method]}
+                    />
+                  </div>
+                )}
+
+                {methodNote && (
+                  <p role="status" className="mt-3 text-[12.5px] leading-relaxed text-foreground/60">
+                    {methodNote}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -441,6 +520,21 @@ const METHODS: Array<{ id: TileId; label: string }> = [
   { id: "apple_pay", label: "Apple Pay" },
   { id: "vodafone", label: "Vodafone" },
 ];
+
+/** Which in-app tile a registry method opens. */
+const TILE_BY_METHOD_ID: Partial<Record<string, TileId>> = {
+  card: "visa",
+  meeza: "visa",
+  apple_pay: "apple_pay",
+  vodafone_cash: "vodafone",
+};
+
+/** Reverse map so the full grid can highlight the active method. */
+const METHOD_ID_BY_TILE: Record<TileId, string> = {
+  visa: "card",
+  apple_pay: "apple_pay",
+  vodafone: "vodafone_cash",
+};
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
