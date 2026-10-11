@@ -3,7 +3,7 @@
  * the icons actually on screen are downloaded. Agents with no published logo —
  * starting with Megsy itself — get the robot. */
 import { lazy, Suspense, useMemo, type ComponentType } from "react";
-import { Bot } from "lucide-react";
+import { Bot, Clapperboard, Sparkles } from "lucide-react";
 import type { AgentInfo } from "@/lib/agentsky/client";
 
 type IconModule = { default: ComponentType<any> & { Color?: ComponentType<any> } };
@@ -148,20 +148,34 @@ function lazyBrand(key: string) {
   return Comp;
 }
 
-/** The robot: the mark every logo-less agent falls back to. */
+/** Megsy's own mark. It belongs to the main agent alone, so every other
+ *  logo-less agent gets its own generic mark instead of borrowing it. */
 export function RobotMark({ size = 21, className }: { size?: number; className?: string }) {
   return <Bot className={className} width={size} height={size} strokeWidth={1.7} aria-hidden />;
 }
+
+const GenericMark = ({ kind, size, className }: { kind: "media" | "agent"; size: number; className?: string }) =>
+  kind === "media" ? (
+    <Clapperboard className={className} width={size} height={size} strokeWidth={1.7} aria-hidden />
+  ) : (
+    <Sparkles className={className} width={size} height={size} strokeWidth={1.7} aria-hidden />
+  );
 
 export function AgentIcon({ agent, size = 23, className }: { agent: AgentInfo; size?: number; className?: string }) {
   const key = useMemo(
     () => agentBrandKey(agent),
     [agent.id, agent.name, agent.description, agent.prompt, agent.isDefault],
   );
-  if (!key) return <RobotMark size={size - 2} className={className} />;
+  const kind = agent.mediaOnly ? "media" : "agent";
+  const fallback = agent.isDefault ? (
+    <RobotMark size={size - 2} className={className} />
+  ) : (
+    <GenericMark kind={kind} size={size - 3} className={className} />
+  );
+  if (!key) return fallback;
   const Lazy = lazyBrand(key);
   return (
-    <Suspense fallback={<RobotMark size={size - 2} className={className} />}>
+    <Suspense fallback={fallback}>
       <Lazy size={size} className={className} />
     </Suspense>
   );

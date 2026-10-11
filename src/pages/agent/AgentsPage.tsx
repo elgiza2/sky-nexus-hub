@@ -101,8 +101,11 @@ export function AgentsPage() {
     const live = sessions.filter((s) => s.agentId === a.id && s.status === "running").length;
     const locked = !a.isDefault && !canUseAgent(tier, !!a.mediaOnly, now);
     const brand = agentBrandKey(a);
-    const hint =
-      a.description || (a.isDefault ? "Your everyday partner" : a.mediaOnly ? "Image and video" : "Personal AI agent");
+    const hint = a.isDefault
+      ? "Your everyday partner"
+      : a.mediaOnly
+        ? "Image and video creation"
+        : a.description || "Personal AI agent";
     const open = () => nav(locked ? "/pricing" : `/agents/chat?agent=${encodeURIComponent(a.id)}`);
 
     return (
