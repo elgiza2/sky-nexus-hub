@@ -44,9 +44,11 @@ export default function AgentSkyBlocks({ message, onSend }: { message: Message; 
         if (card.kind === "question") return <QuestionCard key={card.id} question={card.question} options={card.options} allowFreeText={card.allowFreeText} answered={card.answered} lang={lang} onAnswer={onSend} />;
         if (card.kind === "task") return <TaskCard key={card.id} title={card.title} dueAt={card.dueAt} lang={lang} onOpen={() => navigate("/chat")} />;
         if (card.kind === "plan") return <PlanCard key={card.id} title={card.title} steps={card.steps} lang={lang} />;
+        if (card.kind === "service-action") return <ServiceActionWidget key={card.id} data={card.data} onSend={onSend} />;
         return null;
       })}
       {requests.map((request) => <ApprovalCard key={request.id} request={request} lang={lang} onAnswer={onSend} />)}
     </div>
   );
 }
+import ServiceActionWidget from "@/components/chat/widgets/ServiceActionWidget";

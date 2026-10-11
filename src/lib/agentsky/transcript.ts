@@ -2,6 +2,7 @@
  *  made of steps (thinking, searches, clicks…), answer text and interactive cards. */
 import type { RawEvent } from "./client";
 import { agentProposalSchema, type AgentProposal } from "./agentProposal";
+import type { ServiceAction } from "@/components/chat/widgets/ServiceActionWidget";
 
 export type StepKind = "thought" | "search" | "read" | "browse" | "image" | "video" | "helper" | "command" | "edit" | "ask" | "task" | "plan" | "tool" | "python" | "code" | "file" | "memory" | "email" | "calendar" | "map" | "data";
 export type Step = {
@@ -22,7 +23,8 @@ export type Card =
   | { kind: "question"; id: string; question: string; options: string[]; allowFreeText: boolean; answered: boolean }
   | { kind: "task"; id: string; title: string; dueAt: string | null; taskKind: string }
   | { kind: "plan"; id: string; title: string; steps: { title: string; status: string }[] }
-  | { kind: "file"; id: string; name: string; url?: string; content?: string; mime?: string; size?: number };
+  | { kind: "file"; id: string; name: string; url?: string; content?: string; mime?: string; size?: number }
+  | { kind: "service-action"; id: string; data: ServiceAction };
 
 /** Deliverable files the agent writes in its workspace and the user should be able to download. */
 const DELIVERABLE = /\.(md|txt|csv|tsv|json|html?|xml|ya?ml|py|js|ts|tsx|jsx|css|sql|sh|svg)$/i;
@@ -451,6 +453,14 @@ export function buildTranscript(events: RawEvent[], lang: Lang, running: boolean
           else t.cards.push(card);
         }
         if (p?.type === "megsy.video_proposal") t.cards.push({ kind: "video", id: f.callId, proposal: p });
+        // Any connected service (all 586 of them) reports through one payload, so a
+        // single widget renders every integration without per-service code.
+        if (p?.type === "megsy.service" && p.service) {
+          const card: Card = { kind: "service-action", id: f.callId, data: { ...p, status: f.ok ? "done" : "error" } };
+          const i = t.cards.findIndex((c) => c.id === card.id);
+          if (i >= 0) t.cards[i] = card;
+          else t.cards.push(card);
+        }
         break;
       }
       case "interrupt":
