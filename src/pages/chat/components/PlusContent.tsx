@@ -2,16 +2,23 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { m as motion, AnimatePresence } from "framer-motion";
 import {
   Music2,
-  ChevronLeft,
+  Camera,
   Check,
-  Plus,
-  Loader2,
-  Play,
-  Trash2,
-  Plug,
+  ChevronLeft,
+  Clapperboard,
+  FileUp,
+  ImagePlus,
   Images,
   Blocks,
-  FileUp,
+  Link2,
+  Loader2,
+  Play,
+  Plug,
+  Presentation,
+  Telescope,
+  Timer,
+  Trash2,
+  Plus,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -103,103 +110,155 @@ const PlusMain = (p: PlusContentProps) => {
     fn();
   };
 
-  type MenuItem = {
+  type Tile = {
     id: string;
     label: string;
     Icon: any;
-    value?: string;
-    expanded?: boolean;
+    /** Brand tone for the icon tile, from the shared settings palette. */
+    tone: string;
     onClick: () => void;
   };
 
-  const items: MenuItem[] = [
+  const sections: Array<{ title: string; tiles: Tile[] }> = [
     {
-      id: "skills",
-      label: isArabic ? "المهارات" : "Skills",
-      Icon: Blocks,
-      onClick: closeThen(() => p.navigate("/settings/skills")),
+      title: isArabic ? "أضف إلى المحادثة" : "Add",
+      tiles: [
+        {
+          id: "photos",
+          label: isArabic ? "صور" : "Photos",
+          Icon: Images,
+          tone: "var(--settings-blue)",
+          onClick: closeThen(() => p.imageInputRef.current?.click()),
+        },
+        {
+          id: "camera",
+          label: isArabic ? "كاميرا" : "Camera",
+          Icon: Camera,
+          tone: "var(--settings-violet)",
+          onClick: closeThen(() => p.cameraInputRef.current?.click()),
+        },
+        {
+          id: "files",
+          label: isArabic ? "ملفات" : "Files",
+          Icon: FileUp,
+          tone: "var(--settings-green)",
+          onClick: closeThen(() => p.fileInputRef.current?.click()),
+        },
+        {
+          id: "link",
+          label: isArabic ? "رابط" : "Link",
+          Icon: Link2,
+          tone: "var(--settings-yellow)",
+          onClick: closeThen(() => p.onAddLink?.()),
+        },
+      ],
     },
     {
-      id: "integrations",
-      label: isArabic ? "التطبيقات المربوطة" : "Integrations",
-      Icon: Plug,
-      onClick: closeThen(() => window.dispatchEvent(new CustomEvent("megsy:open-integrations"))),
+      title: isArabic ? "أنشئ" : "Create",
+      tiles: [
+        {
+          id: "images",
+          label: isArabic ? "صور AI" : "Images",
+          Icon: ImagePlus,
+          tone: "var(--settings-pink)",
+          onClick: closeThen(() => p.onModeChange?.("images")),
+        },
+        {
+          id: "video",
+          label: isArabic ? "فيديو" : "Video",
+          Icon: Clapperboard,
+          tone: "var(--settings-violet)",
+          onClick: closeThen(() => p.onModeChange?.("video")),
+        },
+        {
+          id: "slides",
+          label: isArabic ? "عروض" : "Slides",
+          Icon: Presentation,
+          tone: "var(--settings-blue)",
+          onClick: closeThen(() => p.onModeChange?.("slides")),
+        },
+        {
+          id: "research",
+          label: isArabic ? "بحث" : "Research",
+          Icon: Telescope,
+          tone: "var(--settings-green)",
+          onClick: closeThen(() => p.onModeChange?.("deep-research")),
+        },
+      ],
+    },
+    {
+      title: isArabic ? "المزيد" : "More",
+      tiles: [
+        {
+          id: "skills",
+          label: isArabic ? "المهارات" : "Skills",
+          Icon: Blocks,
+          tone: "var(--settings-violet)",
+          onClick: closeThen(() => p.navigate("/settings/skills")),
+        },
+        {
+          id: "integrations",
+          label: isArabic ? "التطبيقات" : "Apps",
+          Icon: Plug,
+          tone: "var(--settings-blue)",
+          onClick: closeThen(() => window.dispatchEvent(new CustomEvent("megsy:open-integrations"))),
+        },
+        {
+          id: "music",
+          label: isArabic ? "موسيقى" : "Music",
+          Icon: Music2,
+          tone: "var(--settings-pink)",
+          onClick: () => p.setPlusView("music"),
+        },
+        {
+          id: "timer",
+          label: isArabic ? "مؤقت" : "Timer",
+          Icon: Timer,
+          tone: "var(--settings-yellow)",
+          onClick: () => p.setPlusView("timer"),
+        },
+      ],
     },
   ];
 
   return (
-    <motion.div key="main" {...fadeProps(-8)} className="plus-settings-menu flex flex-col gap-2 pb-1">
-      <div
-        dir={isArabic ? "rtl" : "ltr"}
-        className="flex flex-col gap-2 px-1 py-2"
-        style={{ fontFamily: mobileFont }}
-      >
-        <div className="plus-settings-grid grid grid-cols-2 gap-2 px-0">
-          <button
-            data-no-neo
-            type="button"
-            onClick={closeThen(() => p.fileInputRef.current?.click())}
-            className="group flex h-[102px] flex-col items-center justify-center gap-2 rounded-2xl border border-foreground/[0.08] bg-background px-2 text-center shadow-sm transition-[background-color,transform,border-color] duration-150 hover:border-primary/30 hover:bg-foreground/[0.03] active:scale-[0.98]"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-              <FileUp className="h-[21px] w-[21px]" strokeWidth={1.8} />
-            </span>
-            <span className="text-[13px] font-medium text-foreground">
-              {isArabic ? "ملفات" : "Files"}
-            </span>
-          </button>
-          <button
-            data-no-neo
-            type="button"
-            onClick={closeThen(() => p.imageInputRef.current?.click())}
-            className="group flex h-[102px] flex-col items-center justify-center gap-2 rounded-2xl border border-foreground/[0.08] bg-background px-2 text-center shadow-sm transition-[background-color,transform,border-color] duration-150 hover:border-primary/30 hover:bg-foreground/[0.03] active:scale-[0.98]"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-              <Images className="h-[21px] w-[21px]" strokeWidth={1.8} />
-            </span>
-            <span className="text-[13px] font-medium text-foreground">
-              {isArabic ? "الصور" : "Photos"}
-            </span>
-          </button>
-        </div>
-        <div className="overflow-hidden rounded-2xl bg-transparent">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-col border-b border-foreground/[0.08] last:border-b-0"
-          >
-            <button
-              data-no-neo
-              type="button"
-              onClick={item.onClick}
-              className="plus-row flex h-12 w-full items-center gap-3 border-0 bg-transparent px-3 text-start transition-[background-color,transform] duration-150 hover:bg-foreground/[0.055] active:bg-foreground/[0.09]"
-            >
-              <item.Icon
-                className="h-[17px] w-[17px] shrink-0 text-foreground/80"
-                strokeWidth={1.8}
-              />
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
-                {item.label}
-              </span>
-              {item.value && (
-                <span className="shrink-0 text-[13px] text-muted-foreground">{item.value}</span>
-              )}
-              {item.expanded !== undefined && (
-                <ChevronLeft
-                  className={`h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ${
-                    item.expanded ? "-rotate-90" : isArabic ? "" : "rotate-180"
-                  }`}
-                  strokeWidth={1.8}
-                />
-              )}
-            </button>
+    <motion.div
+      key="main"
+      {...fadeProps(-8)}
+      dir={isArabic ? "rtl" : "ltr"}
+      className="plusx"
+      style={{ fontFamily: mobileFont }}
+    >
+      {sections.map((section) => (
+        <section key={section.title} className="plusx-section">
+          <h3 className="plusx-heading">{section.title}</h3>
+          <div className="plusx-grid">
+            {section.tiles.map((tile) => (
+              <button
+                key={tile.id}
+                data-no-neo
+                type="button"
+                onClick={tile.onClick}
+                className="plusx-tile"
+              >
+                <span
+                  className="plusx-icon"
+                  style={{
+                    color: tile.tone,
+                    background: `color-mix(in oklch, ${tile.tone} 13%, transparent)`,
+                    boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${tile.tone} 22%, transparent)`,
+                  }}
+                >
+                  <tile.Icon strokeWidth={1.9} />
+                </span>
+                <span className="plusx-label">{tile.label}</span>
+              </button>
+            ))}
           </div>
-        ))}
-        </div>
-      </div>
+        </section>
+      ))}
     </motion.div>
   );
-
 };
 
 const PlusModels = (p: PlusContentProps) => (

@@ -151,3 +151,49 @@ html body [data-shell="megsy"] [data-chat-glass="true"] .cap-panel {
   -webkit-backdrop-filter: var(--settings-frost) !important;
   backdrop-filter: var(--settings-frost) !important;
 }
+
+/* ── the "+" menu: one clean sheet, three rows of tiles ───────── */
+.mobile-plus-glass-menu {
+  background-color: var(--settings-canvas) !important;
+  color: var(--settings-ink) !important;
+  border-top: 1px solid var(--settings-line) !important;
+  border-radius: 28px 28px 0 0 !important;
+  box-shadow: 0 -20px 60px -24px oklch(0.25 0.005 255 / 0.32) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+}
+.mobile-plus-glass-menu [data-sheet-grip] > div:first-child {
+  width: 38px; height: 4px; background: var(--settings-line) !important;
+}
+.mobile-plus-glass-menu [data-sheet-grip] span {
+  font-size: 15px !important; font-weight: 620 !important; color: var(--settings-ink) !important;
+}
+
+.plusx { display: flex; flex-direction: column; gap: 18px; padding: 2px 4px 6px; }
+.plusx-section { display: flex; flex-direction: column; gap: 9px; }
+.plusx-heading {
+  margin: 0; padding-inline-start: 4px;
+  font-size: 11.5px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--settings-muted);
+}
+.plusx-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.plusx-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 12px 6px 11px; border: 0; cursor: pointer; font: inherit;
+  border-radius: 18px; background: var(--settings-surface);
+  -webkit-backdrop-filter: var(--settings-frost); backdrop-filter: var(--settings-frost);
+  box-shadow: var(--settings-shadow);
+  color: var(--settings-ink);
+  transition: transform .16s ease, box-shadow .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.plusx-tile:active { transform: scale(.955); }
+.plusx-icon {
+  width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;
+}
+.plusx-icon > svg { width: 20px; height: 20px; }
+.plusx-label {
+  font-size: 11.5px; font-weight: 560; letter-spacing: -.01em; line-height: 1.15;
+  text-align: center; color: var(--settings-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
