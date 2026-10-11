@@ -167,7 +167,8 @@ const ChatMessageItemImpl = ({
     (msg.mode === "images" || msg.mode === "video" || !!msg.mediaPlan || !!msg.videoJobId) &&
     !mediaDone;
   const tailText = (value: string) => {
-    const t = value.replace(/\s+/g, " ").trim();
+    // The model writes its thoughts in markdown; the live line is plain text.
+    const t = value.replace(/\*\*/g, "").replace(/^\s*[-*]\s+/gm, "").replace(/\s+/g, " ").trim();
     return t.length > 240 ? `…${t.slice(-240)}` : t;
   };
   // What the agent is thinking and doing right now — rendered live while it works.
