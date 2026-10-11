@@ -28,7 +28,6 @@ import {
   Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { useActiveAccount } from "@/hooks/useActiveAccount";
@@ -36,6 +35,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { t as authT, translateExactText, useUserLang, AVAILABLE_LANGS } from "@/lib/authI18n";
 import { goBackOr } from "@/lib/navigation";
 import { getStoredTheme, setTheme, type ThemeMode } from "@/lib/theme";
+import ThemeSegmented from "./ThemeSegmented";
 import { signOutEverywhere } from "@/lib/signOutEverywhere";
 
 type Row = {
@@ -160,10 +160,7 @@ const ManusSettingsMobile = () => {
         {row.control ? <>
           <span className={`ms-icon-tile ms-tone-${row.tone || "account"}`}><Icon className="ms-row-icon" /></span>
           <span className="ms-row-label">{tx(row.label)}</span>
-          <Select value={themeMode} onValueChange={value => { const next = value as ThemeMode; setThemeMode(next); setTheme(next); }}>
-            <SelectTrigger className="ms-theme-select" aria-label={tx("Appearance")}><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="light">{tx("Light")}</SelectItem><SelectItem value="dark">{tx("Dark")}</SelectItem><SelectItem value="system">{tx("System")}</SelectItem></SelectContent>
-          </Select>
+          <ThemeSegmented value={themeMode} onChange={next => { setThemeMode(next); setTheme(next); }} />
         </> : <Button variant="ghost" type="button" onClick={() => row.onClick ? row.onClick() : row.path && navigate(row.path)} disabled={!row.onClick && !row.path} className="ms-row ms-row-inner">
           <span className={`ms-icon-tile ms-tone-${row.tone || "account"}`}><Icon className="ms-row-icon" /></span>
           <span className="ms-row-label">{tx(row.label)}</span>

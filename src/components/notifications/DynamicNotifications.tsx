@@ -4,6 +4,9 @@
  * The idea comes from expo-dynamic-notifications, rebuilt for the web with the
  * same --settings-* glass tokens the settings pages use.
  *
+ * Dismiss it the way a phone banner behaves: swipe it left, right or up, or
+ * simply tap it. There is no close button.
+ *
  * Wrap the app once in <DynamicNotifications> and fire from anywhere:
  *   const { trigger } = useDynamicNotifications();
  *   trigger({ title: "Saved", message: "Your draft is safe." });
@@ -18,7 +21,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { X } from "lucide-react";
 
 export type DynamicNotification = {
   /** Your identifier, handed back through onDismiss. */
@@ -64,6 +66,12 @@ const DEFAULT_DURATION = 4200;
 /** Keep in step with the .mgx-notif transitions below. */
 const ENTER_MS = 520;
 const EXIT_MS = 320;
+/** How far a finger has to travel before the card is thrown away. */
+const SWIPE_X = 84;
+const SWIPE_UP = 58;
+const SWIPE_DOWN = 84;
+
+type Drag = { dx: number; dy: number; live: boolean };
 
 export function DynamicNotifications({
   children,
@@ -79,9 +87,11 @@ export function DynamicNotifications({
   const [current, setCurrent] = useState<DynamicNotification | null>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [drag, setDrag] = useState<Drag | null>(null);
   const timer = useRef<number | null>(null);
   const closer = useRef<number | null>(null);
   const opener = useRef<number | null>(null);
+  const pointer = useRef({ x: 0, y: 0, dx: 0, dy: 0, active: false, moved: false });
 
   const clearTimers = useCallback(() => {
     if (timer.current) window.clearTimeout(timer.current);
@@ -106,6 +116,7 @@ export function DynamicNotifications({
   const trigger = useCallback(
     (n: DynamicNotification) => {
       clearTimers();
+      setDrag(null);
       setCurrent(n);
       setMounted(true);
       setOpen(false);
@@ -126,7 +137,64 @@ export function DynamicNotifications({
     [trigger, dismiss, mounted, current],
   );
 
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    pointer.current = {
+      x: event.clientX,
+      y: event.clientY,
+      dx: 0,
+      dy: 0,
+      active: true,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = pointer.current;
+    if (!state.active) return;
+    state.dx = event.clientX - state.x;
+    state.dy = event.clientY - state.y;
+    if (!state.moved && Math.hypot(state.dx, state.dy) < 6) return;
+    state.moved = true;
+    // Only the axis the finger actually committed to, so the card tracks it.
+    const horizontal = Math.abs(state.dx) >= Math.abs(state.dy);
+    setDrag({
+      dx: horizontal ? state.dx : state.dx * 0.25,
+      dy: horizontal ? state.dy * 0.25 : state.dy,
+      live: true,
+    });
+  };
+
+  const endDrag = () => {
+    const state = pointer.current;
+    if (!state.active) return;
+    state.active = false;
+    const sideways = Math.abs(state.dx) >= SWIPE_X;
+    const upwards = state.dy <= -SWIPE_UP;
+    const downwards = state.dy >= SWIPE_DOWN;
+    if (!sideways && !upwards && !downwards) {
+      setDrag(null);
+      return;
+    }
+    // Throw it off in the direction the finger was going, then unmount.
+    const far = Math.max(window.innerWidth, 480);
+    if (sideways) setDrag({ dx: Math.sign(state.dx) * far, dy: state.dy, live: false });
+    else setDrag({ dx: 0, dy: Math.sign(state.dy) * Math.max(window.innerHeight * 0.5, 320), live: false });
+    dismiss();
+  };
+
   const tint = current?.accent ?? accent;
+
+  const dragStyle = drag
+    ? {
+        transform: `translate3d(${drag.dx}px, ${drag.dy}px, 0) scale(${
+          drag.live ? Math.max(0.9, 1 - Math.abs(drag.dx) / 1600) : 0.96
+        })`,
+        opacity: drag.live
+          ? Math.max(0.4, 1 - (Math.abs(drag.dx) + Math.abs(drag.dy)) / 520)
+          : 0,
+      }
+    : null;
 
   return (
     <DynamicNotificationsCtx.Provider value={value}>
@@ -137,8 +205,21 @@ export function DynamicNotifications({
           <div
             className="mgx-notif"
             data-open={open ? "true" : "false"}
-            style={{ ["--mgx-accent" as any]: tint ?? "var(--settings-ink)" }}
+            data-drag={drag?.live ? "true" : "false"}
+            style={{
+              ["--mgx-accent" as any]: tint ?? "var(--settings-ink)",
+              ...dragStyle,
+            }}
             role="status"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onClick={() => {
+              if (pointer.current.moved) return;
+              current.onPress?.();
+              dismiss();
+            }}
           >
             <div className="mgx-notif__body">
               {current.render ? (
@@ -156,17 +237,6 @@ export function DynamicNotifications({
                   {current.symbol ? <span className="mgx-notif__symbol">{current.symbol}</span> : null}
                 </>
               )}
-              <button
-                type="button"
-                className="mgx-notif__close"
-                aria-label="Dismiss"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  dismiss();
-                }}
-              >
-                <X size={16} strokeWidth={2.2} />
-              </button>
             </div>
           </div>
         )}
@@ -187,7 +257,7 @@ const NOTIF_CSS = `
     position: relative;
     width: min(calc(100vw - 32px), 440px);
     border-radius: 26px;
-    padding: 16px 16px 16px 18px;
+    padding: 16px 18px;
     background: var(--settings-surface, oklch(1 0 0 / 0.55));
     backdrop-filter: var(--settings-frost, blur(24px) saturate(1.3));
     -webkit-backdrop-filter: var(--settings-frost, blur(24px) saturate(1.3));
@@ -203,8 +273,13 @@ const NOTIF_CSS = `
       opacity 0.34s ease,
       transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
     -webkit-tap-highlight-color: transparent;
+    /* The card owns the gesture: no page scroll or text selection mid-swipe. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .mgx-notif[data-open="true"] { opacity: 1; transform: translateY(0) scale(1); }
+  .mgx-notif[data-drag="true"] { transition: none; cursor: grabbing; }
   .mgx-notif__body { display: flex; align-items: center; gap: 14px; }
   .mgx-notif__lead {
     flex: none; width: 46px; height: 46px; border-radius: 50%;
@@ -223,15 +298,6 @@ const NOTIF_CSS = `
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .mgx-notif__symbol { flex: none; display: grid; place-items: center; color: var(--settings-muted); }
-  .mgx-notif__close {
-    flex: none; width: 30px; height: 30px; padding: 0;
-    display: inline-grid; place-items: center;
-    border: 0; border-radius: 50%; cursor: pointer;
-    background: var(--settings-line, oklch(0.4 0.01 255 / 0.09));
-    color: var(--settings-muted, oklch(0.61 0.005 255));
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .mgx-notif__close:active { transform: scale(0.9); }
   @media (prefers-reduced-motion: reduce) {
     .mgx-notif { transition-duration: 0.01ms !important; }
   }

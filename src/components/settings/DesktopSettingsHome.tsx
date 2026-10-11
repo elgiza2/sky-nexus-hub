@@ -2,6 +2,7 @@ import { useEffect, useState, type FC, type SVGProps } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Sparkles, Globe, Brain, Info, Mail, KeyRound, Monitor } from "lucide-react";
 import { getStoredTheme, setTheme, type ThemeMode } from "@/lib/theme";
+import ThemeSegmented from "@/components/settings/ThemeSegmented";
 import { Moon as MoonIcon, Sun as SunIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConfirm } from "@/components/common/ConfirmDialog";
@@ -28,7 +29,7 @@ type Row = {
   path?: string;
   onClick?: () => void;
   trailing?: string;
-  control?: "switch";
+  control?: "switch" | "appearance";
 };
 type Group = { title: string; rows: Row[] };
 
@@ -115,15 +116,7 @@ export function DesktopSettingsHome() {
         {
           icon: (p) => (themeMode === "dark" ? <MoonIcon {...p} /> : <SunIcon {...p} />),
           label: tx("Appearance"),
-          control: "switch",
-          trailing:
-            themeMode === "dark" ? tx("Dark") : themeMode === "system" ? tx("System") : tx("Light"),
-          onClick: () => {
-            const next: ThemeMode =
-              themeMode === "light" ? "dark" : themeMode === "dark" ? "system" : "light";
-            setThemeMode(next);
-            setTheme(next);
-          },
+          control: "appearance",
         },
         {
           icon: (p) => <Info {...p} />,
@@ -191,19 +184,8 @@ export function DesktopSettingsHome() {
                         {row.trailing}
                       </span>
                     )}
-                    {row.control === "switch" ? (
-                      <span
-                        aria-hidden="true"
-                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent shadow-inner transition-colors ${
-                          themeMode === "dark" ? "bg-primary" : "bg-muted-foreground/30"
-                        }`}
-                      >
-                        <span
-                          className={`block h-5 w-5 rounded-full bg-background shadow-md transition-transform ${
-                            themeMode === "dark" ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </span>
+                    {row.control === "appearance" ? (
+                      <ThemeSegmented value={themeMode} onChange={next => { setThemeMode(next); setTheme(next); }} />
                     ) : (
                       <ChevronRight className="w-4 h-4 text-foreground/65 shrink-0" />
                     )}

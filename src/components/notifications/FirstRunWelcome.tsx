@@ -11,9 +11,8 @@ import { useDynamicNotifications } from "./DynamicNotifications";
 
 /** Bump the version to greet everyone again. */
 const WELCOME_KEY = "megsy_welcome_notice_v1";
-/** While this is on, the greeting shows on every visit so it is easy to review.
- *  Set it to false to go back to greeting each account once. */
-const ALWAYS_SHOW = true;
+/** Off = one greeting per account, ever. Flip it on only to review the card. */
+const ALWAYS_SHOW = false;
 
 export default function FirstRunWelcome() {
   const { trigger } = useDynamicNotifications();

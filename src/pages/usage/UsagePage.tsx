@@ -1,7 +1,7 @@
 /**
- * @doc Billing — the single statement page. Glass sheet: back + help, big title,
- * thin icon rows (renewal, amount, auto pay), past statements, and a bill sheet
- * that opens with the real statement data.
+ * @doc Billing — the single statement page. Glass sheet: back, big title, thin
+ * icon rows (renewal, amount, auto-renew), past statements, and sheets that open
+ * with the real statement data and the real auto-renew controls.
  */
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,6 @@ import {
   FileText,
   ChevronRight,
   ChevronLeft,
-  HelpCircle,
   Loader2,
   X,
 } from "lucide-react";
@@ -21,16 +20,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeFunction } from "@/lib/supabaseFunction";
 import { claimDailyCredits, fetchCreditOverview, type CreditOverview } from "@/lib/creditsSystem";
 import { translateExactText, useUserLang, type AuthLang } from "@/lib/authI18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 type Sub = {
   id: string;
@@ -40,6 +29,7 @@ type Sub = {
   amount_cents: number | null;
   currency: string | null;
   created_at: string;
+  auto_renew: boolean | null;
 };
 
 const locale = (lang: AuthLang) => (lang === "ar-eg" ? "ar-EG" : "en-US");
@@ -91,7 +81,7 @@ const Row = ({
   );
 };
 
-/* ── Label / value line inside the bill sheet ── */
+/* ── Label / value line inside a sheet ── */
 const Fact = ({ label, value }: { label: string; value: string }) => (
   <div className="gx-fact">
     <span className="gx-fact-label">{label}</span>
@@ -111,9 +101,8 @@ const UsagePage = () => {
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [openBill, setOpenBill] = useState<Sub | "current" | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
+  const [autoSheet, setAutoSheet] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
 
   useEffect(() => {
     let dead = false;
@@ -134,7 +123,7 @@ const UsagePage = () => {
         supabase.from("profiles").select("credits").eq("id", user.id).single(),
         supabase
           .from("subscriptions")
-          .select("id, plan, status, current_period_end, amount_cents, currency, created_at")
+          .select("id, plan, status, current_period_end, amount_cents, currency, created_at, auto_renew")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(12),
@@ -155,7 +144,8 @@ const UsagePage = () => {
   }, []);
 
   const sub = subs[0] ?? null;
-  const isActive = !cancelled && (sub?.status === "active" || sub?.status === "trialing");
+  const isActive = sub?.status === "active" || sub?.status === "trialing";
+  const autoRenew = Boolean(sub?.auto_renew) && isActive;
   const amountLabel = sub?.amount_cents
     ? money(sub.amount_cents, sub.currency)
     : `${credits.toLocaleString(locale(lang))} MC`;
@@ -171,27 +161,32 @@ const UsagePage = () => {
     return h ? `${h}h ${m}m` : `${m}m`;
   }, [overview?.nextRefresh]);
 
-  const cancelSubscription = async () => {
-    setCancelling(true);
+  /** Real enable / disable of monthly auto-renew, stored on the subscription. */
+  const setAuto = async (on: boolean) => {
+    setAutoBusy(true);
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error(copy("Sign in again to continue."));
-      const { error } = await invokeFunction("kashier-checkout", {
-        body: { kind: "cancel-subscription" },
+      const { error } = await invokeFunction("subscription-manage", {
+        body: { action: on ? "auto-renew-on" : "auto-renew-off" },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (error) throw error;
-      setCancelled(true);
-      setConfirmCancel(false);
+      setSubs((rows) =>
+        rows.map((r, i) => (i === 0 ? { ...r, auto_renew: on } : r)),
+      );
+      setAutoSheet(false);
       toast.success(
-        copy("Subscription cancelled. Your plan stays active until the end of the billing period."),
+        on
+          ? copy("Auto-renew is on. Your plan renews every month.")
+          : copy("Auto-renew is off. Your plan stays active until the period ends."),
       );
     } catch (e: any) {
-      toast.error(e?.message || copy("Could not cancel right now. Please contact support."));
+      toast.error(e?.message || copy("Could not update auto-renew right now."));
     } finally {
-      setCancelling(false);
+      setAutoBusy(false);
     }
   };
 
@@ -236,6 +231,16 @@ const UsagePage = () => {
     ];
   }, [openBill, credits, lang, isActive, sub, amountLabel, overview, refreshIn, copy]);
 
+  const renewFacts = [
+    { label: copy("Plan"), value: isActive && sub ? sub.plan : copy("Free") },
+    { label: copy("Amount"), value: amountLabel },
+    { label: copy("Every"), value: copy("Month") },
+    {
+      label: autoRenew ? copy("Next charge") : copy("Access ends"),
+      value: fmtDate(sub?.current_period_end, lang),
+    },
+  ];
+
   return (
     <div className="gx-root" dir={ar ? "rtl" : "ltr"}>
       <div className="gx-screen">
@@ -247,14 +252,6 @@ const UsagePage = () => {
             className="gx-hbtn"
           >
             <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            aria-label={copy("Help")}
-            onClick={() => navigate("/support")}
-            className="gx-hbtn"
-          >
-            <HelpCircle className="gx-hicon" strokeWidth={1.8} />
           </button>
         </header>
 
@@ -299,10 +296,16 @@ const UsagePage = () => {
               />
               <Row
                 icon={RefreshCcw}
-                tone={isActive ? "green" : "neutral"}
-                label={copy("Auto pay")}
-                value={isActive ? copy("On") : copy("Off")}
-                onClick={() => (isActive ? setConfirmCancel(true) : navigate("/pricing"))}
+                tone={autoRenew ? "green" : "neutral"}
+                label={copy("Auto-renew")}
+                value={
+                  isActive
+                    ? autoRenew
+                      ? copy("On · renews monthly")
+                      : copy("Off · ends this period")
+                    : copy("No active subscription")
+                }
+                onClick={() => setAutoSheet(true)}
                 chevron
               />
             </section>
@@ -378,35 +381,73 @@ const UsagePage = () => {
         </div>
       )}
 
-      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
-        <AlertDialogContent dir={ar ? "rtl" : "ltr"}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{copy("Cancel subscription?")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {copy(
-                "You'll keep your paid plan until the end of the current period, then switch to the free plan. Purchased credits are kept.",
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>{copy("Keep plan")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                cancelSubscription();
-              }}
-              disabled={cancelling}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {cancelling ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                copy("Cancel subscription")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* ── Auto-renew sheet: real on / off ── */}
+      {autoSheet && (
+        <div className="gx-scrim" onClick={() => setAutoSheet(false)}>
+          <div className="gx-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="gx-sheet-bar" />
+            <div className="gx-sheet-head">
+              <h3 className="gx-sheet-title">{copy("Auto-renew")}</h3>
+              <button
+                type="button"
+                aria-label={copy("Close")}
+                onClick={() => setAutoSheet(false)}
+                className="gx-hbtn gx-hbtn-sm"
+              >
+                <X className="gx-hicon" strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="gx-sheet-body">
+              {renewFacts.map((f) => (
+                <Fact key={f.label} label={f.label} value={f.value} />
+              ))}
+              <p className="mt-2 px-1 text-[13px] leading-relaxed text-[color:var(--settings-muted)]">
+                {!isActive
+                  ? copy("You don't have an active subscription yet. Pick a plan to start one.")
+                  : autoRenew
+                    ? copy(
+                        "We charge your saved payment method every month and top up your credits automatically.",
+                      )
+                    : copy(
+                        "Auto-renew is off, so nothing will be charged. Your plan stays active until the end of the period you already paid for.",
+                      )}
+              </p>
+            </div>
+
+            {!isActive ? (
+              <button
+                type="button"
+                className="gx-pill gx-pill-wide"
+                onClick={() => {
+                  setAutoSheet(false);
+                  navigate("/pricing");
+                }}
+              >
+                {copy("See plans")}
+              </button>
+            ) : autoRenew ? (
+              <button
+                type="button"
+                disabled={autoBusy}
+                className="gx-pill gx-pill-wide gx-pill-danger"
+                onClick={() => void setAuto(false)}
+              >
+                {autoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : copy("Turn off auto-renew")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={autoBusy}
+                className="gx-pill gx-pill-wide"
+                onClick={() => void setAuto(true)}
+              >
+                {autoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : copy("Turn on auto-renew")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -96,3 +96,24 @@ html.dark, html[data-theme="dark"] {
  html body .settings-reference-desktop .ds-row .text-foreground { color: var(--settings-ink) !important; }
  html body .settings-reference-desktop .ds-row .ms-icon-tile svg { color: inherit !important; }
 }
+
+/* Appearance: one clean segment instead of a dropdown or a fake switch. */
+.th-seg {
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px; flex-shrink: 0;
+  border-radius: 999px; background: var(--settings-line);
+}
+.th-seg-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  height: 30px; min-width: 34px; padding: 0 11px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--settings-muted);
+  font: inherit; font-size: 11.5px; font-weight: 600; line-height: 1; cursor: pointer;
+  transition: background .22s cubic-bezier(.22,1,.36,1), color .22s, box-shadow .22s;
+}
+.th-seg-btn > svg { width: 14px; height: 14px; flex: none; }
+.th-seg-btn[data-on="true"] {
+  background: var(--settings-surface); color: var(--settings-ink);
+  box-shadow: var(--settings-shadow), 0 1px 4px rgba(0,0,0,.10);
+}
+.th-seg-btn:active { transform: scale(.96); }
+@media (max-width: 400px) { .th-seg-btn { padding: 0 8px; } .th-seg-btn span { display: none; } }
+@media (prefers-reduced-motion: reduce) { .th-seg-btn { transition: none; } }

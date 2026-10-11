@@ -1,6 +1,7 @@
+/** @doc One app — glass detail: hero, linked accounts, connect, how Megsy uses it. */
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Plus, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { ChevronLeft, Loader2, Plus, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { integrations as CATALOG } from "@/lib/integrationsData";
 import {
@@ -13,7 +14,6 @@ import {
 import { IntegrationLogo } from "@/components/chat/integrations/IntegrationRow";
 import { useUserLang } from "@/lib/authI18n";
 
-/** One app: status, linked accounts, add another account, disconnect. */
 export default function IntegrationDetailPage() {
   const { app = "" } = useParams();
   const navigate = useNavigate();
@@ -47,8 +47,10 @@ export default function IntegrationDetailPage() {
 
   if (!item) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">
-        {ar ? "التطبيق ده مش موجود" : "App not found"}
+      <div className="gx-root" dir={ar ? "rtl" : "ltr"}>
+        <div className="gx-screen">
+          <p className="gx-empty">{ar ? "التطبيق ده مش موجود" : "App not found"}</p>
+        </div>
       </div>
     );
   }
@@ -84,92 +86,152 @@ export default function IntegrationDetailPage() {
 
   const m = (meta ?? {}) as Record<string, unknown>;
   const accountName =
-    (m.account_name as string) || (m.email_address as string) || (m.telegram_username as string) ||
-    (m.name as string) || (m.login as string) || (ar ? "الحساب الرئيسي" : "Main account");
+    (m.account_name as string) ||
+    (m.email_address as string) ||
+    (m.telegram_username as string) ||
+    (m.name as string) ||
+    (m.login as string) ||
+    (ar ? "الحساب الرئيسي" : "Main account");
 
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="min-h-[100dvh] bg-background text-foreground">
-      <div className="mx-auto max-w-xl px-5 pb-20 pt-4">
-        <button
-          type="button"
-          onClick={() => navigate("/integrations", { replace: true })}
-          aria-label="Back"
-          className="grid h-10 w-10 place-items-center rounded-full text-foreground/80 transition-colors hover:bg-muted"
-        >
-          <ArrowLeft className={`h-5 w-5 ${ar ? "rotate-180" : ""}`} />
-        </button>
-
-        {/* Hero */}
-        <div className="relative mt-6 flex flex-col items-center rounded-[32px] bg-card px-6 pb-8 pt-10 text-center ring-1 ring-border/60">
-          <span className="relative grid h-24 w-24 place-items-center rounded-[28px] bg-background ring-1 ring-border/60">
-            <IntegrationLogo item={item} size={54} />
-          </span>
-          <h1 className="relative mt-5 text-[26px] font-bold tracking-tight">{item.name}</h1>
-          <p className="relative mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">{item.description}</p>
-          <span
-            className={`relative mt-4 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${
-              on ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
-            }`}
+    <div className="gx-root" dir={ar ? "rtl" : "ltr"}>
+      <style>{detailCss}</style>
+      <div className="gx-screen">
+        <header className="gx-top">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate("/integrations", { replace: true })}
+            className="gx-hbtn"
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-background" : "bg-muted-foreground/50"}`} />
-            {loading ? "…" : on ? (ar ? "متصل" : "Connected") : ar ? "غير متصل" : "Not connected"}
-          </span>
-        </div>
+            <ChevronLeft className="gx-hicon rtl:rotate-180" strokeWidth={2} />
+          </button>
+        </header>
 
-        <section className="mt-8">
-          <h2 className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {ar ? "الحسابات" : "Accounts"}
-          </h2>
-          <div className="overflow-hidden rounded-[24px] bg-card ring-1 ring-border/60">
+        <div className="gx-content">
+          <section className="gx-card app-hero">
+            <span className="app-hero-logo">
+              <IntegrationLogo item={item} size={46} />
+            </span>
+            <h1 className="app-hero-name">{item.name}</h1>
+            <p className="app-hero-desc">{item.description}</p>
+            <span className={`app-state${on ? " is-on" : ""}`}>
+              <span className="app-state-dot" />
+              {loading ? "…" : on ? (ar ? "متصل" : "Connected") : ar ? "غير متصل" : "Not connected"}
+            </span>
+          </section>
+
+          <h2 className="gx-section-title app-section">{ar ? "الحسابات" : "Accounts"}</h2>
+          <section className="gx-card">
             {loading ? (
-              <div className="grid h-16 place-items-center"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+              <div className="gx-loading">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
             ) : on ? (
-              <div className="flex items-center gap-3 px-4 py-3.5">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-muted text-foreground">
-                  <UserRound className="h-4.5 w-4.5" />
+              <div className="app-account">
+                <span className="app-account-tile">
+                  <UserRound strokeWidth={1.8} />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{accountName}</span>
+                <span className="app-account-name">{accountName}</span>
                 <button
                   type="button"
                   onClick={() => void disconnect()}
                   disabled={!!busy}
                   aria-label={ar ? "فصل" : "Disconnect"}
-                  className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                  className="app-icon-btn app-icon-danger"
                 >
                   {busy === "disconnect" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </button>
               </div>
             ) : (
-              <p className="px-4 py-5 text-center text-sm text-muted-foreground">
-                {ar ? "مفيش حسابات مربوطة لسه" : "No accounts linked yet"}
-              </p>
+              <p className="app-none">{ar ? "مفيش حسابات مربوطة لسه" : "No accounts linked yet"}</p>
             )}
+
             <button
               type="button"
               onClick={() => void connect()}
               disabled={!!busy}
-              className="flex w-full items-center gap-3 border-t border-border/60 px-4 py-3.5 text-start text-sm font-semibold transition-colors hover:bg-muted/50 disabled:opacity-50"
+              className={`app-connect${on ? " app-connect-div" : ""}`}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background">
+              <span className="app-connect-tile">
                 {busy === "connect" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               </span>
-              {on ? (ar ? "إضافة حساب تاني" : "Add another account") : ar ? `ربط ${item.name}` : `Connect ${item.name}`}
+              <span className="app-connect-label">
+                {on ? (ar ? "إضافة حساب تاني" : "Add another account") : ar ? `ربط ${item.name}` : `Connect ${item.name}`}
+              </span>
             </button>
-          </div>
-        </section>
+          </section>
 
-        <section className="mt-4 rounded-[24px] bg-card px-5 py-4 ring-1 ring-border/60">
-          <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-            {ar ? "ميغسي بيستخدمه إزاي" : "How Megsy uses it"}
-          </h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            {ar
-              ? "لما تطلب حاجة محتاجة التطبيق ده، ميغسي بيستخدم حسابك المربوط تلقائيًا، وبيسألك قبل أي خطوة مهمة."
-              : "When a request needs this app, Megsy uses your linked account automatically and asks before important steps."}
-          </p>
-        </section>
+          <section className="gx-card app-note">
+            <h3 className="app-note-title">
+              <ShieldCheck strokeWidth={1.8} />
+              {ar ? "ميغسي بيستخدمه إزاي" : "How Megsy uses it"}
+            </h3>
+            <p className="app-note-text">
+              {ar
+                ? "لما تطلب حاجة محتاجة التطبيق ده، ميغسي بيستخدم حسابك المربوط تلقائيًا، وبيسألك قبل أي خطوة مهمة."
+                : "When a request needs this app, Megsy uses your linked account automatically and asks before important steps."}
+            </p>
+          </section>
+        </div>
+        <div className="gx-spacer" />
       </div>
     </div>
   );
 }
+
+const detailCss = `
+.app-hero { display: grid; justify-items: center; gap: 4px; padding: 26px 22px 22px; text-align: center; }
+.app-hero-logo {
+  width: 84px; height: 84px; border-radius: 26px; display: grid; place-items: center;
+  background: var(--settings-surface); box-shadow: inset 0 0 0 1px var(--settings-line);
+  margin-bottom: 10px; overflow: hidden;
+}
+.app-hero-name { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--settings-ink); }
+.app-hero-desc { margin: 2px 0 0; max-width: 34ch; font-size: 13.5px; line-height: 1.5; color: var(--settings-muted); }
+.app-state {
+  margin-top: 12px; display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  background: var(--settings-line); color: var(--settings-muted);
+}
+.app-state.is-on { background: var(--settings-violet); color: var(--settings-surface); }
+.app-state-dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: .9; }
+.app-section { margin-top: 24px; }
+.app-account { display: flex; align-items: center; gap: 12px; padding: 13px 16px; }
+.app-account-tile {
+  flex: none; width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--settings-line); color: var(--settings-ink);
+}
+.app-account-tile > svg { width: 18px; height: 18px; }
+.app-account-name {
+  min-width: 0; flex: 1; font-size: 14.5px; font-weight: 600; color: var(--settings-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-icon-btn {
+  flex: none; width: 36px; height: 36px; display: grid; place-items: center; border: 0;
+  border-radius: 999px; background: transparent; color: var(--settings-muted); cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.app-icon-danger:hover { background: oklch(.55 .19 25 / .12); color: oklch(.55 .19 25); }
+.app-none { margin: 0; padding: 20px 16px; text-align: center; font-size: 13.5px; color: var(--settings-muted); }
+.app-connect {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+  border: 0; background: transparent; cursor: pointer; font: inherit; text-align: start;
+  color: var(--settings-ink); transition: background .18s ease;
+}
+.app-connect-div { box-shadow: inset 0 1px 0 var(--settings-line); }
+.app-connect:active { background: var(--settings-line); }
+.app-connect:disabled { opacity: .6; }
+.app-connect-tile {
+  flex: none; width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--settings-violet); color: var(--settings-surface);
+}
+.app-connect-label { font-size: 14.5px; font-weight: 620; }
+.app-note { padding: 16px 18px; margin-top: 14px; }
+.app-note-title {
+  margin: 0; display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 650; color: var(--settings-ink);
+}
+.app-note-title > svg { width: 16px; height: 16px; color: var(--settings-muted); }
+.app-note-text { margin: 6px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--settings-muted); }
+`;

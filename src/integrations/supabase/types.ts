@@ -10201,6 +10201,8 @@ export type Database = {
       subscriptions: {
         Row: {
           amount_cents: number | null
+          auto_renew: boolean
+          cancelled_at: string | null
           created_at: string
           currency: string | null
           current_period_end: string | null
@@ -10215,6 +10217,8 @@ export type Database = {
         }
         Insert: {
           amount_cents?: number | null
+          auto_renew?: boolean
+          cancelled_at?: string | null
           created_at?: string
           currency?: string | null
           current_period_end?: string | null
@@ -10229,6 +10233,8 @@ export type Database = {
         }
         Update: {
           amount_cents?: number | null
+          auto_renew?: boolean
+          cancelled_at?: string | null
           created_at?: string
           currency?: string | null
           current_period_end?: string | null

@@ -253,3 +253,33 @@ html body section.megsy-checkout .checkout-input-wrap input:not([type="checkbox"
 html body section.megsy-checkout .checkout-input-wrap, html body section.megsy-checkout .checkout-method { -webkit-backdrop-filter: blur(20px) saturate(1.15) !important; backdrop-filter: var(--checkout-frost) !important; }
 html body section.megsy-checkout .checkout-title, html body section.megsy-checkout .checkout-field > span, html body section.megsy-checkout .checkout-method span { color: var(--checkout-glass-ink) !important; -webkit-text-fill-color: var(--checkout-glass-ink) !important; opacity: 1 !important; }
 
+
+/* v4 — the hosted checkout and the bank's verification page open as one big
+   box inside the page instead of a narrow column. */
+.megsy-checkout[data-wide="true"] .botanical-content { max-width: min(1040px, 100vw - 32px); }
+.megsy-checkout[data-wide="true"] .checkout-stage { margin-top: 20px; }
+.checkout-frame {
+  position: relative; width: 100%; flex: 1;
+  min-height: min(760px, 78dvh);
+  border-radius: 26px; overflow: hidden;
+  background: oklch(1 0 0 / .97);
+  border: 1px solid oklch(1 0 0 / .5);
+  box-shadow: 0 26px 70px oklch(0 0 0 / .34), inset 0 1px 0 oklch(1 0 0 / .6);
+}
+.checkout-frame--verify { min-height: min(700px, 76dvh); }
+.checkout-frame iframe {
+  display: block; width: 100%; height: 100%; min-height: inherit;
+  border: 0; background: oklch(1 0 0);
+}
+.apay-slot {
+  display: grid; place-items: center; min-height: 88px; padding: 16px;
+  border-radius: 18px; background: oklch(1 0 0 / .1);
+  border: 1px solid var(--checkout-line);
+}
+.apay-slot:empty::after {
+  content: "Apple Pay"; color: var(--checkout-muted); font-size: 14px;
+}
+@media (max-height: 700px) {
+  .checkout-frame { min-height: min(620px, 74dvh); }
+  .checkout-frame--verify { min-height: min(560px, 72dvh); }
+}

@@ -277,3 +277,65 @@ export async function openHostedSession(
   if (!url || !isKashierUrl(url)) throw new KashierError(data?.error || "Couldn’t open the payment page.");
   return url;
 }
+
+/* --------------------------------------------------------------- Apple Pay */
+/** Kashier renders a real Apple Pay button inside our own page via their SDK. */
+const KASHIER_SDK_SRC = "https://payments.kashier.io/kashier-sdk.js";
+
+/** Apple Pay only exists on Apple devices that have a card in Wallet. */
+export function applePaySupported(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return Boolean((window as any).ApplePaySession?.canMakePayments?.());
+  } catch {
+    return false;
+  }
+}
+
+let sdkPromise: Promise<void> | null = null;
+/** Loads kashier-sdk.js once and resolves as soon as window.kashierSDK exists. */
+export function loadKashierSdk(): Promise<void> {
+  if (typeof document === "undefined") return Promise.resolve();
+  if ((window as any).kashierSDK) return Promise.resolve();
+  if (sdkPromise) return sdkPromise;
+  sdkPromise = new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = KASHIER_SDK_SRC;
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.onload = () => resolve();
+    script.onerror = () => {
+      sdkPromise = null;
+      reject(new KashierError("Couldn't load Apple Pay. Check your connection."));
+    };
+    document.head.appendChild(script);
+  });
+  return sdkPromise;
+}
+
+export type ApplePaySessionInfo = { sessionId: string; mode: "test" | "live"; orderId: string };
+
+/** Opens the Kashier payment session the Apple Pay SDK renders. */
+export async function openApplePaySession(
+  tier: string,
+  interval: BillingInterval,
+): Promise<ApplePaySessionInfo> {
+  const current = await session();
+  const { data, error } = await invokeFunction<{
+    session_id?: string;
+    mode?: string;
+    order_id?: string;
+    error?: string;
+  }>("kashier-applepay-session", {
+    body: { tier, interval },
+    headers: { Authorization: `Bearer ${current.access_token}` },
+  });
+  if (error) throw error;
+  if (!data?.session_id)
+    throw new KashierError(data?.error || "Apple Pay isn't available for this account yet.");
+  return {
+    sessionId: data.session_id,
+    mode: data.mode === "test" ? "test" : "live",
+    orderId: data.order_id ?? "",
+  };
+}

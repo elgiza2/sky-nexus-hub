@@ -1,55 +1,37 @@
-/** @doc Language settings — English or Egyptian Arabic, big cards with cartoon waving flags. */
+/** @doc Language settings — one clean glass list: flag chip, native name, tick. */
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Check } from "lucide-react";
+import { Check, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { AVAILABLE_LANGS, setUserLang, translateExactText, useUserLang, type AuthLang } from "@/lib/authI18n";
 
-/* Cartoon flags: chunky outline, waving shape, soft shine. Flag colours are
-   the countries' real colours, so they are intentionally literal. */
-const WAVE = "M8 14 C22 6 34 22 50 14 C66 6 78 22 92 14 L92 66 C78 74 66 58 50 66 C34 74 22 58 8 66 Z";
-
-function FlagFrame({ id, children }: { id: string; children: React.ReactNode }) {
+/** Flat, tidy flags — no poles, no waving, just the country's real colours. */
+function FlagEN({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 100 84" className="h-full w-full" aria-hidden>
-      <defs>
-        <clipPath id={`clip-${id}`}>
-          <path d={WAVE} />
-        </clipPath>
-      </defs>
-      <rect x="4" y="8" width="5" height="74" rx="2.5" fill="#6b4a2b" stroke="#2b1d12" strokeWidth="2.5" />
-      <circle cx="6.5" cy="8" r="4.5" fill="#f5c542" stroke="#2b1d12" strokeWidth="2.5" />
-      <g clipPath={`url(#clip-${id})`}>{children}</g>
-      <path d="M14 20 C26 14 34 26 48 20" fill="none" stroke="#fff" strokeOpacity=".55" strokeWidth="4" strokeLinecap="round" />
-      <path d={WAVE} fill="none" stroke="#2b1d12" strokeWidth="3.5" strokeLinejoin="round" />
+    <svg viewBox="0 0 60 40" className={className} aria-hidden>
+      <rect width="60" height="40" fill="#1f4aa8" />
+      <path d="M0 0 L60 40 M60 0 L0 40" stroke="#fff" strokeWidth="9" />
+      <path d="M0 0 L60 40 M60 0 L0 40" stroke="#d62839" strokeWidth="3.5" />
+      <path d="M30 0 V40 M0 20 H60" stroke="#fff" strokeWidth="12" />
+      <path d="M30 0 V40 M0 20 H60" stroke="#d62839" strokeWidth="6.5" />
     </svg>
   );
 }
 
-function FlagGB() {
+function FlagEG({ className }: { className?: string }) {
   return (
-    <FlagFrame id="gb">
-      <rect x="0" y="0" width="100" height="84" fill="#1f4aa8" />
-      <path d="M0 0 L100 84 M100 0 L0 84" stroke="#fff" strokeWidth="16" />
-      <path d="M0 0 L100 84 M100 0 L0 84" stroke="#d62839" strokeWidth="6" />
-      <path d="M50 0 V84 M0 40 H100" stroke="#fff" strokeWidth="20" />
-      <path d="M50 0 V84 M0 40 H100" stroke="#d62839" strokeWidth="11" />
-    </FlagFrame>
+    <svg viewBox="0 0 60 40" className={className} aria-hidden>
+      <rect width="60" height="13.4" fill="#d62839" />
+      <rect y="13.4" width="60" height="13.2" fill="#fff" />
+      <rect y="26.6" width="60" height="13.4" fill="#1d1d1f" />
+      <path d="M30 15.4 l2.6 2.6 -1 5.4 h-3.2 l-1 -5.4 z" fill="#e0a526" />
+    </svg>
   );
 }
 
-function FlagEG() {
-  return (
-    <FlagFrame id="eg">
-      <rect x="0" y="0" width="100" height="30" fill="#d62839" />
-      <rect x="0" y="30" width="100" height="20" fill="#fff" />
-      <rect x="0" y="50" width="100" height="34" fill="#1d1d1f" />
-      <path d="M50 32 l5 5 -2 9 h-6 l-2 -9 z" fill="#e0a526" stroke="#2b1d12" strokeWidth="1.2" />
-    </FlagFrame>
-  );
-}
-
-const FLAGS: Record<string, () => JSX.Element> = { en: FlagGB, "ar-eg": FlagEG };
+const FLAGS: Record<string, (p: { className?: string }) => JSX.Element> = {
+  en: FlagEN,
+  "ar-eg": FlagEG,
+};
 
 export default function LanguagePage() {
   const navigate = useNavigate();
@@ -82,40 +64,33 @@ export default function LanguagePage() {
         <p className="gx-sub">{tx("Pick how Megsy talks to you.")}</p>
 
         <div className="gx-content">
-          <div className="lang-grid">
+          <section className="gx-card" role="radiogroup" aria-label={tx("Language")}>
             {AVAILABLE_LANGS.map((l, i) => {
-              const Flag = FLAGS[l.code] ?? FlagGB;
+              const Flag = FLAGS[l.code] ?? FlagEN;
               const active = lang === l.code;
               return (
-                <motion.button
+                <button
                   key={l.code}
                   type="button"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => pick(l.code as AuthLang)}
-                  className={`gx-card lang-card ${active ? "gx-card-selected" : ""}`}
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => void pick(l.code as AuthLang)}
+                  className={`lang-row${i > 0 ? " lang-row-div" : ""}`}
                 >
-                  {active && (
-                    <span className="lang-check">
-                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                    </span>
-                  )}
-                  <motion.span
-                    className="lang-flag"
-                    animate={active ? { rotate: [0, -4, 3, 0] } : { rotate: 0 }}
-                    transition={{ duration: 1.6, repeat: active ? Infinity : 0, ease: "easeInOut" }}
-                    style={{ transformOrigin: "10% 90%" }}
-                  >
-                    <Flag />
-                  </motion.span>
-                  <span className="lang-native">{l.native}</span>
-                  <span className="lang-label">{l.label}</span>
-                </motion.button>
+                  <span className="lang-flag">
+                    <Flag className="lang-flag-art" />
+                  </span>
+                  <span className="lang-text">
+                    <span className="lang-native">{l.native}</span>
+                    <span className="lang-label">{l.label}</span>
+                  </span>
+                  <span className={`lang-tick${active ? " is-on" : ""}`} aria-hidden>
+                    {active ? <Check strokeWidth={3} /> : null}
+                  </span>
+                </button>
               );
             })}
-          </div>
+          </section>
         </div>
         <div className="gx-spacer" />
       </div>
@@ -124,18 +99,27 @@ export default function LanguagePage() {
 }
 
 const languageCss = `
-.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.lang-card {
-  position: relative; display: flex; flex-direction: column; align-items: center;
-  padding: 26px 16px 22px; border: 0; cursor: pointer; font: inherit; color: inherit;
+.lang-row {
+  width: 100%; display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border: 0; background: transparent; cursor: pointer;
+  font: inherit; color: inherit; text-align: start;
+  transition: background 0.18s ease;
 }
-.lang-check {
-  position: absolute; inset-inline-end: 12px; top: 12px;
-  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px;
-  background: var(--settings-violet); color: var(--settings-surface);
-  box-shadow: var(--settings-shadow);
+.lang-row-div { box-shadow: inset 0 1px 0 var(--settings-line); }
+.lang-row:active { background: var(--settings-line); }
+.lang-flag {
+  flex: none; width: 46px; height: 32px; border-radius: 9px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.16), inset 0 0 0 1px var(--settings-line);
 }
-.lang-flag { display: block; width: 7rem; height: 6rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18)); }
-.lang-native { margin-top: 16px; font-size: 17px; font-weight: 700; }
-.lang-label { margin-top: 2px; font-size: 12.5px; color: var(--settings-muted); }
+.lang-flag-art { display: block; width: 100%; height: 100%; }
+.lang-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.lang-native { font-size: 15.5px; font-weight: 650; letter-spacing: -0.01em; color: var(--settings-ink); }
+.lang-label { font-size: 12.5px; color: var(--settings-muted); }
+.lang-tick {
+  flex: none; width: 24px; height: 24px; border-radius: 999px;
+  display: grid; place-items: center; color: var(--settings-surface);
+  background: var(--settings-line); transition: background 0.18s ease;
+}
+.lang-tick.is-on { background: var(--settings-violet); }
+.lang-tick > svg { width: 14px; height: 14px; }
 `;
