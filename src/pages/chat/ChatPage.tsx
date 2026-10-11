@@ -215,7 +215,6 @@ import { DesktopChatHeader } from "./components/DesktopChatHeader";
 import { ChatArtifactsCanvas } from "./components/ChatArtifactsCanvas";
 import { ChatMessagesArea, prewarmTranscript } from "./components/ChatMessagesArea";
 import { ChatComposerSection } from "./components/ChatComposerSection";
-import { ComposerAgentPicker } from "./components/ComposerAgentPicker";
 const InlineCoderRun = lazy(() => import("@/components/coder/InlineCoderRun"));
 // Decorative aurora background + empty-state greeting are not needed for
 // first paint — the greeting only renders when there's no conversation on
@@ -235,7 +234,6 @@ import { DOCS_STATUS_FALLBACKS } from "./chatUtils";
 const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const urlAgentId = new URLSearchParams(location.search).get("agent");
   const conversationLoadRequestRef = useRef(0);
 
   // Warm the Pricing route immediately after the chat surface mounts. The
@@ -3327,7 +3325,6 @@ const ChatPage = () => {
               composerModeBarChange,
             }}
             composerAnimatedInputProps={{
-              agentSlot: <ComposerAgentPicker activeAgentId={urlAgentId} />,
               input,
               setInput,
               handleSend,

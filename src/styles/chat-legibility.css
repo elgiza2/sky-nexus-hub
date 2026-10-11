@@ -186,7 +186,7 @@
     color: hsl(var(--background)) !important;
     border: 0 !important;
     box-shadow: none !important;
-    border-radius: 9999px !important;
+    border-radius: 14px !important;
   }
 
   [data-chat-main="true"]::after {

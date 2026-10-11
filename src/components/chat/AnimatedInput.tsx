@@ -1,6 +1,5 @@
 import { memo, useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
-import { ArrowUp, Mic, Square, X, Sparkles, Loader2, Pencil, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowUp, Square, X, Sparkles, Loader2, Pencil, Plus } from "lucide-react";
 import { m as motion, AnimatePresence } from "framer-motion";
 
 import ModelPickerDropdown from "@/components/model-picker/ModelPickerDropdown";
@@ -52,8 +51,6 @@ interface AnimatedInputProps {
   computerSlot?: React.ReactNode;
   /** Small icon buttons (model / template pickers) rendered in the bottom control row. */
   serviceTools?: React.ReactNode;
-  /** Agent button rendered right after "+" in the bottom control row. */
-  agentSlot?: React.ReactNode;
   isEditing?: boolean;
   onCancelEdit?: () => void;
   /** When true, the composer sits in a chat context and uses a liquid-glass surface. */
@@ -86,7 +83,6 @@ const AnimatedInput = ({
   activeServiceSlot,
   computerSlot,
   serviceTools,
-  agentSlot,
   isEditing,
   onCancelEdit,
   onPlusClick,
@@ -137,51 +133,6 @@ const AnimatedInput = ({
   const [lastSelectedAgent, setLastSelectedAgent] = useState<AgentDef | null>(null);
   const [focused, setFocused] = useState(false);
   const [listening, setListening] = useState(false);
-  const voiceRef = useRef<any>(null);
-  const voiceBaseRef = useRef("");
-  const stopVoice = useCallback(() => {
-    try {
-      voiceRef.current?.stop();
-    } catch {
-      /* already stopped */
-    }
-    voiceRef.current = null;
-    setListening(false);
-  }, []);
-  /* Dictation: speech fills the composer, then send takes over the button. */
-  const toggleVoice = useCallback(() => {
-    if (listening) {
-      stopVoice();
-      return;
-    }
-    const Recognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!Recognition) {
-      toast.error("Voice input is not supported in this browser.");
-      return;
-    }
-    const recognition = new Recognition();
-    recognition.lang = navigator.language || "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    voiceBaseRef.current = value ? `${value.trim()} ` : "";
-    recognition.onresult = (event: any) => {
-      let transcript = "";
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        transcript += event.results[index][0].transcript;
-      }
-      onChange(`${voiceBaseRef.current}${transcript}`.replace(/\s+/g, " ").trimStart());
-    };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    voiceRef.current = recognition;
-    try {
-      recognition.start();
-      setListening(true);
-    } catch {
-      setListening(false);
-    }
-  }, [listening, onChange, stopVoice, value]);
   const composerLocation = useLocation();
   useEffect(() => {
     if (new URLSearchParams(composerLocation.search).get("integrations") === "1") {
@@ -331,10 +282,12 @@ const AnimatedInput = ({
       <div className="md:rounded-[28px]">
         <motion.div
           data-compact={compact ? "true" : "false"}
-          className={`chat-composer-frame chat-mobile-input-glow composer-card pointer-events-auto relative z-10 ${
-            headerSlot
-              ? "mx-0 rounded-[26px] px-3.5 pt-0 pb-2 md:px-4 md:pt-0 md:pb-2.5"
-              : "mx-0 rounded-[26px] px-3.5 pt-3 pb-2.5 md:px-4 md:pt-3 md:pb-2.5"
+          className={`chat-composer-frame chat-mobile-input-glow composer-card pointer-events-auto relative z-10 transition-[border-radius,margin,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            compact
+              ? "mx-0 rounded-[32px] px-2 py-1.5"
+              : headerSlot
+                ? "mx-0 rounded-[26px] px-3.5 pt-0 pb-2 md:px-4 md:pt-0 md:pb-2.5"
+                : "mx-0 rounded-[26px] px-3.5 pt-3 pb-2.5 md:px-4 md:pt-3 md:pb-2.5"
           } ${chatContext ? "chat-composer-liquid" : ""}`}
         >
           {computerSlot ? (
@@ -480,8 +433,8 @@ const AnimatedInput = ({
                 data-bwignore="true"
                 data-form-type="other"
                 name="chat-message"
-                className="scrollbar-hide relative w-full resize-none border-none bg-transparent px-1 py-1.5 text-[15.5px] font-medium leading-relaxed text-foreground outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 md:py-2 md:text-sm"
-                style={{ height: "54px" }}
+                className="scrollbar-hide relative w-full resize-none border-none bg-transparent px-1 py-1.5 text-[15.5px] font-medium leading-relaxed text-foreground outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 md:py-2 md:text-sm transition-[min-height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                style={{ minHeight: headerSlot ? "34px" : "38px" }}
               />
             </div>
             <AnimatePresence>{listening ? <ComposerVoiceWave /> : null}</AnimatePresence>
@@ -494,17 +447,20 @@ const AnimatedInput = ({
             dir={isArabicUi ? "rtl" : "ltr"}
             className={`relative flex items-center gap-1 ${compact ? "pt-0" : "pt-1 md:pt-0"}`}
           >
-            <button
+            <Button
               type="button"
               onClick={onPlusClick}
-              style={{ borderRadius: 9999 }}
-              className="animated-plus-btn relative z-[61] flex h-9 w-9 shrink-0 items-center justify-center border-0 bg-foreground/[0.06] text-foreground/80 transition-[background-color,transform,color] duration-150 hover:bg-foreground/[0.1] hover:text-foreground active:scale-[0.94]"
+              variant="ghost"
+              size="icon-sm"
+              className="animated-plus-btn relative z-[61] flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-[12px] border border-foreground/[0.08] bg-foreground/[0.035] px-2.5 text-muted-foreground shadow-sm transition-[background-color,border-color,transform,color] duration-150 hover:border-primary/30 hover:bg-primary/[0.08] hover:text-foreground active:scale-[0.96] shrink-0"
               aria-label={uiT("openTools")}
               data-plus-trigger
             >
-              <Plus className="h-[19px] w-[19px]" strokeWidth={2.1} />
-            </button>
-            {agentSlot}
+              <Plus className="h-[17px] w-[17px]" strokeWidth={2} />
+              <span className="hidden text-[11px] font-semibold sm:inline">
+                {isArabicUi ? "أدوات" : "Tools"}
+              </span>
+            </Button>
 
             {(focused || hasText) && (
               <ComposerIntegrationsButton onClick={() => navigate("/integrations")} />
@@ -520,16 +476,16 @@ const AnimatedInput = ({
                   when the user has typed a message so it can be queued. */}
               {isLoading ? (
                 <motion.div key="running-actions" className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <Button type="button" onClick={onCancel} variant="destructive" size="icon-sm" style={{ borderRadius: 9999 }} className="shrink-0 shadow-none" aria-label={uiT("stopGeneration")}>
+                  <Button type="button" onClick={onCancel} variant="destructive" size="icon-sm" className="shrink-0 rounded-full shadow-none" aria-label={uiT("stopGeneration")}>
                     <Square className="w-3 h-3" fill="currentColor" />
                   </Button>
                   {hasText && (
-                    <Button type="button" onClick={handleSendWithSlash} disabled={disabled} data-testid="mobile-composer-send" variant="neutral" size="icon-sm" style={{ borderRadius: 9999 }} className="shrink-0 h-10 w-10 shadow-none disabled:opacity-40" aria-label={isArabicUi ? "ضيف للانتظار" : "Queue message"}>
+                    <Button type="button" onClick={handleSendWithSlash} disabled={disabled} data-testid="mobile-composer-send" variant="neutral" size="icon-sm" className="shrink-0 rounded-full h-10 w-10 shadow-none disabled:opacity-40" aria-label={isArabicUi ? "ضيف للانتظار" : "Queue message"}>
                       <ArrowUp className="w-[18px] h-[18px] md:w-4 md:h-4" strokeWidth={2.2} />
                     </Button>
                   )}
                 </motion.div>
-              ) : hasText || canSendWithoutText ? (
+              ) : (
                 <motion.div
                   key="send"
                   initial={{ opacity: 0, scale: 0.7 }}
@@ -544,32 +500,11 @@ const AnimatedInput = ({
                     data-testid="mobile-composer-send"
                     variant="neutral"
                     size="icon-sm"
-                    style={{ borderRadius: 9999 }}
-                    className="shrink-0 h-10 w-10 shadow-none disabled:opacity-40"
+                    className="shrink-0 rounded-full h-10 w-10 shadow-none disabled:opacity-40"
                     aria-label={uiT("sendMessage")}
                   >
                     <ArrowUp className="w-[18px] h-[18px] md:w-4 md:h-4" strokeWidth={2.2} />
                   </Button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="voice"
-                  initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.7 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <button
-                    type="button"
-                    onClick={toggleVoice}
-                    data-testid="mobile-composer-voice"
-                    aria-pressed={listening}
-                    style={{ borderRadius: 9999 }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-foreground/75 transition-[background-color,color,transform] duration-150 hover:bg-foreground/[0.06] hover:text-foreground active:scale-[0.94]"
-                    aria-label={listening ? "Stop voice input" : "Voice input"}
-                  >
-                    <Mic className="h-[21px] w-[21px]" strokeWidth={1.7} />
-                  </button>
                 </motion.div>
               )}
             </AnimatePresence>

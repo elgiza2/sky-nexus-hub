@@ -260,7 +260,7 @@ export const DraggablePlusSheet = ({
       onWheel={(e) => {
         if (e.deltaY > 0 && !expandedRef.current) snapTo("expanded");
       }}
-      className={`mobile-plus-glass-menu fixed bottom-0 left-0 right-0 z-[60] flex min-w-0 max-w-[100vw] flex-col overflow-x-hidden rounded-t-[28px] bg-background outline-none will-change-transform ${
+      className={`mobile-plus-glass-menu fixed bottom-0 left-0 right-0 z-[60] flex min-w-0 max-w-[100vw] flex-col overflow-x-hidden rounded-t-[22px] bg-background outline-none will-change-transform ${
         sheetKind === "integrations"
           ? "md:mx-auto md:max-w-[640px] md:rounded-t-[24px]"
           : "md:hidden"
@@ -268,11 +268,11 @@ export const DraggablePlusSheet = ({
     >
       <div
         data-sheet-grip
-        className="shrink-0 px-4 pb-2.5 pt-3"
+        className="shrink-0 px-4 pb-3 pt-4"
       >
-        <div className="mx-auto mb-2.5 h-1 w-9 rounded-full bg-foreground/15" aria-hidden="true" />
+        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-foreground/20" aria-hidden="true" />
         <div className="flex items-center">
-          <span className="min-w-0 flex-1 text-center text-[15.5px] font-semibold tracking-tight text-foreground">
+          <span className="min-w-0 flex-1 text-center text-[17px] font-semibold tracking-tight text-foreground">
             {sheetKind === "integrations" ? "Integrations & tools" : "Add to chat"}
           </span>
         </div>
@@ -280,7 +280,7 @@ export const DraggablePlusSheet = ({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="flex-1 overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]"
+        className="flex-1 overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]"
         style={{
           WebkitOverflowScrolling: "touch",
           overflowY: expanded ? "auto" : "hidden",
