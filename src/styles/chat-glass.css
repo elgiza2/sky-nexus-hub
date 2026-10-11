@@ -10,6 +10,7 @@
 
 /* Longhands only: the minifier mangles the `background` shorthand when a
    var() gradient and background-attachment share a rule. */
+html body [data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"][data-chat-empty="true"],
 html body [data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"] {
   background-color: var(--settings-canvas) !important;
   background-image: var(--settings-backdrop) !important;
@@ -20,6 +21,7 @@ html body [data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"] {
 }
 
 /* The message log paints its own opaque canvas — let the aurora through. */
+html body [data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"][data-chat-empty="true"] > [role="log"],
 html body [data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"] > [role="log"],
 html body [data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"] [data-chat-scroll] {
   background: transparent !important;
