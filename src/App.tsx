@@ -12,6 +12,8 @@ import MarketingTypographyScope from "@/components/common/MarketingTypographySco
 import { PromoBannerProvider } from "@/components/promo/PromoBannerContext";
 import { ZoneProvider } from "@/contexts/ZoneContext";
 import { ConfirmProvider } from "@/components/common/ConfirmDialog";
+import { DynamicNotifications } from "@/components/notifications/DynamicNotifications";
+import FirstRunWelcome from "@/components/notifications/FirstRunWelcome";
 import { supabase } from "@/integrations/supabase/client";
 import { subscribeAuthEvents } from "@/lib/authStore";
 import { clearAllSnapshots } from "@/lib/pageSnapshot";
@@ -206,6 +208,7 @@ const App = () => {
               <ZoneProvider>
                 <PromoBannerProvider>
                   <ConfirmProvider>
+                    <DynamicNotifications>
                     <ScrollToTop />
                     <PageViewTracker />
                     <ReminderWatcher />
@@ -230,6 +233,8 @@ const App = () => {
                         </SettingsShell>
                       </RouteErrorBoundary>
                     </Suspense>
+                    <FirstRunWelcome />
+                    </DynamicNotifications>
                   </ConfirmProvider>
                 </PromoBannerProvider>
               </ZoneProvider>
