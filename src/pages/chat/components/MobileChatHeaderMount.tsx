@@ -60,9 +60,6 @@ interface MobileChatHeaderMountProps {
   researchDepth: ResearchDepth;
   setResearchDepth: (d: ResearchDepth) => void;
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
-  /** Chat / agents switch in the mobile bar. */
-  tab?: "chat" | "agents";
-  onTabChange?: (tab: "chat" | "agents") => void;
 }
 
 
@@ -108,8 +105,6 @@ export function MobileChatHeaderMount(props: MobileChatHeaderMountProps) {
     handleCreateShareLink,
     handleCopyShareLink,
     scrollContainerRef,
-    tab,
-    onTabChange,
   } = props;
 
 
@@ -142,8 +137,6 @@ export function MobileChatHeaderMount(props: MobileChatHeaderMountProps) {
       isDeleting={isDeleting}
       chatUserId={chatUserId}
       scrollContainerRef={scrollContainerRef}
-      tab={tab}
-      onTabChange={onTabChange}
       modelSlot={
         // Model picker removed: one agent, fixed models.
         true ? null : (

@@ -98,7 +98,7 @@ const AnimatedInput = ({
   const isArabicUi =
     currentLang === "ar-eg" ||
     (typeof document !== "undefined" && document.documentElement.dir === "rtl");
-  const shortPlaceholder = isArabicUi ? "اسأل ميغسي" : "Ask anything…";
+  const shortPlaceholder = isArabicUi ? "اسأل ميغسي" : "Ask Megsy";
 
   /**
    * Intercept bare slash commands (e.g. "/clear", "/docs", "/new").
@@ -374,7 +374,7 @@ const AnimatedInput = ({
               {!value && (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 flex items-start px-1 pt-2 text-[15.5px] md:text-sm text-foreground/45 md:text-foreground/90 leading-relaxed overflow-hidden"
+                  className="pointer-events-none absolute inset-0 hidden md:flex items-start px-1 pt-2 text-[15.5px] md:text-sm text-foreground/90 leading-relaxed overflow-hidden"
                 >
                   <AnimatePresence mode="wait">
                     <motion.span
@@ -452,11 +452,14 @@ const AnimatedInput = ({
               onClick={onPlusClick}
               variant="ghost"
               size="icon-sm"
-              className="animated-plus-btn relative z-[61] flex h-10 w-10 items-center justify-center rounded-full border border-foreground/[0.08] bg-foreground/[0.035] text-muted-foreground shadow-sm transition-[background-color,border-color,transform,color] duration-150 hover:border-primary/30 hover:bg-primary/[0.08] hover:text-foreground active:scale-[0.96] shrink-0"
+              className="animated-plus-btn relative z-[61] flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-[12px] border border-foreground/[0.08] bg-foreground/[0.035] px-2.5 text-muted-foreground shadow-sm transition-[background-color,border-color,transform,color] duration-150 hover:border-primary/30 hover:bg-primary/[0.08] hover:text-foreground active:scale-[0.96] shrink-0"
               aria-label={uiT("openTools")}
               data-plus-trigger
             >
-              <Plus className="h-[19px] w-[19px]" strokeWidth={2.1} />
+              <Plus className="h-[17px] w-[17px]" strokeWidth={2} />
+              <span className="hidden text-[11px] font-semibold sm:inline">
+                {isArabicUi ? "أدوات" : "Tools"}
+              </span>
             </Button>
 
             {(focused || hasText) && (

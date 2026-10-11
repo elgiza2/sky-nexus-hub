@@ -211,7 +211,6 @@ const ChatGlobalModals = lazy(() =>
 );
 
 import { MobileChatHeaderMount } from "./components/MobileChatHeaderMount";
-import { ChatAgentsPanel } from "./components/ChatAgentsPanel";
 import {
   agentConversationKey,
   agentsFromKey,
@@ -394,7 +393,6 @@ const ChatPage = () => {
   const { plusMenuOpen, setPlusMenuOpen, plusView, setPlusView } = usePlusMenu();
   const isMobileViewport = useIsMobile();
   // The chat page has two halves on phones: the conversation and the agents.
-  const [mobileChatTab, setMobileChatTab] = useState<"chat" | "agents">("chat");
   /** One AgentSky session per agent, so a team chat keeps every agent's thread. */
   const agentSessionsRef = useRef<Record<string, string>>({});
 
@@ -416,7 +414,6 @@ const ChatPage = () => {
     .filter(Boolean) as AgentInfo[];
   const pickAgentFromPanel = useCallback(
     (agent: { id: string }) => {
-      setMobileChatTab("chat");
       navigate(`/chat?agent=${encodeURIComponent(agent.id)}`);
     },
     [navigate],
@@ -3224,27 +3221,7 @@ const ChatPage = () => {
             scrollContainerRef={messagesContainerRef}
 
             setResearchDepth={setResearchDepth}
-            tab={mobileChatTab}
-            onTabChange={setMobileChatTab}
           />
-
-          {/* Agents half: same page, the next message goes to the picked agent */}
-          {mobileChatTab === "agents" && (
-            <ChatAgentsPanel
-              activeAgentId={urlAgentId}
-              onPick={pickAgentFromPanel}
-              onPickTeam={(agents) => {
-                if (!agentChatPro) {
-                  promptUpgrade("Agent teams", "Run several agents on the same message.");
-                  return;
-                }
-                setMobileChatTab("chat");
-                navigate(`/chat?agents=${agents.map((agent) => agent.id).join(",")}`);
-              }}
-              onManage={() => navigate("/agents")}
-              isPro={agentChatPro}
-            />
-          )}
 
           {/* Desktop/mobile combined header: title dropdown, Unlock Pro, options */}
           <DesktopChatHeader
@@ -3384,7 +3361,7 @@ const ChatPage = () => {
                 <AgentChatBar
                   agents={activeAgentInfos}
                   team={urlAgentIds.length > 1}
-                  onSwitch={() => setMobileChatTab("agents")}
+                  onSwitch={() => navigate("/agents")}
                 />
               ) : null
             }
