@@ -40,6 +40,12 @@ export default function PaymentMethodsShowcase({
               const busy = busyId === method.id;
               const interactive = Boolean(onSelect);
               const Tag = interactive ? "button" : "div";
+              // A single wordmark that already reads as the method name (Meeza,
+              // iDEAL, BLIK, ...) is printed once, in its brand colour.
+              const single = method.marks.length === 1 ? method.marks[0] : null;
+              const wordmarkOnly =
+                single?.kind === "word" &&
+                single.text.trim().toLowerCase() === method.label.trim().toLowerCase();
               return (
                 <Tag
                   key={method.id}
@@ -62,10 +68,21 @@ export default function PaymentMethodsShowcase({
                       : "border-border/60 bg-card/40",
                   ].join(" ")}
                 >
-                  <PaymentMethodMarks marks={method.marks} />
-                  <span className="text-[12.5px] font-medium leading-none text-foreground/85">
-                    {method.label}
-                  </span>
+                  {wordmarkOnly && single?.kind === "word" ? (
+                    <span
+                      className="text-[12.5px] font-bold leading-none tracking-[-0.01em]"
+                      style={{ color: single.color }}
+                    >
+                      {method.label}
+                    </span>
+                  ) : (
+                    <>
+                      <PaymentMethodMarks marks={method.marks} />
+                      <span className="text-[12.5px] font-medium leading-none text-foreground/85">
+                        {method.label}
+                      </span>
+                    </>
+                  )}
                   {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                 </Tag>
               );
