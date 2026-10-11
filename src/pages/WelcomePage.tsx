@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUserLang } from "@/lib/authI18n";
-import artSky from "@/assets/Explore_Desktop_01-1.avif.asset.json";
-import artStorm from "@/assets/Explore_Desktop_03-1.avif.asset.json";
-import artEmber from "@/assets/desktop-nano-banana-pro-inspiration-gallery-img-6.avif.asset.json";
 
 export const WELCOME_SEEN_KEY = "megsy_welcome_seen_v1";
 
@@ -30,7 +27,11 @@ const SLIDES = {
   ],
 };
 // Keep each restored image paired with its matching slide copy on every visit.
-const IMAGES = [artSky.url, artStorm.url, artEmber.url];
+const IMAGES = [
+  "/project-assets/welcome-hero-1.webp",
+  "/project-assets/welcome-hero-2.webp",
+  "/project-assets/welcome-hero-3.webp",
+];
 
 export default function WelcomePage() {
   const lang = useUserLang();
