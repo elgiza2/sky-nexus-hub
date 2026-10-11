@@ -58,7 +58,12 @@ function isYearly(raw: string): boolean {
   return /year|annual/.test(raw);
 }
 
-/** Resolves the catalogue key from any of sku / interval / trial / offer. */
+/**
+ * Resolves the catalogue key from any of sku / interval / trial / offer.
+ *
+ * Mirrors `catalogSlot` in kashier-checkout: a monthly plan always starts on the
+ * discounted first month, so both gateways charge the price the site displays.
+ */
 function resolveKey(p: Record<string, unknown>): string | null {
   const sku = String(p.sku ?? "").trim();
   if (sku && SKU_TO_KEY[sku]) return SKU_TO_KEY[sku];
@@ -68,13 +73,11 @@ function resolveKey(p: Record<string, unknown>): string | null {
   const offer = String(p.offer ?? "").toLowerCase();
   const winback = p.winback === true || /winback|win_back|return/.test(offer);
   const freeTrial = p.free_trial === true || /free_trial|trial3|3day|3-day/.test(offer);
-  const intro = p.trial === true || p.intro === true || /intro|first|trial/.test(offer);
 
   if (yearly) return winback ? "yearly_winback" : "yearly";
   if (winback) return "monthly_winback";
   if (freeTrial) return "monthly_trial";
-  if (intro) return "monthly_intro";
-  return "monthly";
+  return "monthly_intro";
 }
 
 const API_BASE =

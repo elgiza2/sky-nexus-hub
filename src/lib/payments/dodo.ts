@@ -7,7 +7,6 @@
  * payment link. Switch the rail off with VITE_DODO_CHECKOUT_ENABLED=false.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { hasUsedIntroTrial } from "@/lib/introTrial";
 
 export const DODO_READY = import.meta.env.VITE_DODO_CHECKOUT_ENABLED !== "false";
 
@@ -54,8 +53,11 @@ export interface DodoStartResult {
 
 /**
  * Creates the Dodo checkout for this account and sends the customer to it.
- * The `intro` offer maps to the discounted first month; a returning customer
- * gets the standard plan price.
+ *
+ * The monthly slot always uses the discounted first month, exactly like the
+ * Kashier rail (`catalogSlot` in kashier-checkout): the checkout page shows the
+ * first-month price, so the gateway must charge the same one. Dodo's own
+ * renewal then moves the customer to the standard monthly price.
  */
 export async function startDodoCheckout(input: {
   tier: string;
@@ -70,13 +72,11 @@ export async function startDodoCheckout(input: {
     } = await supabase.auth.getSession();
     if (!session?.access_token) return { ok: false, reason: "unauthenticated" };
 
-    const intro = !(await hasUsedIntroTrial());
-
     const { data, error } = await supabase.functions.invoke("dodo-checkout", {
       body: {
         tier: input.tier,
         interval: input.interval,
-        offer: intro ? "intro" : "standard",
+        offer: input.interval === "yearly" ? "standard" : "intro",
         method_id: input.methodId ?? null,
       },
     });
