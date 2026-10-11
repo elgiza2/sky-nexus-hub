@@ -494,17 +494,15 @@ const AnimatedInput = ({
             dir={isArabicUi ? "rtl" : "ltr"}
             className={`relative flex items-center gap-1 ${compact ? "pt-0" : "pt-1 md:pt-0"}`}
           >
-            <Button
+            <button
               type="button"
               onClick={onPlusClick}
-              variant="ghost"
-              size="icon-sm"
-              className="animated-plus-btn relative z-[61] flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-foreground/[0.06] text-foreground/80 shadow-none transition-[background-color,transform,color] duration-150 hover:bg-foreground/[0.1] hover:text-foreground active:scale-[0.94]"
+              className="animated-plus-btn relative z-[61] flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-foreground/[0.06] text-foreground/80 transition-[background-color,transform,color] duration-150 hover:bg-foreground/[0.1] hover:text-foreground active:scale-[0.94]"
               aria-label={uiT("openTools")}
               data-plus-trigger
             >
               <Plus className="h-[19px] w-[19px]" strokeWidth={2.1} />
-            </Button>
+            </button>
             {agentSlot}
 
             {(focused || hasText) && (
@@ -559,18 +557,16 @@ const AnimatedInput = ({
                   exit={{ opacity: 0, scale: 0.7 }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
                 >
-                  <Button
+                  <button
                     type="button"
                     onClick={toggleVoice}
                     data-testid="mobile-composer-voice"
-                    variant="ghost"
-                    size="icon-sm"
                     aria-pressed={listening}
-                    className="shrink-0 h-9 w-9 rounded-full border-0 bg-transparent p-0 text-foreground/75 shadow-none transition-colors duration-150 hover:bg-foreground/[0.06] hover:text-foreground active:scale-[0.94]"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-foreground/75 transition-[background-color,color,transform] duration-150 hover:bg-foreground/[0.06] hover:text-foreground active:scale-[0.94]"
                     aria-label={listening ? "Stop voice input" : "Voice input"}
                   >
                     <Mic className="h-[21px] w-[21px]" strokeWidth={1.7} />
-                  </Button>
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
