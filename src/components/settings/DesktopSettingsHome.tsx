@@ -2,7 +2,7 @@ import { useEffect, useState, type FC, type SVGProps } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Sparkles, Globe, Brain, Info, Mail, KeyRound, Monitor } from "lucide-react";
 import { getStoredTheme, setTheme, type ThemeMode } from "@/lib/theme";
-import ThemeSegmented from "@/components/settings/ThemeSegmented";
+import ThemePreviewPicker from "@/components/settings/ThemePreviewPicker";
 import { Moon as MoonIcon, Sun as SunIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConfirm } from "@/components/common/ConfirmDialog";
@@ -169,6 +169,19 @@ export function DesktopSettingsHome() {
             <div className="settings-desktop-group">
               {group.rows.map((row) => {
                 const Icon = row.icon;
+                if (row.control === "appearance") {
+                  return (
+                    <div key={row.label} className="ds-row w-full px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="ms-icon-tile ms-tone-appearance"><Icon className="w-[19px] h-[19px]" /></span>
+                        <span className="flex-1 text-[14.5px] font-medium text-foreground">{row.label}</span>
+                      </div>
+                      <div className="mt-3.5">
+                        <ThemePreviewPicker value={themeMode} onChange={next => { setThemeMode(next); setTheme(next); }} />
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <Button variant="ghost"
                     key={row.label}
@@ -184,11 +197,7 @@ export function DesktopSettingsHome() {
                         {row.trailing}
                       </span>
                     )}
-                    {row.control === "appearance" ? (
-                      <ThemeSegmented value={themeMode} onChange={next => { setThemeMode(next); setTheme(next); }} />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-foreground/65 shrink-0" />
-                    )}
+                    <ChevronRight className="w-4 h-4 text-foreground/65 shrink-0" />
                   </Button>
                 );
               })}

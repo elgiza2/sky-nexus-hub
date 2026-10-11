@@ -1,7 +1,7 @@
-/** @doc Apps — glass shelf of integrations: search, connected first, tidy rows. */
+/** @doc Apps — glass grid of integrations: icon + name tiles, connected first. */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
+import { Check, ChevronLeft, Loader2, Search } from "lucide-react";
 import { integrations as CATALOG } from "@/lib/integrationsData";
 import { loadIntegrationConnections } from "@/lib/integrationBackend";
 import { IntegrationLogo } from "@/components/chat/integrations/IntegrationRow";
@@ -31,34 +31,33 @@ export default function IntegrationsPage() {
   const mine = filtered.filter((i) => connected[i.app]);
   const rest = filtered.filter((i) => !connected[i.app]);
 
-  const Rows = ({ items, divided }: { items: typeof CATALOG; divided: boolean }) => (
-    <section className="gx-card">
-      {items.map((item, i) => {
+  /** A tile is just the logo and the name — everything else lives in the detail page. */
+  const Grid = ({ items }: { items: typeof CATALOG }) => (
+    <div className="app-grid">
+      {items.map((item) => {
         const on = !!connected[item.app];
         return (
           <button
             key={item.id}
             type="button"
             onClick={() => navigate(`/integrations/${encodeURIComponent(item.app)}`)}
-            className={`int-row${(divided || i > 0) && i > 0 ? " int-row-div" : ""}`}
+            title={item.description ?? item.name}
+            className="app-tile"
+            data-connected={on ? "true" : "false"}
           >
-            <span className="int-logo">
-              <IntegrationLogo item={item} size={26} />
+            <span className="app-tile-logo">
+              <IntegrationLogo item={item} size={24} />
             </span>
-            <span className="int-text">
-              <span className="int-name">{item.name}</span>
-              {item.description ? <span className="int-desc">{item.description}</span> : null}
-            </span>
+            <span className="app-tile-name">{item.name}</span>
             {on && (
-              <span className="int-chip" title={ar ? "متصل" : "Connected"}>
-                <Check strokeWidth={3} />
+              <span className="app-tile-check" title={ar ? "متصل" : "Connected"}>
+                <Check strokeWidth={3.2} />
               </span>
             )}
-            <ChevronRight className="int-chev rtl:rotate-180" strokeWidth={1.9} />
           </button>
         );
       })}
-    </section>
+    </div>
   );
 
   return (
@@ -106,13 +105,13 @@ export default function IntegrationsPage() {
               {mine.length > 0 && (
                 <>
                   <h2 className="gx-section-title int-section">{ar ? "متصل" : "Connected"}</h2>
-                  <Rows items={mine} divided={false} />
+                  <Grid items={mine} />
                 </>
               )}
               <h2 className="gx-section-title int-section">
                 {mine.length > 0 ? (ar ? "كل التطبيقات" : "All apps") : ar ? "التطبيقات" : "Apps"}
               </h2>
-              <Rows items={rest} divided={mine.length === 0} />
+              <Grid items={rest} />
             </>
           )}
         </div>
@@ -137,31 +136,39 @@ const integrationsCss = `
 .int-search-input:focus-visible { border-color: var(--settings-violet); }
 .int-section { margin-top: 22px; }
 .int-section:first-of-type { margin-top: 0; }
-.int-row {
-  width: 100%; display: flex; align-items: center; gap: 13px; padding: 12px 16px;
-  border: 0; background: transparent; cursor: pointer; font: inherit; color: inherit;
-  text-align: start; transition: background .18s ease;
+
+/* Two tidy columns of icon + name tiles: logos line up, names sit beside them. */
+.app-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
 }
-.int-row-div { box-shadow: inset 0 1px 0 var(--settings-line); }
-.int-row:active { background: var(--settings-line); }
-.int-logo {
-  flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
-  background: var(--settings-surface); box-shadow: inset 0 0 0 1px var(--settings-line);
-  overflow: hidden;
+@media (min-width: 620px) { .app-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .app-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.app-tile {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 62px;
+  padding: 11px 12px; border: 0; cursor: pointer; font: inherit; color: inherit;
+  text-align: start; border-radius: 18px; background: var(--settings-surface);
+  -webkit-backdrop-filter: var(--settings-frost); backdrop-filter: var(--settings-frost);
+  box-shadow: inset 0 0 0 1px var(--settings-line), var(--settings-shadow);
+  transition: transform .16s ease, box-shadow .16s ease;
 }
-.int-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.int-name {
-  font-size: 15px; font-weight: 620; letter-spacing: -.01em; color: var(--settings-ink);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.app-tile:active { transform: scale(.975); }
+.app-tile[data-connected="true"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-violet) 34%, transparent), var(--settings-shadow); }
+
+.app-tile-logo {
+  flex: none; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--settings-frost-strong, rgba(255,255,255,.55));
+  box-shadow: inset 0 0 0 1px var(--settings-line); overflow: hidden;
 }
-.int-desc {
-  font-size: 12.5px; line-height: 1.35; color: var(--settings-muted);
-  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+.app-tile-name {
+  min-width: 0; font-size: 13.5px; font-weight: 620; letter-spacing: -.01em;
+  color: var(--settings-ink); line-height: 1.25;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.int-chip {
-  flex: none; width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center;
+.app-tile-check {
+  position: absolute; top: 8px; inset-inline-end: 8px;
+  width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center;
   background: var(--settings-violet); color: var(--settings-surface);
 }
-.int-chip > svg { width: 12px; height: 12px; }
-.int-chev { flex: none; width: 18px; height: 18px; color: var(--settings-muted); }
+.app-tile-check > svg { width: 10px; height: 10px; }
 `;

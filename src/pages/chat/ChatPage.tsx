@@ -211,6 +211,7 @@ const ChatGlobalModals = lazy(() =>
 );
 
 import { MobileChatHeaderMount } from "./components/MobileChatHeaderMount";
+import { ChatAgentsPanel } from "./components/ChatAgentsPanel";
 import { DesktopChatHeader } from "./components/DesktopChatHeader";
 import { ChatArtifactsCanvas } from "./components/ChatArtifactsCanvas";
 import { ChatMessagesArea, prewarmTranscript } from "./components/ChatMessagesArea";
@@ -382,6 +383,16 @@ const ChatPage = () => {
   const desktopSidebarWidth = isSidebarExpanded ? 320 : 60;
   const { plusMenuOpen, setPlusMenuOpen, plusView, setPlusView } = usePlusMenu();
   const isMobileViewport = useIsMobile();
+  // The chat page has two halves on phones: the conversation and the agents.
+  const [mobileChatTab, setMobileChatTab] = useState<"chat" | "agents">("chat");
+  const urlAgentId = new URLSearchParams(location.search).get("agent");
+  const pickAgentFromPanel = useCallback(
+    (agent: { id: string }) => {
+      setMobileChatTab("chat");
+      navigate(`/chat?agent=${encodeURIComponent(agent.id)}`);
+    },
+    [navigate],
+  );
   // Edge-swipe to open the sidebar is owned by MobilePushShell.
   // A second copy used to run here and fought it for every touch,
   // which made buttons need two taps. Keep exactly one gesture owner.

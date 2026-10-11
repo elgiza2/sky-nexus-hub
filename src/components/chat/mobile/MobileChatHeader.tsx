@@ -4,22 +4,21 @@ import { AnimatePresence, m as motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { PrefetchLink as Link } from "@/components/common/PrefetchLink";
 import {
+  Bot,
   ChevronRight,
   Copy,
+  EllipsisVertical,
   Globe,
   Loader2,
   Lock,
-  MoreVertical,
-  Plus,
+  MessagesSquare,
   Share2,
   UserPlus,
   Pencil,
   Pin,
-  Star,
-  FolderPlus,
-  Send,
   Trash2,
 } from "lucide-react";
+import { getCachedUser } from "@/lib/cachedUser";
 import { prefetchRoute } from "@/hooks/usePrefetchRoute";
 import { t as uiT, useUserLang } from "@/lib/authI18n";
 import { UpgradePlanButton } from "@/components/billing/UpgradePlanButton";
@@ -28,6 +27,48 @@ import { UpgradePlanButton } from "@/components/billing/UpgradePlanButton";
 type MenuView = "main" | "rename" | "invite" | "share" | "delete";
 
 const MEGSY_APP_ICON = "/favicon.png";
+
+/* Reference layout: avatar, one wide segmented control, one round action. */
+const HEADER_CSS = `
+  .mch-avatar {
+    flex: none; width: 38px; height: 38px; border-radius: 999px; overflow: hidden;
+    display: grid; place-items: center; border: 0; padding: 0; cursor: pointer;
+    background: hsl(var(--foreground) / 0.08); color: hsl(var(--foreground));
+    font-size: 15px; font-weight: 600; line-height: 1;
+    box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.06);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mch-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mch-avatar:active { transform: scale(.94); }
+
+  .mch-seg {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px;
+    padding: 3px; border-radius: 999px; background: hsl(var(--foreground) / 0.06);
+  }
+  .mch-seg-btn {
+    flex: 1; min-width: 0; height: 34px; display: inline-flex; align-items: center;
+    justify-content: center; gap: 6px; border: 0; border-radius: 999px;
+    background: transparent; color: hsl(var(--foreground) / 0.55);
+    font: inherit; font-size: 13px; font-weight: 600; letter-spacing: -.01em;
+    cursor: pointer; transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mch-seg-btn > svg { width: 15px; height: 15px; flex: none; }
+  .mch-seg-btn[data-on="true"] {
+    background: hsl(var(--background)); color: hsl(var(--foreground));
+    box-shadow: 0 1px 6px -2px hsl(var(--foreground) / 0.4), inset 0 0 0 1px hsl(var(--foreground) / 0.06);
+  }
+  .mch-seg-btn:active { transform: scale(.97); }
+
+  .mch-icon-btn {
+    flex: none; width: 38px; height: 38px; border-radius: 999px; display: grid;
+    place-items: center; border: 0; cursor: pointer;
+    background: hsl(var(--foreground) / 0.06); color: hsl(var(--foreground));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mch-icon-btn > svg { width: 18px; height: 18px; }
+  .mch-icon-btn:active { transform: scale(.94); }
+`;
 
 const MegsySidebarToggleIcon = () => (
   // Clear sidebar/panel-left icon: panel outline with a left rail + content lines
@@ -112,6 +153,9 @@ export interface MobileChatHeaderProps {
   isDeleting?: boolean;
   rightSlot?: React.ReactNode;
   modelSlot?: React.ReactNode;
+  /** Which half of the chat the bar is showing: the conversation or the agents. */
+  tab?: "chat" | "agents";
+  onTabChange?: (tab: "chat" | "agents") => void;
   chatUserId?: string | null;
   scrollContainerRef?: RefObject<HTMLElement | null>;
 
@@ -153,6 +197,8 @@ export default function MobileChatHeader({
   isDeleting,
   rightSlot,
   modelSlot,
+  tab,
+  onTabChange,
   chatUserId,
   scrollContainerRef,
   inlineRename,
@@ -163,6 +209,24 @@ export default function MobileChatHeader({
   const [open, setOpen] = useState(false);
   const [menuView, setMenuView] = useState<MenuView>("main");
   const navigate = useNavigate();
+  const activeTab = tab ?? "chat";
+
+  // The avatar doubles as the drawer handle — it shows who is signed in.
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [initial, setInitial] = useState("M");
+  useEffect(() => {
+    let alive = true;
+    void getCachedUser().then((user) => {
+      if (!alive || !user) return;
+      const meta = (user.user_metadata ?? {}) as Record<string, string>;
+      setAvatar(meta.avatar_url || meta.picture || null);
+      const name = meta.full_name || meta.name || user.email || "Megsy";
+      setInitial(name.trim().charAt(0).toUpperCase() || "M");
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // The header always uses the page background so it blends seamlessly with
   // the chat surface — no colour change on scroll.
@@ -220,36 +284,48 @@ export default function MobileChatHeader({
       <div
         data-testid="mobile-chat-header"
         style={{ top: "var(--promo-banner-h, 0px)" }}
-        className="mobile-chat-header md:hidden fixed inset-x-0 z-30 flex items-center gap-2 px-3 py-1.5 min-h-[44px] pt-[max(env(safe-area-inset-top),0.25rem)] pointer-events-none [&>*]:pointer-events-auto border-0 bg-background pointer-events-auto"
-
-
+        className="mobile-chat-header md:hidden fixed inset-x-0 z-[36] flex items-center gap-2 px-3 py-1.5 min-h-[54px] pt-[max(env(safe-area-inset-top),0.4rem)] pointer-events-none [&>*]:pointer-events-auto border-0 bg-background"
       >
+        <style>{HEADER_CSS}</style>
         <button
-            type="button"
-            onClick={onOpenSidebar}
-            aria-label="Open menu"
-            data-testid="mobile-open-sidebar"
-            className="w-11 h-11 rounded-full flex items-center justify-center text-foreground transition bg-transparent border-0"
-          >
-            <MegsySidebarToggleIcon />
+          type="button"
+          onClick={onOpenSidebar}
+          aria-label="Open menu"
+          data-testid="mobile-open-sidebar"
+          className="mch-avatar"
+        >
+          {avatar ? <img src={avatar} alt="" /> : <span>{initial}</span>}
         </button>
 
-        {/* Layout stays identical whether or not the list is scrolled: moving
-            these around mid-scroll made the agent selector jump and produced a
-            visible shake right after the first message. */}
-        <div className="flex min-w-0 items-center">
-          {modelSlot}
+        <div className="mch-seg" role="tablist" aria-label="Chat or agents">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "chat"}
+            data-on={activeTab === "chat" ? "true" : "false"}
+            onClick={() => onTabChange?.("chat")}
+            className="mch-seg-btn"
+          >
+            <MessagesSquare strokeWidth={1.9} />
+            <span>Chat</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "agents"}
+            data-on={activeTab === "agents" ? "true" : "false"}
+            onClick={() => onTabChange?.("agents")}
+            className="mch-seg-btn"
+          >
+            <Bot strokeWidth={1.9} />
+            <span>Agents</span>
+          </button>
         </div>
-
-        <div className="flex-1" />
 
         {/* Caller-provided actions (e.g. an upgrade CTA). */}
         {rightSlot}
 
-        {chatUserId && !hasConversation && (
-          <UpgradePlanButton variant="compact" hideCredits />
-        )}
-
+        {chatUserId && !hasConversation && <UpgradePlanButton variant="compact" hideCredits />}
 
         {!chatUserId && (
           <button
@@ -260,8 +336,19 @@ export default function MobileChatHeader({
             {uiT("Sign in", lang)}
           </button>
         )}
-      </div>
 
+        {hasConversation && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Chat options"
+            data-testid="mobile-chat-options"
+            className="mch-icon-btn"
+          >
+            <EllipsisVertical strokeWidth={2} />
+          </button>
+        )}
+      </div>
 
       <AnimatePresence>
         {open && (

@@ -117,3 +117,8 @@ html.dark, html[data-theme="dark"] {
 .th-seg-btn:active { transform: scale(.96); }
 @media (max-width: 400px) { .th-seg-btn { padding: 0 8px; } .th-seg-btn span { display: none; } }
 @media (prefers-reduced-motion: reduce) { .th-seg-btn { transition: none; } }
+
+/* Appearance picker sits on its own full-width row so the previews have room. */
+.ms-root .ms-row-stack { display: block; padding: 14px 16px 16px; }
+.ms-row-stack .ms-row-head { display: flex; align-items: center; gap: 13px; }
+.ms-row-stack .ms-row-picker { margin-top: 12px; }

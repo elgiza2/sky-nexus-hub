@@ -35,7 +35,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { t as authT, translateExactText, useUserLang, AVAILABLE_LANGS } from "@/lib/authI18n";
 import { goBackOr } from "@/lib/navigation";
 import { getStoredTheme, setTheme, type ThemeMode } from "@/lib/theme";
-import ThemeSegmented from "./ThemeSegmented";
+import ThemePreviewPicker from "./ThemePreviewPicker";
 import { signOutEverywhere } from "@/lib/signOutEverywhere";
 
 type Row = {
@@ -156,11 +156,15 @@ const ManusSettingsMobile = () => {
     const Icon = row.icon;
     const Chevron = isAr ? ChevronLeft : ChevronRight;
     return (
-      <div key={row.label} className={`${row.control ? "ms-row" : "ms-row-container"}${idx > 0 ? " ms-row-div" : ""}`}>
+      <div key={row.label} className={`${row.control ? "ms-row ms-row-stack" : "ms-row-container"}${idx > 0 ? " ms-row-div" : ""}`}>
         {row.control ? <>
-          <span className={`ms-icon-tile ms-tone-${row.tone || "account"}`}><Icon className="ms-row-icon" /></span>
-          <span className="ms-row-label">{tx(row.label)}</span>
-          <ThemeSegmented value={themeMode} onChange={next => { setThemeMode(next); setTheme(next); }} />
+          <div className="ms-row-head">
+            <span className={`ms-icon-tile ms-tone-${row.tone || "account"}`}><Icon className="ms-row-icon" /></span>
+            <span className="ms-row-label">{tx(row.label)}</span>
+          </div>
+          <div className="ms-row-picker">
+            <ThemePreviewPicker value={themeMode} onChange={next => { setThemeMode(next); setTheme(next); }} />
+          </div>
         </> : <Button variant="ghost" type="button" onClick={() => row.onClick ? row.onClick() : row.path && navigate(row.path)} disabled={!row.onClick && !row.path} className="ms-row ms-row-inner">
           <span className={`ms-icon-tile ms-tone-${row.tone || "account"}`}><Icon className="ms-row-icon" /></span>
           <span className="ms-row-label">{tx(row.label)}</span>

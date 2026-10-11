@@ -717,11 +717,16 @@ const MobileChatLanding = ({
 
   return (
     <div className="md:hidden relative w-full h-full overflow-hidden text-foreground" style={{ background: "var(--chat-reference-bg, hsl(var(--background)))" }}>
-      {/* Empty canvas — no hero star, no greeting text */}
+      {/* Empty canvas — a quiet wordmark, exactly like the reference layout */}
+      <style>{WATERMARK_CSS}</style>
       <div
         className="absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y pt-[max(env(safe-area-inset-top),16px)] px-5"
         style={{ color: "#F5F5F7" }}
-      />
+      >
+        <div className="mcl-watermark-wrap" aria-hidden="true">
+          <span className="mcl-watermark">megsy</span>
+        </div>
+      </div>
 
 
 
@@ -788,3 +793,15 @@ const MobileChatLanding = ({
 };
 
 export default MobileChatLanding;
+
+/* Centered, very quiet brand mark on the empty chat canvas. */
+const WATERMARK_CSS = `
+.mcl-watermark-wrap {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.mcl-watermark {
+  font-size: clamp(42px, 16vw, 74px); font-weight: 600; letter-spacing: -.045em;
+  color: currentColor; opacity: .11; line-height: 1; user-select: none;
+}
+`;
