@@ -114,10 +114,10 @@ const isPaid = (p: KashierResponse) =>
 /* ------------------------------------------------------------------ orders */
 
 /** Create a signed, server-priced order for the chosen plan. */
-export async function createOrder(tier: string, interval: BillingInterval) {
+export async function createOrder(tier: string, interval: BillingInterval, saveCard = false) {
   const current = await session();
   const { data, error } = await invokeFunction<KashierOrder>("kashier-direct-order", {
-    body: { tier, interval },
+    body: { tier, interval, save: saveCard },
     headers: { Authorization: `Bearer ${current.access_token}` },
   });
   if (error || !data?.order_id) throw error || new KashierError("Couldn’t start the payment.");
@@ -133,7 +133,8 @@ export async function payWithCard(
 ): Promise<CardResult> {
   if (!isCardComplete(card))
     throw new KashierError("Check the card details and make sure they’re complete.");
-  const { order, user } = await createOrder(tier, interval);
+  // Saving the card is what makes monthly auto-renew possible later.
+  const { order, user } = await createOrder(tier, interval, true);
   const redirect =
     order.merchant_redirect ??
     `${window.location.origin}/billing/success?provider=kashier&order=${encodeURIComponent(order.order_id)}`;
@@ -153,6 +154,7 @@ export async function payWithCard(
           nameOnCard: card.name.trim(),
           expiry: { month: card.month, year: card.year },
           securityCode: card.cvv,
+          save: true,
           enable3DS: true,
         },
       },

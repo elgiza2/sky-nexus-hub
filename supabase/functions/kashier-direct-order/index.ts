@@ -72,6 +72,10 @@ Deno.serve(async (request) => {
   if (!merchantId || !paymentKey)
     return json({ error: "Kashier live payment credentials are not configured" }, 503);
 
+  // Auto-renew needs the card on file, so ask Kashier to save the card and
+  // sign the customer reference into the hash (required when card.save is sent).
+  const save = body.save === true;
+
   const orderId = `ord_${crypto.randomUUID()}`;
   const webhookUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/kashier-webhook`;
   const redirectUrl = `${(Deno.env.get("SITE_URL") || "https://megsyai.com").replace(/\/$/, "")}/billing/success?provider=kashier&order=${encodeURIComponent(orderId)}`;
@@ -84,11 +88,19 @@ Deno.serve(async (request) => {
     plan: tier,
     method: "card",
     status: "pending",
-    raw: { interval: row.base_interval || requestedInterval, direct_api: true, mode: "live" },
+    raw: {
+      interval: row.base_interval || requestedInterval,
+      direct_api: true,
+      mode: "live",
+      save_card: save,
+    },
   });
   if (error) return json({ error: error.message }, 500);
 
-  const hash = await hmac(paymentKey, `/?payment=${merchantId}.${orderId}.${amount}.EGP`);
+  const hash = await hmac(
+    paymentKey,
+    `/?payment=${merchantId}.${orderId}.${amount}.EGP${save ? `.${auth.user.id}` : ""}`,
+  );
   return json({
     order_id: orderId,
     merchant_id: merchantId,
@@ -98,5 +110,7 @@ Deno.serve(async (request) => {
     endpoint: "https://fep.kashier.io/v3/orders/",
     webhook_url: webhookUrl,
     merchant_redirect: redirectUrl,
+    customer_reference: auth.user.id,
+    save_card: save,
   });
 });

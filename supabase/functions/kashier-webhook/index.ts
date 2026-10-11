@@ -138,6 +138,45 @@ Deno.serve(async (request) => {
   }
   console.log("kashier order", orderId, status, "->", updated?.status ?? "unchanged");
 
+  // The saved card (returned with the payment when card.save was sent) is what
+  // the renewal engine charges every month, so keep it on the subscription.
+  if (updated && nextStatus === "paid") {
+    const saved = data as Record<string, any>;
+    const cardToken = String(
+      saved.cardDataToken ??
+        saved.cardToken ??
+        saved.response?.paymentMethod?.card?.cardToken ??
+        "",
+    ).trim();
+    const agreementId = String(
+      saved.cardAgreementId ?? saved.agreementId ?? saved.agreement?.id ?? "",
+    ).trim();
+    const masked = String(
+      saved.maskedCard ?? saved.response?.paymentMethod?.card?.number ?? "",
+    ).trim();
+    if (cardToken) {
+      const { data: sub } = await admin
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", updated.user_id as string)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (sub?.id) {
+        await admin
+          .from("subscriptions")
+          .update({
+            card_token: cardToken,
+            card_agreement_id: agreementId || null,
+            card_masked: masked || null,
+            renewal_failures: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", sub.id);
+      }
+    }
+  }
+
   // The browser copy of CompletePayment only fires when the buyer actually
   // lands back on the success page. This server copy is authoritative and
   // shares the same event_id, so TikTok deduplicates the two.
