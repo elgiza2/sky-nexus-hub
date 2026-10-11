@@ -219,6 +219,7 @@ import {
   agentWelcomeText,
 } from "@/lib/agentChat";
 import { AgentChatBar } from "./components/AgentChatBar";
+import { promptUpgrade } from "@/lib/upgradeMoment";
 import { loadWorkspace, workspace, useWorkspaceStore } from "@/lib/agentsky/store";
 import type { AgentInfo } from "@/lib/agentsky/client";
 import { DesktopChatHeader } from "./components/DesktopChatHeader";
@@ -1367,7 +1368,7 @@ const ChatPage = () => {
   // finds its thread, writes the first-run welcome once, then loads it — so the
   // agent chat always looks the same as the last time it was used.
   const agentChatOpenedRef = useRef<string | null>(null);
-  const agentChatPro = Boolean(userPlan && userPlan !== "free");
+  const agentChatPro = isProPlusPlan();
   useEffect(() => {
     if (!agentChatKey || !chatUserId) return;
     if (agentChatOpenedRef.current === agentChatKey) return;
@@ -3233,6 +3234,10 @@ const ChatPage = () => {
               activeAgentId={urlAgentId}
               onPick={pickAgentFromPanel}
               onPickTeam={(agents) => {
+                if (!agentChatPro) {
+                  promptUpgrade("Agent teams", "Run several agents on the same message.");
+                  return;
+                }
                 setMobileChatTab("chat");
                 navigate(`/chat?agents=${agents.map((agent) => agent.id).join(",")}`);
               }}

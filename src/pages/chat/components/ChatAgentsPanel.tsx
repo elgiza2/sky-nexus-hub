@@ -74,7 +74,7 @@ export function ChatAgentsPanel({
             <h1 className="cap-title">Agents</h1>
             <p className="cap-sub">Personal agents you talk to</p>
           </div>
-          {isPro && onPickTeam ? (
+          {onPickTeam ? (
             <button
               type="button"
               className="cap-team-toggle"
