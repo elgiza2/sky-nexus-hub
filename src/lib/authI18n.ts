@@ -95,6 +95,7 @@ const DICT: Record<string, Entry> = {
   or: { en: "or", "ar-eg": "أو" },
   continueWithGoogle: { en: "Continue with Google", "ar-eg": "كمّل بجوجل" },
   continueWithGitHub: { en: "Continue with GitHub", "ar-eg": "كمّل بـ GitHub" },
+  continueWithMicrosoft: { en: "Continue with Microsoft", "ar-eg": "كمّل بمايكروسوفت" },
   continueWithTelegram: { en: "Continue with Telegram", "ar-eg": "كمّل بـ Telegram" },
   inviteCode: { en: "Invite code", "ar-eg": "كود الدعوة" },
   remove: { en: "Remove", "ar-eg": "شيله" },
