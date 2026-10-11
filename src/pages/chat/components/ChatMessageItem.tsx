@@ -168,7 +168,7 @@ const ChatMessageItemImpl = ({
     !mediaDone;
   const content = (
     <>
-      {msg.role === "assistant" && msg.agentSkyState && <>
+      {msg.role === "assistant" && (msg.agentSkyState || msg.agentSkyAgent) && <>
         <AgentPresence message={msg} />
         {!!msg.agentSkySteps?.length && <div className="px-3 md:px-12" data-agent-color={msg.agentSkyAgent?.color ?? "aurora"}><StepTimeline steps={msg.agentSkySteps} lang={/^[\u0600-\u06ff]/.test(msg.agentSkySteps[0]?.label ?? "") ? "ar" : "en"} /></div>}
       </>}

@@ -30,6 +30,8 @@ export function prewarmTranscript(): void {
 }
 
 interface ChatMessagesAreaProps {
+  /** Rendered above the transcript inside the scroller (agent identity strip). */
+  topSlot?: React.ReactNode;
   // Loading + transcript
   loadingMessages: boolean;
   messages: Message[];
@@ -81,6 +83,7 @@ export const ChatMessagesArea = forwardRef<HTMLDivElement, ChatMessagesAreaProps
       renderPlusMenu,
       messagesListProps,
       slotAfterMessages,
+      topSlot,
     } = props;
 
     const isEmpty = !loadingMessages && messages.length === 0;
@@ -98,6 +101,8 @@ export const ChatMessagesArea = forwardRef<HTMLDivElement, ChatMessagesAreaProps
         aria-relevant="additions text"
         aria-atomic="false"
       >
+        {topSlot}
+
         {loadingMessages && messages.length === 0 ? (
           <div className="relative z-[1] max-w-3xl mx-auto pt-20 pb-44 md:pb-52 px-4 md:px-6 space-y-5">
             {[

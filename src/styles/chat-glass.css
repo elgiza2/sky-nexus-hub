@@ -199,3 +199,52 @@ html body [data-shell="megsy"] [data-chat-glass="true"] .cap-panel {
   text-align: center; color: var(--settings-ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
 }
+
+/* ── agent thread strip ──────────────────────────────────────── */
+.chat-agent-bar {
+  position: sticky; top: 68px; z-index: 6;
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px auto 10px; padding: 8px 10px 8px 12px;
+  max-width: 720px; width: calc(100% - 24px);
+  border-radius: 20px;
+  background: var(--settings-surface);
+  box-shadow: var(--settings-shadow);
+  -webkit-backdrop-filter: var(--settings-frost); backdrop-filter: var(--settings-frost);
+  color: var(--settings-ink);
+}
+.chat-agent-bar-marks { display: flex; align-items: center; }
+.chat-agent-bar-mark {
+  display: grid; place-items: center; width: 30px; height: 30px;
+  border-radius: 50%; background: var(--settings-canvas);
+  box-shadow: inset 0 0 0 1px var(--settings-line);
+  color: var(--settings-ink);
+}
+.chat-agent-bar-text { min-width: 0; flex: 1; }
+.chat-agent-bar-name {
+  font-size: 13px; font-weight: 620; letter-spacing: -.01em; color: var(--settings-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chat-agent-bar-role { font-size: 11px; color: var(--settings-muted); }
+.chat-agent-bar-switch {
+  display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+  height: 30px; padding: 0 10px; border: 0; cursor: pointer;
+  border-radius: 15px; background: var(--settings-line); color: var(--settings-ink);
+  font: inherit; font-size: 12px; font-weight: 560;
+  -webkit-tap-highlight-color: transparent;
+}
+.chat-agent-bar-switch svg { width: 14px; height: 14px; }
+.chat-agent-bar-switch:active { transform: scale(.96); }
+
+/* ── the agent's own mark on every message it sends ──────────── */
+.agent-msg-head {
+  display: flex; align-items: center; gap: 9px;
+  margin: 6px 0 8px; padding-inline: 12px;
+}
+@media (min-width: 768px) { .agent-msg-head { padding-inline: 48px; } }
+.agent-msg-mark {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  background: var(--settings-surface); box-shadow: var(--settings-shadow);
+  -webkit-backdrop-filter: var(--settings-frost); backdrop-filter: var(--settings-frost);
+}
+.agent-msg-name { font-size: 12.5px; font-weight: 620; color: var(--settings-ink); line-height: 1.2; }
+.agent-msg-state { font-size: 11px; color: var(--settings-muted); }
