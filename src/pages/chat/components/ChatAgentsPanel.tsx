@@ -77,6 +77,7 @@ export function ChatAgentsPanel({
           <div className="cap-grid">
             {list.map((agent) => {
               const active = agent.id === activeAgentId;
+              const tint = TINT[agent.color] ?? TINT.mono;
               const hint = agent.isDefault
                 ? "Your everyday partner"
                 : agent.mediaOnly
@@ -93,7 +94,10 @@ export function ChatAgentsPanel({
                 >
                   <span
                     className="cap-tile-icon"
-                    style={{ ["--cap-tint" as any]: TINT[agent.color] ?? TINT.mono }}
+                    style={{
+                      background: `color-mix(in oklch, ${tint} 14%, transparent)`,
+                      boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${tint} 24%, transparent)`,
+                    }}
                   >
                     <AgentIcon agent={agent} size={26} />
                   </span>
@@ -162,8 +166,6 @@ const PANEL_CSS = `
 .cap-tile-icon {
   width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 8px;
   border-radius: 14px;
-  background: color-mix(in oklch, var(--cap-tint, var(--settings-muted)) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--cap-tint, var(--settings-muted)) 22%, transparent);
 }
 .cap-tile-name {
   font-size: 14px; font-weight: 620; letter-spacing: -.01em; line-height: 1.3;

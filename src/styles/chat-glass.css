@@ -2,34 +2,37 @@
  * Chat page, in the app's own glass language.
  *
  * Everything is scoped to [data-chat-glass="true"] (the chat <main>),
- * so no other page is touched. The chat used to paint its own dark
- * palette; here it borrows the same backdrop, frosted surfaces, hairline
- * borders and shadows the settings / agents / apps pages already use.
+ * so no other page is touched. The selectors carry the shell attribute
+ * as well, because the older chat skins pin the surface with
+ * `[data-shell="megsy"] [data-chat-main="true"]` and !important —
+ * matching that specificity and loading last is what makes this win.
  * ───────────────────────────────────────────────────────────── */
 
-[data-chat-glass="true"] {
+[data-shell="megsy"] [data-chat-main="true"][data-chat-glass="true"] {
   background: var(--settings-backdrop) !important;
   background-color: var(--settings-canvas) !important;
   background-image: var(--settings-backdrop) !important;
   background-attachment: fixed !important;
-  color: var(--settings-ink);
+  color: var(--settings-ink) !important;
 }
 
-/* The shell above the chat paints a flat colour — let the aurora through. */
+/* No leftover aurora/blur overlays from the old dark surface. */
 [data-chat-glass="true"]::before,
 [data-chat-glass="true"]::after {
   content: none !important;
+  background: none !important;
 }
 
 /* ── header: frosted bar ─────────────────────────────────────── */
-[data-chat-glass="true"] .mobile-chat-header {
-  background: color-mix(in oklch, var(--settings-canvas) 74%, transparent) !important;
+[data-shell="megsy"] [data-chat-glass="true"] .mobile-chat-header {
+  background: var(--settings-surface) !important;
   -webkit-backdrop-filter: var(--settings-frost) !important;
   backdrop-filter: var(--settings-frost) !important;
   box-shadow: 0 1px 0 var(--settings-line) !important;
+  border: 0 !important;
 }
 [data-chat-glass="true"] .mch-seg {
-  background: color-mix(in oklch, var(--settings-ink) 7%, transparent) !important;
+  background: var(--settings-line) !important;
 }
 [data-chat-glass="true"] .mch-seg-btn { color: var(--settings-muted) !important; }
 [data-chat-glass="true"] .mch-seg-btn[data-on="true"] {
@@ -59,8 +62,8 @@
 }
 
 /* ── composer: one frosted card ──────────────────────────────── */
-[data-chat-glass="true"] .chat-composer-frame,
-[data-chat-glass="true"] .chat-composer-frame.chat-composer-liquid {
+[data-shell="megsy"] [data-chat-glass="true"] .chat-composer-frame,
+[data-shell="megsy"] [data-chat-glass="true"] .chat-composer-frame.chat-composer-liquid {
   background: var(--settings-surface) !important;
   background-image: none !important;
   border: 1px solid var(--settings-line) !important;
@@ -72,9 +75,6 @@
 }
 [data-chat-glass="true"] .chat-composer-frame textarea {
   color: var(--settings-ink) !important;
-}
-[data-chat-glass="true"] .chat-composer-frame textarea::placeholder {
-  color: var(--settings-muted) !important;
 }
 [data-chat-glass="true"] .chat-composer-frame [data-composer-controls] button {
   color: var(--settings-ink) !important;
@@ -91,19 +91,25 @@
   opacity: 0.4 !important;
 }
 [data-chat-glass="true"] .chat-composer-frame [data-plus-trigger] {
-  background: color-mix(in oklch, var(--settings-ink) 6%, transparent) !important;
+  background: var(--settings-surface) !important;
   border: 1px solid var(--settings-line) !important;
   color: var(--settings-ink) !important;
 }
 
 /* ── agents half: its own, clearly different surface ─────────── */
-[data-chat-glass="true"] .cap-panel {
+[data-shell="megsy"] [data-chat-glass="true"] .cap-panel {
   background: var(--settings-backdrop) !important;
   background-attachment: fixed !important;
   color: var(--settings-ink) !important;
 }
 [data-chat-glass="true"] .cap-title { color: var(--settings-ink) !important; }
 [data-chat-glass="true"] .cap-sub { color: var(--settings-muted) !important; }
+[data-chat-glass="true"] .cap-hero-orb {
+  background: var(--settings-surface) !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+}
 [data-chat-glass="true"] .cap-search > input {
   background: var(--settings-surface) !important;
   border: 1px solid var(--settings-line) !important;
@@ -123,10 +129,6 @@
 }
 [data-chat-glass="true"] .cap-tile[data-active="true"] {
   box-shadow: inset 0 0 0 1.5px var(--settings-violet), var(--settings-shadow) !important;
-}
-[data-chat-glass="true"] .cap-tile-icon {
-  background: color-mix(in oklch, var(--settings-ink) 6%, transparent) !important;
-  box-shadow: inset 0 0 0 1px var(--settings-line) !important;
 }
 [data-chat-glass="true"] .cap-tile-hint { color: var(--settings-muted) !important; }
 [data-chat-glass="true"] .cap-manage {
