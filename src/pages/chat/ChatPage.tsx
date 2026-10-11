@@ -471,6 +471,19 @@ const ChatPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // /chat?agent=<id> is how the agents list and shared links start a chat with
+  // an agent. Everything stays on the one chat page; there is no separate one.
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get("agent");
+    if (!id) return;
+    const agent = getAgentById(id);
+    if (!agent) return;
+    setChatMode("normal");
+    setSelectedAgent(agent);
+    setSelectedModel(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   // Agent picked from the model menu ("Agent" entry) — activate the Computer Agent.
   useEffect(() => {
     const onPick = (e: Event) => {

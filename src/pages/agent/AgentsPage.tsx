@@ -109,7 +109,7 @@ export function AgentsPage() {
       : a.mediaOnly
         ? "Image and video creation"
         : a.description || "Personal AI agent";
-    const open = () => nav(locked ? "/pricing" : `/agents/chat?agent=${encodeURIComponent(a.id)}`);
+    const open = () => nav(locked ? "/pricing" : `/chat?agent=${encodeURIComponent(a.id)}`);
 
     return (
       <li key={a.id} className="gx-row agx-row" style={{ ["--agx" as any]: TINT[a.color] }}>

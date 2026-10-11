@@ -1,4 +1,4 @@
-import { Route, Navigate } from "react-router-dom";
+import { Route, Navigate, useLocation } from "react-router-dom";
 import WelcomePage from "@/pages/WelcomePage";
 import {
   LegacyToolsRedirect,
@@ -84,6 +84,12 @@ import {
 
 const toChat = <RetiredRedirect to="/chat" />;
 const toPricing = <RetiredRedirect to="/pricing" />;
+/** Agent chats belong to the normal chat page — old links keep working. */
+const AgentChatRedirect = () => {
+  const { search } = useLocation();
+  const agent = new URLSearchParams(search).get("agent");
+  return <Navigate to={agent ? `/chat?agent=${encodeURIComponent(agent)}` : "/chat"} replace />;
+};
 
 /** All application routes. Rendered inside <DeferredRoutes> in App.tsx. */
 export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) => (
@@ -93,8 +99,8 @@ export const AppRoutes = ({ currentUserId }: { currentUserId: string | null }) =
     <Route path="/chat" element={<ProtectedRoute guestEntry="/welcome"><ChatPage /></ProtectedRoute>} />
     <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
     <Route path="/agents/new" element={<ProtectedRoute><AgentNewPage /></ProtectedRoute>} />
-    <Route path="/agents/chat" element={<ProtectedRoute><AgentChatPage /></ProtectedRoute>} />
-    <Route path="/agents/chat/:sessionId" element={<ProtectedRoute><AgentChatPage /></ProtectedRoute>} />
+    <Route path="/agents/chat" element={<ProtectedRoute><AgentChatRedirect /></ProtectedRoute>} />
+    <Route path="/agents/chat/:sessionId" element={<ProtectedRoute><AgentChatRedirect /></ProtectedRoute>} />
     <Route path="/welcome" element={<WelcomePage />} />
     <Route path="/index" element={<ProtectedRoute guestEntry="/welcome"><ChatPage /></ProtectedRoute>} />
     <Route path="/share/:shareId" element={<SharedChatPage />} />
