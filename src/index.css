@@ -946,23 +946,6 @@ html:not(.dark) [class*="text-white/"]:not(.theme-fixed) {
   color: hsl(var(--muted-foreground)) !important;
 }
 
-/* + button in composer: fully borderless, plain icon (no fill, no accent). */
-.animated-plus-btn,
-button[data-testid="mobile-composer-plus"] {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-.animated-plus-btn:hover,
-button[data-testid="mobile-composer-plus"]:hover { background: transparent !important; }
-html.dark .animated-plus-btn,
-html[data-theme="dark"] .animated-plus-btn,
-html.dark button[data-testid="mobile-composer-plus"],
-html[data-theme="dark"] button[data-testid="mobile-composer-plus"] {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
 html:not(.dark) .bg-black:not(.theme-fixed) {
   background-color: hsl(var(--card)) !important;
 }
@@ -4893,23 +4876,6 @@ html:not(.dark) [class*="text-white/"]:not(.theme-fixed) {
   color: hsl(var(--muted-foreground)) !important;
 }
 
-/* + button in composer: fully borderless, plain icon (no fill, no accent). */
-.animated-plus-btn,
-button[data-testid="mobile-composer-plus"] {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-.animated-plus-btn:hover,
-button[data-testid="mobile-composer-plus"]:hover { background: transparent !important; }
-html.dark .animated-plus-btn,
-html[data-theme="dark"] .animated-plus-btn,
-html.dark button[data-testid="mobile-composer-plus"],
-html[data-theme="dark"] button[data-testid="mobile-composer-plus"] {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
 html:not(.dark) .bg-black:not(.theme-fixed) {
   background-color: hsl(var(--card)) !important;
 }

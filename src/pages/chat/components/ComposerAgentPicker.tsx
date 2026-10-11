@@ -47,7 +47,8 @@ export function ComposerAgentPicker({ activeAgentId }: { activeAgentId?: string 
         aria-expanded={open}
         aria-label={`Agent: ${active?.name ?? "Megsy"}`}
         data-agent-picker
-        className="relative z-[61] flex h-9 shrink-0 items-center gap-1.5 rounded-full border-0 bg-foreground/[0.06] pl-1.5 pr-2.5 text-foreground/85 shadow-none transition-[background-color,transform] duration-150 hover:bg-foreground/[0.1] active:scale-[0.96]"
+        style={{ borderRadius: 9999 }}
+        className="relative z-[61] flex h-9 shrink-0 items-center gap-1.5 border-0 bg-foreground/[0.06] pl-1.5 pr-2.5 text-foreground/85 shadow-none transition-[background-color,transform] duration-150 hover:bg-foreground/[0.1] active:scale-[0.96]"
       >
         <span className="grid h-6 w-6 shrink-0 place-items-center">
           {active ? <AgentIcon agent={active} size={17} /> : null}

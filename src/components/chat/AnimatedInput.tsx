@@ -497,7 +497,8 @@ const AnimatedInput = ({
             <button
               type="button"
               onClick={onPlusClick}
-              className="animated-plus-btn relative z-[61] flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-foreground/[0.06] text-foreground/80 transition-[background-color,transform,color] duration-150 hover:bg-foreground/[0.1] hover:text-foreground active:scale-[0.94]"
+              style={{ borderRadius: 9999 }}
+              className="animated-plus-btn relative z-[61] flex h-9 w-9 shrink-0 items-center justify-center border-0 bg-foreground/[0.06] text-foreground/80 transition-[background-color,transform,color] duration-150 hover:bg-foreground/[0.1] hover:text-foreground active:scale-[0.94]"
               aria-label={uiT("openTools")}
               data-plus-trigger
             >
@@ -519,11 +520,11 @@ const AnimatedInput = ({
                   when the user has typed a message so it can be queued. */}
               {isLoading ? (
                 <motion.div key="running-actions" className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <Button type="button" onClick={onCancel} variant="destructive" size="icon-sm" className="shrink-0 rounded-full shadow-none" aria-label={uiT("stopGeneration")}>
+                  <Button type="button" onClick={onCancel} variant="destructive" size="icon-sm" style={{ borderRadius: 9999 }} className="shrink-0 shadow-none" aria-label={uiT("stopGeneration")}>
                     <Square className="w-3 h-3" fill="currentColor" />
                   </Button>
                   {hasText && (
-                    <Button type="button" onClick={handleSendWithSlash} disabled={disabled} data-testid="mobile-composer-send" variant="neutral" size="icon-sm" className="shrink-0 rounded-full h-10 w-10 shadow-none disabled:opacity-40" aria-label={isArabicUi ? "ضيف للانتظار" : "Queue message"}>
+                    <Button type="button" onClick={handleSendWithSlash} disabled={disabled} data-testid="mobile-composer-send" variant="neutral" size="icon-sm" style={{ borderRadius: 9999 }} className="shrink-0 h-10 w-10 shadow-none disabled:opacity-40" aria-label={isArabicUi ? "ضيف للانتظار" : "Queue message"}>
                       <ArrowUp className="w-[18px] h-[18px] md:w-4 md:h-4" strokeWidth={2.2} />
                     </Button>
                   )}
@@ -543,7 +544,8 @@ const AnimatedInput = ({
                     data-testid="mobile-composer-send"
                     variant="neutral"
                     size="icon-sm"
-                    className="shrink-0 rounded-full h-10 w-10 shadow-none disabled:opacity-40"
+                    style={{ borderRadius: 9999 }}
+                    className="shrink-0 h-10 w-10 shadow-none disabled:opacity-40"
                     aria-label={uiT("sendMessage")}
                   >
                     <ArrowUp className="w-[18px] h-[18px] md:w-4 md:h-4" strokeWidth={2.2} />
@@ -562,7 +564,8 @@ const AnimatedInput = ({
                     onClick={toggleVoice}
                     data-testid="mobile-composer-voice"
                     aria-pressed={listening}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-foreground/75 transition-[background-color,color,transform] duration-150 hover:bg-foreground/[0.06] hover:text-foreground active:scale-[0.94]"
+                    style={{ borderRadius: 9999 }}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-foreground/75 transition-[background-color,color,transform] duration-150 hover:bg-foreground/[0.06] hover:text-foreground active:scale-[0.94]"
                     aria-label={listening ? "Stop voice input" : "Voice input"}
                   >
                     <Mic className="h-[21px] w-[21px]" strokeWidth={1.7} />
