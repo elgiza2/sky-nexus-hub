@@ -202,7 +202,18 @@ export function describeTool(name: string, args: any, lang: Lang): { kind: StepK
   if (n === "read" || n.includes("read_file") || n.includes("view") || n === "ls" || n.includes("glob") || n.includes("grep"))
     return { kind: "file", label: t.file(short(firstText(a.path, a.file_path, a.pattern).split("/").pop(), 40)) };
   if (n.includes("code") || n.includes("sandbox") || n.includes("deploy") || n.includes("build")) return { kind: "code", label: t.code };
-  if (n === "exec" || n.includes("bash") || n.includes("shell") || n === "process") return { kind: "command", label: t.command };
+  if (n === "exec" || n.includes("bash") || n.includes("shell") || n === "process") {
+    const cmd = firstText(a.command, a.cmd);
+    // A shell command that is really a web search reads as a search, not as a mystery command.
+    const q = cmd.match(/web\.search\s+query=(?:"([^"]+)"|'([^']+)'|([^\s]+))/i);
+    if (q) return { kind: "search", label: t.searched(short(q[1] || q[2] || q[3], 60)) };
+    // The agent titles its own commands in plain words — that title is the most
+    // useful thing we can tell the user, so prefer it over a generic label.
+    const title = firstText(a.title, a.name);
+    if (title) return { kind: "command", label: short(title, 80) };
+    if (cmd) return { kind: "command", label: short(cmd, 80) };
+    return { kind: "command", label: t.command };
+  }
   if (n.includes("write") || n.includes("edit") || n.includes("apply_patch"))
     return { kind: "edit", label: t.edit(short(firstText(a.path, a.file_path).split("/").pop(), 40)) };
   return { kind: "tool", label: t.tool(n.replace(/[_-]+/g, " ")) };
