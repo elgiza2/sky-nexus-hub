@@ -1,145 +1,119 @@
-# Megsy Credit System 2.0 — Unified Design (proposal)
+# Megsy Credit System 2.0 — unified design (rev. 2, Oct 2026)
 
-> One credit, one price table, one server-side ledger. This document proposes the target
-> design; prices ($7 / $15 / $120 / $17 / $40 / $320) stay exactly as they are today.
+Supersedes the per-action pricing draft. Three decisions drive everything below:
+
+1. **Credits measure real consumption**, not actions. A clip costs by the second and the
+   resolution; a message costs by the tokens; an image costs by the pixels.
+2. **One plan only — Pro.** No tiers, no ladder, no Max.
+3. **Nothing is free.** No free plan, no trial, no daily allowance, chat included.
+
+Existing prices are unchanged: **$7 first month → $15/month**, **$120/year**.
+
+---
 
 ## 1. The anchor
 
-**1 MC = $0.01 of platform value.** Every action is priced in whole MC, and every price is
-derived from provider cost + a target gross margin, so the unit stops being an abstract number.
+> **1 MC = $0.001 of measured provider cost.**
+> **1,000 MC = $1 of real consumption.**
 
-Published anchor line for the pricing page: *"1 credit ≈ one chat message, half a standard image,
-or 1/20 of a 5-second video. Nothing on Megsy is unlimited."*
+Every charge is derived from a measured quantity multiplied by a published rate. Nothing is
+hand-picked per action, and no two code paths can produce two prices for the same asset.
 
-**Decision (Oct 2026): nothing is free — chat included.** Chat is metered from day one, so the
-credit is the only way to use the product and the balance moves on every single action.
+## 2. The rate card (`credit_rates`)
 
-## 2. One table, one source of truth
+| Measured unit | Provider cost | MC |
+|---|---|---|
+| Text — per 1,000 tokens, standard model | $0.001 | **1** |
+| Text — per 1,000 tokens, frontier/reasoning model | $0.006 | **6** |
+| Image — 1K | $0.02 | **20** |
+| Image — 2K | $0.04 | **40** |
+| Image — 4K | $0.10 | **100** |
+| Video — per second, 720p | $0.10 | **100** |
+| Video — per second, 1080p | $0.25 | **250** |
+| Voice — text to speech, per 1,000 characters | $0.006 | **6** |
+| Voice — speech to text, per minute | $0.006 | **6** |
+| Web search — per call | $0.005 | **5** |
+| Agent step — per step | $0.02 | **20** |
+| Browser — per minute of runtime | $0.01 | **10** |
+| Code execution — per minute | $0.005 | **5** |
+| Document/page analysis — per page | $0.015 | **15** |
 
-Replace the three current cost locations (a TS constant in `media-video`, `video_models.credits_per_video`,
-and the Anything API `credits`) with a single DB table `credit_costs`:
+Charged amount = `measured quantity × rate`, rounded to a whole MC, charged only after the
+operation succeeds.
 
-| column | meaning |
-|---|---|
-| `action_key` | `chat`, `image_standard`, `image_premium`, `video_5s_720`, `video_5s_1080`, `video_10s_1080`, `research_deep`, `agent_start`, `agent_step`, `browser_minute`, `voice_1k_chars`, `music_track`, `slides_deck`, `doc_generate`, `code_minute` |
-| `mc` | whole-credit price |
-| `unit` | what one charge represents |
-| `provider_cost_usd` | our cost, for margin monitoring |
-| `active` | kill switch per action |
-| `updated_at` | audit |
+### Worked examples
 
-Every edge function reads this table through one RPC: `spend(action_key, operation_key, meta)`.
+| Real operation | Consumption | Cost |
+|---|---|---|
+| Chat message | 8,000 tokens (in + out), standard | **8 MC** |
+| Chat message on a frontier model | 8,000 tokens | **48 MC** |
+| Image | 2K output | **40 MC** |
+| Video | 5 s @ 720p | **500 MC** |
+| Video | 5 s @ 1080p | **1,250 MC** |
+| Video | 10 s @ 1080p | **2,500 MC** |
+| Voice note | 1 minute speech to text | **6 MC** |
+| Web search inside a turn | 1 call | **5 MC** |
+| Agent task | 6 steps | **120 MC** |
+| Deep research run | 20 searches + 60k tokens | **160 MC** |
 
-## 3. Proposed price table (action → MC)
+## 3. The plan
 
-| Action | Unit | MC | Provider cost (est.) | Margin |
-|---|---|---|---|---|
-| Chat turn — standard model | per turn | **1** | ~$0.002–0.008 | ~50% |
-| Chat turn — frontier/reasoning model | per turn | **3** | ~$0.01–0.02 | ~45% |
-| Web search inside a turn | per turn | 0 | ~$0.005 | bundled |
-| Image — standard | per image | **2** | $0.02–0.04 | ~40% |
-| Image — premium / 4K | per image | **5** | $0.05–0.09 | ~40% |
-| Video — 5s 720p | per clip | **20** | $0.15–0.25 | ~25% |
-| Video — 5s 1080p | per clip | **35** | $0.30–0.45 | ~25% |
-| Video — 10s 1080p | per clip | **60** | $0.55–0.75 | ~25% |
-| Deep research run | per run | **8** | $0.05–0.10 | ~40% |
-| Slides deck (premium, ≤12 slides) | per deck | **6** | $0.03–0.06 | ~40% |
-| Document / spreadsheet generation | per file | **2** | $0.01–0.02 | ~50% |
-| Voice — TTS | per 1,000 chars | **1** | $0.005–0.015 | ~40% |
-| Voice — STT | per minute | **1** | $0.004–0.01 | ~50% |
-| Music track | per track | **10** | $0.05–0.08 | ~40% |
-| Agent task — start | per task | **1** | $0.005 | — |
-| Agent task — per tool step | per step | **0.5**, capped 40/task | $0.003–0.01 | ~40% |
-| Browser / computer use | per minute | **2** | $0.01–0.02 | ~40% |
-| Code / sandbox run | per minute | **1** | $0.004–0.01 | ~50% |
+**Pro — the only plan.**
 
-Design rules baked in:
+| | Monthly | Yearly |
+|---|---|---|
+| Price | $7 first month, then **$15/month** | **$120/year** |
+| Balance | **10,000 MC / month** | **96,000 MC, delivered upfront** |
+| Effective credit price | $0.0015 per MC | $0.00125 per MC |
 
-1. **Every action is metered — chat included.** There is no unlimited surface anywhere in the
-   product. A message costs credits exactly like an image or a clip, and the balance visibly
-   moves with every turn, so the unit is anchored to the thing users do most.
-2. **One asset = one price.** No action may have two prices; the model catalogue references an
-   `action_key`, it never carries its own price.
-3. **Charge on success, refund automatically on failure** — keep `charge_credits_once` +
-   `refund_credits_once`, make them the only write path.
-4. **Fractional steps are allowed internally** (0.5 MC/step) but the customer only ever sees whole
-   credits on the pricing page.
+- 10,000 MC = **$10 of metered provider cost** on a $15 plan → 1.5× cost coverage at 100%
+  utilisation.
+- At a realistic **60% utilisation** our cost is ≈$6 of $15 → **~60% gross margin**.
+- Yearly buyers get a better per-credit rate ($0.00125) — the only discount in the system.
 
-## 4. Proposed allowance per plan (the number to give a subscriber)
+**Top-ups (overflow only, never better than the subscription):**
 
-Recommendation — three options, with the recommended one in bold:
+| Pack | Price | Per credit |
+|---|---|---|
+| 5,000 MC | $9 | $0.0018 |
+| 12,000 MC | $19 | $0.00158 |
+| 25,000 MC | $39 | $0.00156 |
 
-| Plan | Price (unchanged) | Today | Option A (lean) | **Option B (recommended)** | Option C (generous) |
-|---|---|---|---|---|---|
-| Free | $0 | 5 MC/day + 3 images/12h | 5 MC/day (150/mo) | **5 MC/day + 3 images/12h** | 8 MC/day |
-| Pro monthly | $15 (first month $7) | 1,000 MC | 1,000 MC | **1,500 MC / month** | 2,000 MC |
-| Pro yearly | $120 | 12,000 MC | 12,000 MC | **18,000 MC / year** (1,500/mo) | 24,000 MC |
-| Max monthly | $40 (first month $17) | 600 MC (broken) | 4,000 MC | **6,000 MC / month** | 8,000 MC |
-| Max yearly | $320 | 9,000 MC (broken) | 48,000 MC | **72,000 MC / year** (6,000/mo) | 96,000 MC |
+**No free anything:** an account without an active Pro subscription cannot use chat, media,
+agents, research, slides or code. There is no trial, no daily allowance, no free bucket.
 
-Why **1,500 MC on Pro**:
+## 4. What 10,000 MC buys
 
-- $15 ÷ 1,500 = **$0.010 per credit**, matching the published anchor exactly.
-- It buys a meaningful, easy-to-say mix: **1,500 chat messages**, or **750 images**, or **75 short
-  videos**, or **187 deep research runs** — or any combination.
-- At a realistic 40–50% utilisation the blended provider cost lands near $6–7 on a $15 plan,
-  keeping gross margin above 55%.
-- 1,000 → 1,500 is a 50% headline increase that costs us nothing until the credits are actually
-  spent, and it removes the main objection to the current plan ("1,000 credits sounds like a lot
-  until you make a few videos").
+1,250 chat messages (8 MC each) · 250 images at 2K · 20 videos of 5 s at 720p · 8 videos of
+5 s at 1080p · 83 agent tasks (6 steps) · or any mix — the balance is one pool.
 
-Why **6,000 MC on Max**: today's 600 credits for $40 is 15× smaller than what the price implies;
-6,000 gives $0.0067 per credit, a real reason to move up, and still sits above the yearly Pro rate.
+## 5. Metering pipeline (what to build)
 
-### Top-up packs (keep the existing three, fix the ladder)
+1. One measurement layer: input/output token counter on every model call.
+2. Media measured from real output: video seconds × resolution, image pixels, audio duration,
+   agent step count, browser/code minutes.
+3. `credit_rates` table mapping each measured unit to MC.
+4. One RPC — `spend_credits(action_key, usage, operation_key)` — takes the measured usage and
+   returns the charge. Idempotent on `operation_key`.
+5. Store `provider_cost_usd` on every operation so margin is measured, not guessed.
+6. Delete the daily allowance and every free path; every call must pass the balance check.
+7. Collapse the two image paths onto one pixel-based meter.
+8. Usage screen shows unit, quantity, cost and MC per operation.
 
-| Pack | Price | MC | $/credit | Rule |
-|---|---|---|---|---|
-| Starter | $9 | 500 | 0.018 | entry |
-| Plus | $19 | 1,200 | 0.0158 | — |
-| Pro | $39 | 3,000 | 0.013 | best value |
+## 6. Rules
 
-**Packs must never be cheaper per credit than the yearly plan** ($0.01). Keeping the ladder above
-that line protects subscription value; the current 3,000-pack at $0.013 already respects it.
+- Purchased credits never expire. Plan credits roll over one month, capped at one allowance.
+- Charge on success, auto-refund on failure — the existing operation-key pattern becomes the
+  only write path.
+- Pre-flight estimate from expected consumption (token estimate, duration, resolution) before
+  anything above 20 MC runs.
+- Low-balance prompts at 20% and 5%, with a one-tap top-up sheet.
+- Refunds stated in credits, not percentages.
+- Referral pays **1,000 MC** when the referred user subscribes — nothing for a signup.
 
-## 5. Rules that make credits feel fair (and stop support tickets)
+## 7. What we will not copy
 
-1. **Purchased credits never expire.** Plan credits refresh with the subscription; daily credits
-   refresh daily and do not stack (keep today's behaviour, state it plainly).
-2. **Rollover:** unused plan credits roll over for one month, capped at one month's allowance.
-   This is the single most requested fairness feature in credit products.
-3. **Every charge is itemised** in the usage screen: action, model, credits, timestamp, and the
-   operation key. Today only aggregates are shown.
-4. **Failed generations refund automatically within minutes** (already implemented — surface it in
-   the UI as a visible event).
-5. **A pre-flight estimate before every expensive action** ("This video will cost 35 MC — you have
-   1,240 MC") with a one-tap confirm above a threshold (e.g. ≥20 MC).
-6. **A visible low-balance state** at 20% and 5%, with a one-tap top-up sheet.
-7. **Refunds policy in credits, not percentages:** "Unused credits are refundable within 7 days"
-   is easier to police and explain than "less than 10% consumed".
-8. **Referral reward scales with the plan:** 20 MC for a free signup, 200 MC when the referred user
-   becomes a paying subscriber — cheap acquisition, real incentive.
-
-## 6. What has to change in the codebase
-
-1. Create `credit_costs` and seed it with the table above; delete the three hardcoded price sources.
-2. One RPC `spend_credits(action_key, operation_key, meta)` replacing direct calls in
-   `media-video`, `media-video/image.ts`, `media-video/agent.ts`, `anything-api`.
-3. `consume_video_quota` becomes a plan-gate only (allowed / not allowed) and stops returning a
-   price; the price comes from `credit_costs`.
-4. `daily_credit_allowance()` and the hardcoded `daily_allowance: 5` in `get_credit_overview()`
-   become plan-aware.
-5. Unify the two image paths so one action key covers both.
-6. Fix the Max tier rows (`elite`) to 6,000 / 72,000 before re-activating them.
-7. Usage screen: itemised history + estimate + low-balance prompts.
-8. Add `provider_cost_usd` tracking so margin per action is measurable, not guessed.
-
-## 7. Migration path (safe, no downtime)
-
-1. Ship `credit_costs` + the unified RPC and route **one** action (video) through it; compare
-   charges against the old path in `credit_transactions`.
-2. Move image, slides, agent, research one at a time; keep the old code behind the same operation
-   keys so no user is double-charged.
-3. Switch the allowance numbers at the start of a billing cycle; grant existing Pro subscribers a
-   one-time goodwill top-up equal to the difference.
-4. Update the pricing page, FAQ and usage screen in the same release as the numbers.
+Claude ("at least 5x Free"), Gemini (2x/4x/20x on an unpublished quota) and Grok (a percentage
+bar) all sell an allowance they never quantify, which lets them cut it mid-cycle without
+changing a published number. Megsy publishes the unit, the quantity and the rate — and gives
+nothing away for free, so there is no allowance to renegotiate.
