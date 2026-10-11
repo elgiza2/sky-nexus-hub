@@ -218,6 +218,7 @@ import {
   agentWelcomeText,
 } from "@/lib/agentChat";
 import { AgentChatBar } from "./components/AgentChatBar";
+import { ComposerAgentPicker } from "./components/ComposerAgentPicker";
 import { promptUpgrade } from "@/lib/upgradeMoment";
 import { loadWorkspace, workspace, useWorkspaceStore } from "@/lib/agentsky/store";
 import type { AgentInfo } from "@/lib/agentsky/client";
@@ -3481,6 +3482,7 @@ const ChatPage = () => {
               composerModeBarChange,
             }}
             composerAnimatedInputProps={{
+              agentSlot: <ComposerAgentPicker activeAgentId={urlAgentId} />,
               input,
               setInput,
               handleSend,

@@ -63,6 +63,8 @@ interface ComposerAnimatedInputProps {
   chatContext?: boolean;
   onInputFocusChange?: (focused: boolean) => void;
   canSendWithoutText?: boolean;
+  /** Agent picker rendered next to the "+" button. */
+  agentSlot?: React.ReactNode;
 }
 
 /**
@@ -111,6 +113,7 @@ export function ComposerAnimatedInput(props: ComposerAnimatedInputProps) {
     chatContext,
     onInputFocusChange,
     canSendWithoutText,
+    agentSlot,
     ...inlineSlotProps
   } = props;
 
@@ -216,6 +219,7 @@ export function ComposerAnimatedInput(props: ComposerAnimatedInputProps) {
           setSelectedModel={setSelectedModel}
         />
       }
+      agentSlot={agentSlot ?? null}
       headerSlot={(props as any).activeServiceHeader ?? null}
       computerSlot={(props as any).computerSlot ?? null}
       activeServiceSlot={(props as any).activeServiceSlot ?? null}

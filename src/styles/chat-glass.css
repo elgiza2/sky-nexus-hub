@@ -251,3 +251,74 @@ html body [data-shell="megsy"] [data-chat-glass="true"] .cap-panel {
 
 /* The empty chat canvas is part of the page, not a surface of its own. */
 [data-chat-landing="true"] { background: transparent !important; }
+
+/* ── floating glass header buttons (sidebar + plan) ──────────── */
+.mobile-chat-header {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.mch-glass-btn {
+  background: var(--settings-surface) !important;
+  color: var(--settings-ink) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+}
+.mch-glass-btn-slot { display: inline-flex; align-items: center; padding: 0 6px; height: 44px; }
+.mch-glass-btn:active { transform: scale(.94); }
+.mch-glass-btn .upgrade-plan-btn { background: transparent !important; }
+
+/* ── agent picker chip inside the composer ───────────────────── */
+.composer-agent-chip {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  height: 36px; max-width: 42vw; padding: 0 10px 0 6px; border: 0; cursor: pointer;
+  border-radius: 12px; background: var(--settings-surface); color: var(--settings-ink);
+  font: inherit; font-size: 12.5px; font-weight: 580; letter-spacing: -.01em;
+  box-shadow: var(--settings-shadow);
+  -webkit-backdrop-filter: var(--settings-frost); backdrop-filter: var(--settings-frost);
+  -webkit-tap-highlight-color: transparent;
+}
+.composer-agent-chip:active { transform: scale(.96); }
+.composer-agent-chip-mark { display: grid; place-items: center; width: 24px; height: 24px; }
+.composer-agent-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-agent-chip-chev { width: 14px; height: 14px; opacity: .55; }
+.composer-voice-btn { color: var(--settings-ink) !important; background: var(--settings-line) !important; }
+
+.composer-agent-scrim { position: fixed; inset: 0; z-index: 70; background: transparent; }
+.composer-agent-sheet {
+  position: fixed; z-index: 71; left: 12px; right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  max-height: 58vh; overflow-y: auto; overscroll-behavior: contain;
+  padding: 10px 10px 12px; border-radius: 26px;
+  background-color: var(--settings-canvas);
+  background-image: var(--settings-backdrop);
+  background-repeat: no-repeat; background-size: cover;
+  color: var(--settings-ink);
+  box-shadow: 0 24px 60px -22px oklch(.25 .005 255 / .34);
+  border: 1px solid var(--settings-line);
+}
+.composer-agent-sheet-grip { width: 38px; height: 4px; border-radius: 999px; margin: 0 auto 8px; background: var(--settings-line); }
+.composer-agent-sheet-title {
+  margin: 0 0 8px; padding-inline-start: 6px;
+  font-size: 11.5px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--settings-muted);
+}
+.composer-agent-sheet-loading { display: grid; place-items: center; padding: 22px 0; color: var(--settings-muted); }
+.composer-agent-sheet-loading svg { width: 18px; height: 18px; }
+.composer-agent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.composer-agent-item {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 9px 10px; border: 0; cursor: pointer; font: inherit; text-align: start;
+  border-radius: 18px; background: var(--settings-surface); color: var(--settings-ink);
+  box-shadow: var(--settings-shadow);
+  -webkit-tap-highlight-color: transparent;
+}
+.composer-agent-item[data-on="true"] { box-shadow: inset 0 0 0 1.5px var(--settings-violet), var(--settings-shadow); }
+.composer-agent-item:active { transform: scale(.985); }
+.composer-agent-item-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 12px; background: var(--settings-canvas); }
+.composer-agent-item-text { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.composer-agent-item-name { font-size: 13.5px; font-weight: 600; color: var(--settings-ink); }
+.composer-agent-item-role { font-size: 11px; color: var(--settings-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-agent-item-check { width: 17px; height: 17px; flex: none; color: var(--settings-violet); }
