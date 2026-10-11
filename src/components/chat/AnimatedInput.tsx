@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
-import { ArrowUp, Square, X, Sparkles, Loader2, Pencil, Plus } from "lucide-react";
+import { ArrowUp, Mic, Square, X, Sparkles, Loader2, Pencil, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { m as motion, AnimatePresence } from "framer-motion";
 
 import ModelPickerDropdown from "@/components/model-picker/ModelPickerDropdown";
@@ -51,6 +52,8 @@ interface AnimatedInputProps {
   computerSlot?: React.ReactNode;
   /** Small icon buttons (model / template pickers) rendered in the bottom control row. */
   serviceTools?: React.ReactNode;
+  /** Agent button rendered right after "+" in the bottom control row. */
+  agentSlot?: React.ReactNode;
   isEditing?: boolean;
   onCancelEdit?: () => void;
   /** When true, the composer sits in a chat context and uses a liquid-glass surface. */
@@ -83,6 +86,7 @@ const AnimatedInput = ({
   activeServiceSlot,
   computerSlot,
   serviceTools,
+  agentSlot,
   isEditing,
   onCancelEdit,
   onPlusClick,
@@ -133,6 +137,51 @@ const AnimatedInput = ({
   const [lastSelectedAgent, setLastSelectedAgent] = useState<AgentDef | null>(null);
   const [focused, setFocused] = useState(false);
   const [listening, setListening] = useState(false);
+  const voiceRef = useRef<any>(null);
+  const voiceBaseRef = useRef("");
+  const stopVoice = useCallback(() => {
+    try {
+      voiceRef.current?.stop();
+    } catch {
+      /* already stopped */
+    }
+    voiceRef.current = null;
+    setListening(false);
+  }, []);
+  /* Dictation: speech fills the composer, then send takes over the button. */
+  const toggleVoice = useCallback(() => {
+    if (listening) {
+      stopVoice();
+      return;
+    }
+    const Recognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Recognition) {
+      toast.error("Voice input is not supported in this browser.");
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = navigator.language || "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    voiceBaseRef.current = value ? `${value.trim()} ` : "";
+    recognition.onresult = (event: any) => {
+      let transcript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        transcript += event.results[index][0].transcript;
+      }
+      onChange(`${voiceBaseRef.current}${transcript}`.replace(/\s+/g, " ").trimStart());
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    voiceRef.current = recognition;
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
+  }, [listening, onChange, stopVoice, value]);
   const composerLocation = useLocation();
   useEffect(() => {
     if (new URLSearchParams(composerLocation.search).get("integrations") === "1") {
@@ -461,6 +510,7 @@ const AnimatedInput = ({
                 {isArabicUi ? "أدوات" : "Tools"}
               </span>
             </Button>
+            {agentSlot}
 
             {(focused || hasText) && (
               <ComposerIntegrationsButton onClick={() => navigate("/integrations")} />
@@ -485,7 +535,7 @@ const AnimatedInput = ({
                     </Button>
                   )}
                 </motion.div>
-              ) : (
+              ) : hasText || canSendWithoutText ? (
                 <motion.div
                   key="send"
                   initial={{ opacity: 0, scale: 0.7 }}
@@ -504,6 +554,27 @@ const AnimatedInput = ({
                     aria-label={uiT("sendMessage")}
                   >
                     <ArrowUp className="w-[18px] h-[18px] md:w-4 md:h-4" strokeWidth={2.2} />
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="voice"
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <Button
+                    type="button"
+                    onClick={toggleVoice}
+                    data-testid="mobile-composer-voice"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-pressed={listening}
+                    className="shrink-0 rounded-full h-10 w-10 border border-foreground/[0.08] bg-foreground/[0.035] text-muted-foreground shadow-none transition-[background-color,border-color,color,transform] duration-150 hover:border-primary/30 hover:bg-primary/[0.08] hover:text-foreground active:scale-[0.96]"
+                    aria-label={listening ? "Stop voice input" : "Voice input"}
+                  >
+                    <Mic className="w-[18px] h-[18px]" strokeWidth={2} />
                   </Button>
                 </motion.div>
               )}
