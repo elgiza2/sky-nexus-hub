@@ -256,7 +256,9 @@ const ThinkingTrace = ({
         {/* Raw model reasoning stays behind the expander — the collapsed view
             keeps only clean activity steps, so the chat never fills up with
             half-sentences from the model's scratchpad. */}
-        {open && reasoningLines.length > 0 && (
+        {/* While the turn runs the reasoning streams visibly; once it settles
+            the scratchpad folds back behind the expander. */}
+        {(open || active) && reasoningLines.length > 0 && (
           <div className="mt-2 flex flex-col gap-1.5 border-t border-border/40 pt-2">
             {reasoningLines.map((line, i) => (
               <p key={`tr-${i}`} className="text-[12.5px] leading-relaxed text-muted-foreground/90 break-words">
