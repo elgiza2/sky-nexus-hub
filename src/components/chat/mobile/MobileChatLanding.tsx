@@ -716,7 +716,7 @@ const MobileChatLanding = ({
   void modelControlSlot;
 
   return (
-    <div className="md:hidden relative w-full h-full overflow-hidden text-foreground" style={{ background: "var(--chat-reference-bg, hsl(var(--background)))" }}>
+    <div className="chat-landing-glass md:hidden relative w-full h-full overflow-hidden text-foreground" style={{ background: "var(--chat-reference-bg, hsl(var(--background)))" }}>
       {/* Empty canvas — a quiet wordmark, exactly like the reference layout */}
       <style>{WATERMARK_CSS}</style>
       <div

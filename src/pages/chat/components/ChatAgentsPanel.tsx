@@ -3,8 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Loader2, Search } from "lucide-react";
 import { AgentIcon } from "@/components/agent/AgentIcon";
+import { AgentOrb } from "@/components/agent/AgentOrb";
 import { loadWorkspace, useWorkspaceStore } from "@/lib/agentsky/store";
-import type { AgentInfo } from "@/lib/agentsky/client";
+import type { AgentColor, AgentInfo } from "@/lib/agentsky/client";
+
+/* Each agent carries its own hue, exactly like the agents directory. */
+const TINT: Record<AgentColor, string> = {
+  aurora: "var(--settings-violet)",
+  ocean: "var(--settings-blue)",
+  ember: "var(--settings-red)",
+  mint: "var(--settings-green)",
+  sun: "var(--settings-yellow)",
+  rose: "var(--settings-pink)",
+  mono: "var(--settings-muted)",
+};
 
 export function ChatAgentsPanel({
   activeAgentId,
@@ -35,8 +47,15 @@ export function ChatAgentsPanel({
     <section className="cap-panel md:hidden" data-testid="chat-agents-panel">
       <style>{PANEL_CSS}</style>
       <div className="cap-inner">
-        <h1 className="cap-title">Agents</h1>
-        <p className="cap-sub">Pick an agent and Megsy hands the work to it.</p>
+        <div className="cap-hero">
+          <span className="cap-hero-orb">
+            <AgentOrb size={46} />
+          </span>
+          <div className="cap-hero-text">
+            <h1 className="cap-title">Agents</h1>
+            <p className="cap-sub">Pick an agent and Megsy hands the work to it.</p>
+          </div>
+        </div>
 
         <div className="cap-search">
           <Search aria-hidden />
@@ -72,7 +91,10 @@ export function ChatAgentsPanel({
                   onClick={() => onPick(agent)}
                   aria-label={`Chat with ${agent.name}`}
                 >
-                  <span className="cap-tile-icon">
+                  <span
+                    className="cap-tile-icon"
+                    style={{ ["--cap-tint" as any]: TINT[agent.color] ?? TINT.mono }}
+                  >
                     <AgentIcon agent={agent} size={26} />
                   </span>
                   <span className="cap-tile-name">{agent.name}</span>
@@ -129,10 +151,19 @@ const PANEL_CSS = `
   background: hsl(var(--foreground) / 0.08);
   box-shadow: inset 0 0 0 1.5px hsl(var(--foreground) / 0.3);
 }
+.cap-hero { display: flex; align-items: center; gap: 13px; margin: 2px 0 16px; }
+.cap-hero-orb {
+  width: 52px; height: 52px; flex: none; display: grid; place-items: center;
+  border-radius: 18px; background: hsl(var(--foreground) / 0.05);
+  box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.07);
+}
+.cap-hero-text { min-width: 0; }
+.cap-hero-text .cap-title { margin: 0; }
 .cap-tile-icon {
   width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 8px;
-  border-radius: 14px; background: hsl(var(--background));
-  box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.08);
+  border-radius: 14px;
+  background: color-mix(in oklch, var(--cap-tint, var(--settings-muted)) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--cap-tint, var(--settings-muted)) 22%, transparent);
 }
 .cap-tile-name {
   font-size: 14px; font-weight: 620; letter-spacing: -.01em; line-height: 1.3;

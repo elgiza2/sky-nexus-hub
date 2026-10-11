@@ -1,0 +1,138 @@
+/* ─────────────────────────────────────────────────────────────
+ * Chat page, in the app's own glass language.
+ *
+ * Everything is scoped to [data-chat-glass="true"] (the chat <main>),
+ * so no other page is touched. The chat used to paint its own dark
+ * palette; here it borrows the same backdrop, frosted surfaces, hairline
+ * borders and shadows the settings / agents / apps pages already use.
+ * ───────────────────────────────────────────────────────────── */
+
+[data-chat-glass="true"] {
+  background: var(--settings-backdrop) !important;
+  background-color: var(--settings-canvas) !important;
+  background-image: var(--settings-backdrop) !important;
+  background-attachment: fixed !important;
+  color: var(--settings-ink);
+}
+
+/* The shell above the chat paints a flat colour — let the aurora through. */
+[data-chat-glass="true"]::before,
+[data-chat-glass="true"]::after {
+  content: none !important;
+}
+
+/* ── header: frosted bar ─────────────────────────────────────── */
+[data-chat-glass="true"] .mobile-chat-header {
+  background: color-mix(in oklch, var(--settings-canvas) 74%, transparent) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+  box-shadow: 0 1px 0 var(--settings-line) !important;
+}
+[data-chat-glass="true"] .mch-seg {
+  background: color-mix(in oklch, var(--settings-ink) 7%, transparent) !important;
+}
+[data-chat-glass="true"] .mch-seg-btn { color: var(--settings-muted) !important; }
+[data-chat-glass="true"] .mch-seg-btn[data-on="true"] {
+  background: var(--settings-surface) !important;
+  color: var(--settings-ink) !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+}
+[data-chat-glass="true"] .mch-avatar,
+[data-chat-glass="true"] .mch-icon-btn {
+  background: var(--settings-surface) !important;
+  color: var(--settings-ink) !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+}
+
+/* ── landing canvas ──────────────────────────────────────────── */
+[data-chat-glass="true"] .chat-landing-glass {
+  background: transparent !important;
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .mcl-watermark {
+  color: var(--settings-ink) !important;
+  opacity: 0.13 !important;
+}
+
+/* ── composer: one frosted card ──────────────────────────────── */
+[data-chat-glass="true"] .chat-composer-frame,
+[data-chat-glass="true"] .chat-composer-frame.chat-composer-liquid {
+  background: var(--settings-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--settings-line) !important;
+  border-radius: 28px !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .chat-composer-frame textarea {
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .chat-composer-frame textarea::placeholder {
+  color: var(--settings-muted) !important;
+}
+[data-chat-glass="true"] .chat-composer-frame [data-composer-controls] button {
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .chat-composer-frame button[aria-label="Send message" i],
+[data-chat-glass="true"] .chat-composer-frame [data-testid="mobile-composer-send"] {
+  background: var(--settings-violet) !important;
+  color: oklch(1 0 0) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 18px -12px var(--settings-violet) !important;
+}
+[data-chat-glass="true"] .chat-composer-frame button[aria-label="Send message" i]:disabled,
+[data-chat-glass="true"] .chat-composer-frame [data-testid="mobile-composer-send"]:disabled {
+  opacity: 0.4 !important;
+}
+[data-chat-glass="true"] .chat-composer-frame [data-plus-trigger] {
+  background: color-mix(in oklch, var(--settings-ink) 6%, transparent) !important;
+  border: 1px solid var(--settings-line) !important;
+  color: var(--settings-ink) !important;
+}
+
+/* ── agents half: its own, clearly different surface ─────────── */
+[data-chat-glass="true"] .cap-panel {
+  background: var(--settings-backdrop) !important;
+  background-attachment: fixed !important;
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .cap-title { color: var(--settings-ink) !important; }
+[data-chat-glass="true"] .cap-sub { color: var(--settings-muted) !important; }
+[data-chat-glass="true"] .cap-search > input {
+  background: var(--settings-surface) !important;
+  border: 1px solid var(--settings-line) !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .cap-search > input::placeholder { color: var(--settings-muted) !important; }
+[data-chat-glass="true"] .cap-search > svg { color: var(--settings-muted) !important; }
+[data-chat-glass="true"] .cap-tile {
+  background: var(--settings-surface) !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+  color: var(--settings-ink) !important;
+}
+[data-chat-glass="true"] .cap-tile[data-active="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--settings-violet), var(--settings-shadow) !important;
+}
+[data-chat-glass="true"] .cap-tile-icon {
+  background: color-mix(in oklch, var(--settings-ink) 6%, transparent) !important;
+  box-shadow: inset 0 0 0 1px var(--settings-line) !important;
+}
+[data-chat-glass="true"] .cap-tile-hint { color: var(--settings-muted) !important; }
+[data-chat-glass="true"] .cap-manage {
+  background: var(--settings-surface) !important;
+  color: var(--settings-ink) !important;
+  box-shadow: var(--settings-shadow) !important;
+  -webkit-backdrop-filter: var(--settings-frost) !important;
+  backdrop-filter: var(--settings-frost) !important;
+}

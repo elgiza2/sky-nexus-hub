@@ -3043,6 +3043,7 @@ const ChatPage = () => {
 
         <motion.div
           data-chat-main="true"
+          data-chat-glass="true"
           data-chat-empty={messages.length === 0 && !loadingMessages ? "true" : "false"}
           data-chat-glow={hasActiveTaskGlow ? "true" : "false"}
           data-sidebar-open={sidebarOpen ? "true" : "false"}
