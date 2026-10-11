@@ -646,14 +646,6 @@ const AuthPage = () => {
     });
   };
 
-  const handleMicrosoftLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "azure",
-      options: { scopes: "email", redirectTo: absoluteAuthRedirect(redirectUrl || pathForZone("/chat", window.location.pathname), window.location.search) },
-    });
-    if (error) setMobileError(translateAuthError(error, "loginFailed"));
-  };
-
   const handleGithubLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
@@ -782,7 +774,6 @@ const AuthPage = () => {
         <MobileAuthIntro
           authMode={creatingPassword ? "signup" : "signin"}
           onGoogle={handleGoogleLogin}
-          onMicrosoft={handleMicrosoftLogin}
           onGithub={handleGithubLogin}
           onClose={() => navigate("/welcome")}
           onBack={() => { if (!isSubmitting) setStep(step === "password" || creatingPassword ? "email" : "intro1"); }}
@@ -1037,15 +1028,6 @@ const AuthPage = () => {
                           {authT("continueWithGoogle")}
                         </button>
                         <AppleSignInButton className={socialCls} />
-                        <button type="button" onClick={handleMicrosoftLogin} className={socialCls}>
-                          <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="2" y="2" width="9" height="9" fill="#F25022" />
-                            <rect x="13" y="2" width="9" height="9" fill="#7FBA00" />
-                            <rect x="2" y="13" width="9" height="9" fill="#00A4EF" />
-                            <rect x="13" y="13" width="9" height="9" fill="#FFB900" />
-                          </svg>
-                          {authT("continueWithMicrosoft")}
-                        </button>
                         <button type="button" onClick={handleGithubLogin} className={socialCls}>
                           <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                             <path
