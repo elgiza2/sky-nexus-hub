@@ -41,9 +41,9 @@ export default function DesktopPricing({ plans, faqs, isYearly, setIsYearly, loa
         <CreditPacks isPro={!!currentPlan && currentPlan !== "free"} />
       </div>
 
-      {/* Free line */}
+      {/* Talk-to-us line */}
       <div className="flex items-center justify-between border-b border-foreground/10 py-8 text-[14px]">
-        <span className="text-foreground/65">{t("Not ready? Chat with Megsy stays free.")}</span>
+        <span className="text-foreground/65">{t("Not sure yet? Top up with a credit pack whenever you like.")}</span>
         <a href="mailto:support@megsyai.com" className="font-semibold underline underline-offset-4">
           {t("Talk to us")}
         </a>

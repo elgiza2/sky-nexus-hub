@@ -225,11 +225,11 @@ export const SERVICES_GUIDE: { name: string; desc: string }[] = [
   { name: "Agent catalogue", desc: "Browse available agents. Switching agents requires an active subscription." },
   { name: "Higgsfield Images & Video", desc: "Subscriber-only media inside chat using the configured Hypit agent. Free accounts cannot generate images or videos. Availability depends on the provider." },
   { name: "Task progress", desc: "Follow the agent's actual work, tool activity and completion status." },
-  { name: "Megsy Credits", desc: "Pro includes 1,000 monthly credits. Chat remains available on the free plan; media and agent switching require a subscription." },
+  { name: "Megsy Credits", desc: "Pro includes 1,000 Megsy Credits every month. Chat, media and agent switching are all metered against those credits — there is no free tier." },
 ];
 
 export const FAQS: { q: string; a: string }[] = [
-  { q: "Can free accounts generate images or videos?", a: "No. Images and videos are exclusive to subscribers and appear directly inside chat. Free users can chat with Megsy but cannot switch agents." },
+  { q: "Do I need a subscription to use Megsy?", a: "Yes. Megsy is a paid product: chat, research, media and agent switching all run on the Pro plan and are metered against your Megsy Credits." },
   {
     q: "How does the introductory first month work?",
     a: "Your first month costs $7, then Pro renews at $15 a month. Each month includes 1,000 credits. You can cancel anytime.",
@@ -240,15 +240,15 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What are Megsy Credits (MC)?",
-    a: "Megsy Credits are your plan allowance. Chat remains available for free; image/video generation and agent switching are subscriber-only. Media availability and usage depend on the configured provider.",
+    a: "Megsy Credits are your monthly allowance and the single currency for everything Megsy does — chat, research, browsing, coding, images and video. Every request is metered against the real usage it costs.",
   },
   {
     q: "What happens when I run out of MC?",
-    a: "Chat stays free. Pro members can buy a 100, 300 or 700 credit pack, or wait for the monthly renewal.",
+    a: "Top up with a credit pack — 500, 1,200 or 3,000 credits — or wait for your monthly renewal. Nothing runs without credits.",
   },
   {
     q: "Do unused credits roll over?",
-    a: "Daily free credits refresh to 5 and do not stack. Purchased credits stay available; plan credits refresh with the subscription.",
+    a: "Plan credits refresh with your subscription and do not stack month to month. Purchased credit packs stay available until you use them.",
   },
   {
     q: "Do prices include tax?",
