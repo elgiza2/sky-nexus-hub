@@ -11,6 +11,9 @@ import { useDynamicNotifications } from "./DynamicNotifications";
 
 /** Bump the version to greet everyone again. */
 const WELCOME_KEY = "megsy_welcome_notice_v1";
+/** While this is on, the greeting shows on every visit so it is easy to review.
+ *  Set it to false to go back to greeting each account once. */
+const ALWAYS_SHOW = true;
 
 export default function FirstRunWelcome() {
   const { trigger } = useDynamicNotifications();
@@ -23,14 +26,14 @@ export default function FirstRunWelcome() {
     const greet = (userId: string) => {
       if (!alive || greeted.current === userId) return;
       const key = `${WELCOME_KEY}:${userId}`;
+      let seen = false;
       try {
-        if (localStorage.getItem(key)) return;
+        seen = Boolean(localStorage.getItem(key));
         localStorage.setItem(key, String(Date.now()));
       } catch {
-        // Storage can be unavailable (private mode); greeting twice is worse
-        // than not greeting at all, so bail out quietly.
-        return;
+        // Storage can be unavailable (private mode) — the greeting still shows.
       }
+      if (seen && !ALWAYS_SHOW) return;
       greeted.current = userId;
       window.setTimeout(() => {
         if (!alive) return;

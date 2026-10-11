@@ -6,6 +6,7 @@ import { lazy, Suspense, useMemo, type ComponentType } from "react";
 import { Clapperboard, Sparkles } from "lucide-react";
 import type { AgentColor, AgentInfo } from "@/lib/agentsky/client";
 import { AgentOrb } from "./AgentOrb";
+import higgsfieldLogo from "@/assets/higgsfield-logo.png";
 
 type IconModule = { default: ComponentType<any> & { Color?: ComponentType<any> } };
 
@@ -64,10 +65,14 @@ const BRANDS: Record<string, () => Promise<IconModule>> = {
   meshy: () => import("@lobehub/icons/es/Meshy"),
   lovart: () => import("@lobehub/icons/es/Lovart"),
   topaz: () => import("@lobehub/icons/es/TopazLabs"),
+  /* Higgsfield publishes its own app mark, so it ships with the app instead of
+     coming from the icon package. */
+  higgsfield: async () => ({ default: HiggsfieldMark as ComponentType<any> }),
 };
 
 /* Ordered: the most specific agent identity wins. */
 const RULES: [RegExp, keyof typeof BRANDS][] = [
+  [/\bhiggsfield\b|\bhiggs\b/, "higgsfield"],
   [/\bclaude\s*code\b|\bclaudecode\b/, "claudecode"],
   [/\bopenclaw\b|\bclaw\b/, "openclaw"],
   [/\bopenhands\b/, "openhands"],
@@ -154,6 +159,21 @@ function lazyBrand(key: string) {
 /** Megsy's own mark: the same orb creature the chat page greets you with. */
 export function MegsyMark({ color = "aurora", size = 28, className }: { color?: AgentColor; size?: number; className?: string }) {
   return <AgentOrb color={color} size={size} state="idle" className={className} />;
+}
+
+/** Higgsfield's published app mark. */
+function HiggsfieldMark({ size = 23, className }: { size?: number; className?: string }) {
+  return (
+    <img
+      src={higgsfieldLogo}
+      alt=""
+      width={size}
+      height={size}
+      className={className}
+      loading="lazy"
+      decoding="async"
+    />
+  );
 }
 
 const GenericMark = ({ kind, size, className }: { kind: "media" | "agent"; size: number; className?: string }) =>
