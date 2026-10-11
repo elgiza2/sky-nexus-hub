@@ -32,7 +32,7 @@ export default function PaymentMethodsShowcase({
     <div className={`flex flex-col gap-5 ${className}`}>
       {PAYMENT_METHODS_BY_GROUP.map((section) => (
         <section key={section.group} className="flex flex-col gap-2.5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
             {section.label}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -65,7 +65,7 @@ export default function PaymentMethodsShowcase({
                       : "cursor-default",
                     activeId === method.id
                       ? "border-foreground/35 bg-muted/60"
-                      : "border-border/60 bg-card/40",
+                      : "border-border/60 bg-card/60",
                   ].join(" ")}
                 >
                   {wordmarkOnly && single?.kind === "word" ? (
@@ -78,7 +78,7 @@ export default function PaymentMethodsShowcase({
                   ) : (
                     <>
                       <PaymentMethodMarks marks={method.marks} />
-                      <span className="text-[12.5px] font-medium leading-none text-foreground/85">
+                      <span className="text-[12.5px] font-medium leading-none text-foreground/90">
                         {method.label}
                       </span>
                     </>

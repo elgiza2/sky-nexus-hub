@@ -1,23 +1,22 @@
 /**
  * @doc The Dodo Payments rail.
  *
- * Methods that Megsy cannot charge in-app are handed to Dodo's hosted checkout.
- * Dodo is a Merchant of Record, so it collects the money, handles tax and pays
- * us out — we only need the checkout URL.
- *
- * Switch it on with the `VITE_DODO_CHECKOUT_ENABLED=true` build variable once the
- * `dodo-checkout` edge function has its `DODO_PAYMENTS_API_KEY` secret.
+ * Methods Megsy cannot charge in-app are handed to the Dodo Payments checkout:
+ * `dodo-checkout` creates the session server-side (Dodo is the Merchant of
+ * Record, so it collects the money and handles tax) and we open the returned
+ * payment link. Switch the rail off with VITE_DODO_CHECKOUT_ENABLED=false.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { dodoMethodTypesFor } from "./paymentMethods";
+import { hasUsedIntroTrial } from "@/lib/introTrial";
 
-export const DODO_READY = import.meta.env.VITE_DODO_CHECKOUT_ENABLED === "true";
+export const DODO_READY = import.meta.env.VITE_DODO_CHECKOUT_ENABLED !== "false";
 
 const ALLOWED_HOSTS = ["dodopayments.com", "www.dodopayments.com", "checkout.dodopayments.com"];
 
 /** Sends the browser to an external checkout, escaping any embedding frame first. */
 export function openExternalCheckout(url: string): boolean {
   if (typeof window === "undefined" || !url) return false;
+
   let target: URL;
   try {
     target = new URL(url);
@@ -53,6 +52,11 @@ export interface DodoStartResult {
   message?: string;
 }
 
+/**
+ * Creates the Dodo checkout for this account and sends the customer to it.
+ * The `intro` offer maps to the discounted first month; a returning customer
+ * gets the standard plan price.
+ */
 export async function startDodoCheckout(input: {
   tier: string;
   interval: "monthly" | "yearly";
@@ -66,23 +70,26 @@ export async function startDodoCheckout(input: {
     } = await supabase.auth.getSession();
     if (!session?.access_token) return { ok: false, reason: "unauthenticated" };
 
+    const intro = !(await hasUsedIntroTrial());
+
     const { data, error } = await supabase.functions.invoke("dodo-checkout", {
       body: {
         tier: input.tier,
         interval: input.interval,
-        methodId: input.methodId ?? null,
-        methodTypes: dodoMethodTypesFor(input.methodId),
+        offer: intro ? "intro" : "standard",
+        method_id: input.methodId ?? null,
       },
     });
 
     if (error) return { ok: false, reason: "failed", message: error.message };
 
-    const url = (data as { checkout_url?: string | null } | null)?.checkout_url;
+    const payload = data as { checkout_url?: string | null; error?: string } | null;
+    const url = payload?.checkout_url;
     if (!url) {
       return {
         ok: false,
         reason: "failed",
-        message: "The secure checkout link is missing. Please try another method.",
+        message: payload?.error ?? "The secure checkout link is missing. Please try another method.",
       };
     }
 

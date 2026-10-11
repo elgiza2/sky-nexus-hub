@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, ChevronDown, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "./CardPreview";
 import PaymentMethodsShowcase from "./PaymentMethodsShowcase";
@@ -43,7 +43,6 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
   const [phone, setPhone] = useState("");
   const [walletWaiting, setWalletWaiting] = useState(false);
   const [applePay, setApplePay] = useState(false);
-  const [showAllMethods, setShowAllMethods] = useState(false);
   const [startingMethod, setStartingMethod] = useState<string | null>(null);
   const [methodNote, setMethodNote] = useState<string | null>(null);
   const stopWatchRef = useRef<(() => void) | null>(null);
@@ -82,7 +81,6 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
       setStage("main");
       setPhone("");
       setWalletWaiting(false);
-      setShowAllMethods(false);
       setStartingMethod(null);
       setMethodNote(null);
     }
@@ -177,7 +175,6 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
       if (tile) {
         setError(null);
         setMethod(tile);
-        setShowAllMethods(false);
         return;
       }
       setMethodNote(
@@ -397,32 +394,18 @@ export default function CustomCardForm({ open, tier, interval, onClose }: Props)
                 )}
               </div>
 
-              <div className="mt-6 border-t border-border/50 pt-5">
-                <Button
-                  variant="ghost"
-                  type="button"
-                  onClick={() => setShowAllMethods((value) => !value)}
-                  aria-expanded={showAllMethods}
-                  className="flex h-11 w-full items-center justify-between rounded-2xl border border-border/60 bg-card/40 px-4 text-[13.5px] font-medium text-foreground/85 hover:bg-muted/50"
-                >
-                  <span>All payment methods ({PAYMENT_METHOD_COUNT})</span>
-                  <ChevronDown
-                    className={`h-4 w-4 text-foreground/50 transition-transform ${
-                      showAllMethods ? "rotate-180" : ""
-                    }`}
-                    strokeWidth={1.8}
-                  />
-                </Button>
+              <div className="mt-5 rounded-3xl border border-white/25 bg-background/85 p-4 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70">
+                  All payment methods ({PAYMENT_METHOD_COUNT})
+                </h2>
 
-                {showAllMethods && (
-                  <div className="mt-4">
-                    <PaymentMethodsShowcase
-                      onSelect={chooseMethod}
-                      busyId={startingMethod}
-                      activeId={METHOD_ID_BY_TILE[method]}
-                    />
-                  </div>
-                )}
+                <div className="mt-3.5">
+                  <PaymentMethodsShowcase
+                    onSelect={chooseMethod}
+                    busyId={startingMethod}
+                    activeId={METHOD_ID_BY_TILE[method]}
+                  />
+                </div>
 
                 {methodNote && (
                   <p role="status" className="mt-3 text-[12.5px] leading-relaxed text-foreground/60">
