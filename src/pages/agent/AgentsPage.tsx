@@ -3,13 +3,15 @@
  * Every agent shows its real published logo; Megsy itself is the robot. */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Loader2, Lock, Plus, RotateCw, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Loader2, Lock, Plus, RotateCw, Trash2, Users } from "lucide-react";
 import { agentApi, type AgentColor, type AgentInfo } from "@/lib/agentsky/client";
 import { useWorkspaceStore, workspace, loadWorkspace } from "@/lib/agentsky/store";
 import { AgentIcon, agentBrandKey } from "@/components/agent/AgentIcon";
 import ProfileGlassShell, { GlassCard, GlassSection } from "@/components/profile/ProfileGlassShell";
 import SEOHead from "@/components/common/SEOHead";
 import { canUseAgent } from "@/lib/octoberOffer";
+import { promptUpgrade } from "@/lib/upgradeMoment";
+import { isPaidUser } from "@/lib/subscriptionGating";
 
 /* The agent's own colour drives its tile tint (brand marks keep a neutral tile). */
 const TINT: Record<AgentColor, string> = {
@@ -68,6 +70,14 @@ const AGENT_CSS = `
   .agx-icon-btn:active { transform: scale(.92); background: var(--settings-line); }
   .agx-icon-btn.agx-del { color: var(--settings-red); }
   .agx-icon-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .agx-check {
+    flex-shrink: 0; width: 24px; height: 24px; display: grid; place-items: center;
+    border-radius: 50%; color: #fff;
+    box-shadow: inset 0 0 0 1.5px var(--settings-line);
+  }
+  .agx-check[data-on="true"] { background: var(--settings-violet); box-shadow: none; }
+  .agx-check svg { width: 14px; height: 14px; }
+  .agx-team-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--settings-muted); }
 `;
 
 export function AgentsPage() {
@@ -76,6 +86,20 @@ export function AgentsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [now] = useState(Date.now());
+  const [teamMode, setTeamMode] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const paid = isPaidUser(tier);
+  const team = agents.filter((agent) => picked.includes(agent.id));
+  const toggle = (id: string) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const startTeam = () => {
+    if (team.length < 2) return;
+    if (!paid) {
+      promptUpgrade("Agent teams", "Run several agents on the same message.");
+      return;
+    }
+    nav(`/chat?agents=${team.map((agent) => agent.id).join(",")}`);
+  };
   const setup = () => nav("/chat", { state: { agentCreation: true } });
   const back = () => (window.history.length > 1 ? nav(-1) : nav("/chat"));
 
@@ -110,10 +134,16 @@ export function AgentsPage() {
         ? "Image and video creation"
         : a.description || "Personal AI agent";
     const open = () => nav(locked ? "/pricing" : `/chat?agent=${encodeURIComponent(a.id)}`);
+    const isPicked = picked.includes(a.id);
 
     return (
       <li key={a.id} className="gx-row agx-row" style={{ ["--agx" as any]: TINT[a.color] }}>
-        <button type="button" className="agx-hit" onClick={open} aria-label={`Open ${a.name}`}>
+        <button
+          type="button"
+          className="agx-hit"
+          onClick={teamMode ? () => toggle(a.id) : open}
+          aria-label={teamMode ? `Add ${a.name} to the team` : `Open ${a.name}`}
+        >
           <span className={`agx-tile${plainTile ? " agx-tile-brand" : ""}`}>
             <AgentIcon agent={a} />
           </span>
@@ -140,7 +170,11 @@ export function AgentsPage() {
           </button>
         )}
 
-        {locked ? (
+        {teamMode ? (
+          <span className="agx-check" data-on={isPicked ? "true" : "false"}>
+            {isPicked ? <Check strokeWidth={2.6} /> : null}
+          </span>
+        ) : locked ? (
           <span className="agx-lock">
             <Lock />
             Pro
@@ -172,9 +206,24 @@ export function AgentsPage() {
         subtitle="Your personal agents, specialists and media makers — each with its own logo and chat."
         onBack={back}
         trailing={
-          <button type="button" className="gx-hbtn gx-hbtn-sm" aria-label="Add agent" title="Add agent" onClick={setup}>
-            <Plus className="gx-hicon" strokeWidth={2} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="gx-hbtn gx-hbtn-sm"
+              aria-label="Work with a team of agents"
+              title="Work with a team of agents"
+              data-on={teamMode ? "true" : "false"}
+              onClick={() => {
+                setTeamMode((value) => !value);
+                setPicked([]);
+              }}
+            >
+              <Users className="gx-hicon" strokeWidth={2} />
+            </button>
+            <button type="button" className="gx-hbtn gx-hbtn-sm" aria-label="Add agent" title="Add agent" onClick={setup}>
+              <Plus className="gx-hicon" strokeWidth={2} />
+            </button>
+          </div>
         }
       >
         {(error || deleteError) && (
@@ -195,6 +244,24 @@ export function AgentsPage() {
               <Loader2 size={17} className="animate-spin" />
               Loading your agents…
             </div>
+          </GlassCard>
+        )}
+
+        {teamMode && (
+          <GlassCard>
+            <p className="agx-team-note">
+              Pick two or more agents. They all answer the same message, each from its own angle.
+            </p>
+            <button
+              type="button"
+              className="gx-pill gx-pill-wide"
+              style={{ marginTop: 12 }}
+              disabled={team.length < 2}
+              onClick={startTeam}
+            >
+              <Users size={16} />
+              {team.length < 2 ? "Pick at least two agents" : `Start team chat · ${team.length}`}
+            </button>
           </GlassCard>
         )}
 
