@@ -331,12 +331,10 @@ const AnimatedInput = ({
       <div className="md:rounded-[28px]">
         <motion.div
           data-compact={compact ? "true" : "false"}
-          className={`chat-composer-frame chat-mobile-input-glow composer-card pointer-events-auto relative z-10 transition-[border-radius,margin,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            compact
-              ? "mx-0 rounded-[32px] px-2 py-1.5"
-              : headerSlot
-                ? "mx-0 rounded-[26px] px-3.5 pt-0 pb-2 md:px-4 md:pt-0 md:pb-2.5"
-                : "mx-0 rounded-[26px] px-3.5 pt-3 pb-2.5 md:px-4 md:pt-3 md:pb-2.5"
+          className={`chat-composer-frame chat-mobile-input-glow composer-card pointer-events-auto relative z-10 ${
+            headerSlot
+              ? "mx-0 rounded-[26px] px-3.5 pt-0 pb-2 md:px-4 md:pt-0 md:pb-2.5"
+              : "mx-0 rounded-[26px] px-3.5 pt-3 pb-2.5 md:px-4 md:pt-3 md:pb-2.5"
           } ${chatContext ? "chat-composer-liquid" : ""}`}
         >
           {computerSlot ? (
@@ -482,8 +480,8 @@ const AnimatedInput = ({
                 data-bwignore="true"
                 data-form-type="other"
                 name="chat-message"
-                className="scrollbar-hide relative w-full resize-none border-none bg-transparent px-1 py-1.5 text-[15.5px] font-medium leading-relaxed text-foreground outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 md:py-2 md:text-sm transition-[min-height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                style={{ minHeight: headerSlot ? "34px" : "38px" }}
+                className="scrollbar-hide relative w-full resize-none border-none bg-transparent px-1 py-1.5 text-[15.5px] font-medium leading-relaxed text-foreground outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 md:py-2 md:text-sm"
+                style={{ height: "54px" }}
               />
             </div>
             <AnimatePresence>{listening ? <ComposerVoiceWave /> : null}</AnimatePresence>
@@ -501,14 +499,11 @@ const AnimatedInput = ({
               onClick={onPlusClick}
               variant="ghost"
               size="icon-sm"
-              className="animated-plus-btn relative z-[61] flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-[12px] border border-foreground/[0.08] bg-foreground/[0.035] px-2.5 text-muted-foreground shadow-sm transition-[background-color,border-color,transform,color] duration-150 hover:border-primary/30 hover:bg-primary/[0.08] hover:text-foreground active:scale-[0.96] shrink-0"
+              className="animated-plus-btn relative z-[61] flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-foreground/[0.06] text-foreground/80 shadow-none transition-[background-color,transform,color] duration-150 hover:bg-foreground/[0.1] hover:text-foreground active:scale-[0.94]"
               aria-label={uiT("openTools")}
               data-plus-trigger
             >
-              <Plus className="h-[17px] w-[17px]" strokeWidth={2} />
-              <span className="hidden text-[11px] font-semibold sm:inline">
-                {isArabicUi ? "أدوات" : "Tools"}
-              </span>
+              <Plus className="h-[19px] w-[19px]" strokeWidth={2.1} />
             </Button>
             {agentSlot}
 
@@ -571,10 +566,10 @@ const AnimatedInput = ({
                     variant="ghost"
                     size="icon-sm"
                     aria-pressed={listening}
-                    className="shrink-0 rounded-full h-10 w-10 border border-foreground/[0.08] bg-foreground/[0.035] text-muted-foreground shadow-none transition-[background-color,border-color,color,transform] duration-150 hover:border-primary/30 hover:bg-primary/[0.08] hover:text-foreground active:scale-[0.96]"
+                    className="shrink-0 h-9 w-9 rounded-full border-0 bg-transparent p-0 text-foreground/75 shadow-none transition-colors duration-150 hover:bg-foreground/[0.06] hover:text-foreground active:scale-[0.94]"
                     aria-label={listening ? "Stop voice input" : "Voice input"}
                   >
-                    <Mic className="w-[18px] h-[18px]" strokeWidth={2} />
+                    <Mic className="h-[21px] w-[21px]" strokeWidth={1.7} />
                   </Button>
                 </motion.div>
               )}

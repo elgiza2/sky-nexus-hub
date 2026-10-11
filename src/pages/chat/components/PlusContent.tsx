@@ -134,15 +134,15 @@ const PlusMain = (p: PlusContentProps) => {
         className="flex flex-col gap-2 px-1 py-2"
         style={{ fontFamily: mobileFont }}
       >
-        <div className="grid grid-cols-2 gap-2 px-0">
+        <div className="grid grid-cols-2 gap-2.5 px-0">
           <button
             data-no-neo
             type="button"
             onClick={closeThen(() => p.fileInputRef.current?.click())}
-            className="group flex h-[102px] flex-col items-center justify-center gap-2 rounded-2xl border border-foreground/[0.08] bg-background px-2 text-center shadow-sm transition-[background-color,transform,border-color] duration-150 hover:border-primary/30 hover:bg-foreground/[0.03] active:scale-[0.98]"
+            className="group flex h-[104px] flex-col items-center justify-center gap-2.5 rounded-[24px] border-0 bg-foreground/[0.055] px-2 text-center transition-[background-color,transform] duration-150 active:scale-[0.98] active:bg-foreground/[0.1]"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-              <FileUp className="h-[21px] w-[21px]" strokeWidth={1.8} />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background/80 text-foreground">
+              <FileUp className="h-[20px] w-[20px]" strokeWidth={1.8} />
             </span>
             <span className="text-[13px] font-medium text-foreground">
               {isArabic ? "ملفات" : "Files"}
@@ -152,33 +152,31 @@ const PlusMain = (p: PlusContentProps) => {
             data-no-neo
             type="button"
             onClick={closeThen(() => p.imageInputRef.current?.click())}
-            className="group flex h-[102px] flex-col items-center justify-center gap-2 rounded-2xl border border-foreground/[0.08] bg-background px-2 text-center shadow-sm transition-[background-color,transform,border-color] duration-150 hover:border-primary/30 hover:bg-foreground/[0.03] active:scale-[0.98]"
+            className="group flex h-[104px] flex-col items-center justify-center gap-2.5 rounded-[24px] border-0 bg-foreground/[0.055] px-2 text-center transition-[background-color,transform] duration-150 active:scale-[0.98] active:bg-foreground/[0.1]"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-              <Images className="h-[21px] w-[21px]" strokeWidth={1.8} />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background/80 text-foreground">
+              <Images className="h-[20px] w-[20px]" strokeWidth={1.8} />
             </span>
             <span className="text-[13px] font-medium text-foreground">
               {isArabic ? "الصور" : "Photos"}
             </span>
           </button>
         </div>
-        <div className="overflow-hidden rounded-2xl bg-transparent">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-col border-b border-foreground/[0.08] last:border-b-0"
-          >
+        <div className="overflow-hidden rounded-[24px] bg-foreground/[0.055]">
+        {items.map((item, index) => (
+          <div key={item.id} className="flex flex-col">
+            {index > 0 && <span className="mx-4 h-px bg-foreground/[0.07]" aria-hidden />}
             <button
               data-no-neo
               type="button"
               onClick={item.onClick}
-              className="plus-row flex h-12 w-full items-center gap-3 border-0 bg-transparent px-3 text-start transition-[background-color,transform] duration-150 hover:bg-foreground/[0.055] active:bg-foreground/[0.09]"
+              className="plus-row flex h-[56px] w-full items-center gap-3.5 border-0 bg-transparent px-4 text-start transition-colors duration-150 active:bg-foreground/[0.05]"
             >
               <item.Icon
-                className="h-[17px] w-[17px] shrink-0 text-foreground/80"
+                className="h-[19px] w-[19px] shrink-0 text-foreground/70"
                 strokeWidth={1.8}
               />
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+              <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-foreground">
                 {item.label}
               </span>
               {item.value && (
@@ -186,10 +184,10 @@ const PlusMain = (p: PlusContentProps) => {
               )}
               {item.expanded !== undefined && (
                 <ChevronLeft
-                  className={`h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ${
+                  className={`h-4 w-4 shrink-0 text-foreground/35 transition-transform duration-200 ${
                     item.expanded ? "-rotate-90" : isArabic ? "" : "rotate-180"
                   }`}
-                  strokeWidth={1.8}
+                  strokeWidth={2}
                 />
               )}
             </button>
