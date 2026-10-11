@@ -17,8 +17,8 @@ export function ComposerAgentPicker({ activeAgentId }: { activeAgentId?: string 
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (open) void loadWorkspace();
-  }, [open]);
+    void loadWorkspace();
+  }, []);
 
   const list = useMemo(
     () => [...agents].sort((a, b) => Number(!!b.isDefault) - Number(!!a.isDefault)),
