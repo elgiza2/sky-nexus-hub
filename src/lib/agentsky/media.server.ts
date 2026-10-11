@@ -47,7 +47,7 @@ export const MEDIA_MODELS: MediaModel[] = [
 ];
 
 export function pickModel(kind: MediaKind, tier: Tier, requested?: string | null): MediaModel {
-  if (tier === "free") throw new AgentSkyError(402, "upgrade_required", "الصور والفيديو متاحين للمشتركين بس.");
+  if (tier === "free") throw new AgentSkyError(402, "upgrade_required", "Images and video are available on the Pro plan.");
   const model = MEDIA_MODELS.find((m) => m.kind === kind);
   if (!model) throw new AgentSkyError(400, "invalid_model", "Media model unavailable");
   return model;

@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeFunction } from "@/lib/supabaseFunction";
-import { claimDailyCredits, fetchCreditOverview, type CreditOverview } from "@/lib/creditsSystem";
+import { fetchCreditOverview, type CreditOverview } from "@/lib/creditsSystem";
 import { translateExactText, useUserLang, type AuthLang } from "@/lib/authI18n";
 
 type Sub = {
@@ -117,7 +117,6 @@ const UsagePage = () => {
         }
         return;
       }
-      await claimDailyCredits();
       const [ov, profile, subRows] = await Promise.all([
         fetchCreditOverview().catch(() => null),
         supabase.from("profiles").select("credits").eq("id", user.id).single(),
@@ -150,7 +149,8 @@ const UsagePage = () => {
     ? money(sub.amount_cents, sub.currency)
     : `${credits.toLocaleString(locale(lang))} MC`;
 
-  const refreshIn = useMemo(() => {
+  /** Time until the plan renews — there is no daily credit refresh any more. */
+  const renewsIn = useMemo(() => {
     if (!overview?.nextRefresh) return "—";
     const mins = Math.max(
       0,
@@ -199,15 +199,13 @@ const UsagePage = () => {
         { label: copy("Credit balance"), value: bal },
         {
           label: copy("Used today"),
-          value: overview
-            ? `${Math.round(overview.spentToday)} / ${Math.round(overview.dailyAllowance)}`
-            : "—",
+          value: overview ? `${Math.round(overview.spentToday)} MC` : "—",
         },
         {
           label: copy("Used this month"),
           value: overview ? `${Math.round(overview.spentThisMonth)} MC` : "—",
         },
-        { label: copy("Daily refresh in"), value: refreshIn },
+        { label: copy("Plan renews in"), value: renewsIn },
       ];
     }
     return [
@@ -229,7 +227,7 @@ const UsagePage = () => {
       },
       { label: copy("Credit balance"), value: bal },
     ];
-  }, [openBill, credits, lang, isActive, sub, amountLabel, overview, refreshIn, copy]);
+  }, [openBill, credits, lang, isActive, sub, amountLabel, overview, renewsIn, copy]);
 
   const renewFacts = [
     { label: copy("Plan"), value: isActive && sub ? sub.plan : copy("Free") },

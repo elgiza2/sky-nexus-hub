@@ -25,16 +25,8 @@ export function useCredits() {
     }
     setUserId(user.id);
 
-    // Today's daily credits are handed out on the first read of the day, so a
-    // signed-in user always sees a real, refreshed balance.
-    try {
-      const { claimDailyCredits } = await import("@/lib/creditsSystem");
-      const granted = await claimDailyCredits();
-      if (granted > 0) invalidateOwnProfile();
-    } catch {
-      /* the balance below is still read from the server */
-    }
-
+    // Nothing is granted on read: the balance only moves when something is bought,
+    // earned through a referral, or spent.
     if (wsId) {
       const { data } = await supabase
         .from("workspaces")

@@ -265,7 +265,7 @@ export async function ensureHiggsfieldAgent(userId: string, origin: string) {
   if (existing) return existing;
   const { agents } = await api<{ agents: any[] }>("/agents");
   const template = agents.find((a) => !a.archived && ["Hypit", "Chat · Hypit"].includes(a.name));
-  if (!template) throw new AgentSkyError(503, "hypit_unavailable", "وكيل Hypit مش متاح عند المزود حالياً؛ إنشاء الصور والفيديو متوقف لحد ما يتضاف.");
+  if (!template) throw new AgentSkyError(503, "hypit_unavailable", "The media agent is unavailable at the provider right now, so image and video creation is paused.");
   const { agent } = await api<{ agent: AgentRecord }>("/agents", {
     method: "POST", headers: { "Idempotency-Key": name },
     body: JSON.stringify({

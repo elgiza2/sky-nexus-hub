@@ -23,6 +23,16 @@ import {
   startRun,
   userTier,
 } from "@/lib/agentsky/media.server";
+import {
+  bearer,
+  chargeKnown,
+  creditBalance,
+  latestOpenTurn,
+  mediaCostUsd,
+  openTurn,
+  settleTurn,
+  TurnMeter,
+} from "@/lib/agentsky/metering.server";
 
 const j = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), {
@@ -42,6 +52,31 @@ function contentOf(body: any): Content[] {
   return out;
 }
 
+/** Characters the caller actually sent — the input side of a metered turn. */
+function inputCharsOf(content: Content[]): number {
+  return content.reduce((n, c) => n + (c.type === "text" ? c.text.length : 0), 0);
+}
+
+/**
+ * Credits are the gate: a turn needs a live balance before it starts. A metering
+ * outage must never lock paying users out, so an unreadable balance is allowed
+ * through and settled later by the sweep.
+ */
+async function requireCredits(jwt: string): Promise<Response | null> {
+  const balance = await creditBalance(jwt);
+  if (balance === null) return null;
+  if (balance <= 0)
+    return j(
+      {
+        error: {
+          code: "insufficient_credits",
+          message: "You are out of credits. Upgrade your plan to keep going.",
+        },
+      },
+      402,
+    );
+  return null;
+}
 function agentView(a: any) {
   return {
     id: a.id,
@@ -67,7 +102,7 @@ async function fullAgents(userId: string, origin: string) {
     prompt: "", isDefault: false, isTemplate: true, createdAt: a.createdAt,
   }));
   const higgsfield = {
-    id: "higgsfield", name: "Higgsfield", description: "صور وفيديو · Images & video",
+    id: "higgsfield", name: "Higgsfield", description: "Images & video",
     color: "sun", prompt: "", isDefault: false, isTemplate: true, mediaOnly: true, createdAt: "",
   };
   return [...details.filter((a) => !a.metadata?.templateId && a.metadata?.kind !== "media").map(agentView), ...catalogue, higgsfield].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
@@ -122,7 +157,7 @@ async function handle(request: Request, splat: string): Promise<Response> {
   if (parts[0] === "sessions" && method === "POST" && (!parts[1] || parts[2] === "messages")) {
     const { detectMediaIntent } = await import("@/lib/agentsky/mediaIntent");
     if ((body?.agentId === "higgsfield" || detectMediaIntent(String(body?.text || ""))) && await userTier(uid) === "free")
-      return j({ error: { code: "upgrade_required", message: "الصور والفيديو متاحين للمشتركين بس." } }, 402);
+      return j({ error: { code: "upgrade_required", message: "Images and video are available on the Pro plan." } }, 402);
   }
 
   // Sessions
@@ -144,12 +179,14 @@ async function handle(request: Request, splat: string): Promise<Response> {
       const requestedId = typeof body?.agentId === "string" ? body.agentId : undefined;
       if (requestedId && !canUseAgent(await userTier(uid), requestedId === "higgsfield")) {
         const defaultAgent = await ensureDefaultAgent(uid, origin);
-        if (requestedId !== defaultAgent.id) return j({ error: { code: "upgrade_required", message: "تغيير الوكيل متاح للمشتركين بس." } }, 402);
+        if (requestedId !== defaultAgent.id) return j({ error: { code: "upgrade_required", message: "Switching agents is available on the Pro plan." } }, 402);
       }
       const selectedAgent = await resolveUserAgent(uid, origin, requestedId);
       const agentId = selectedAgent.id;
       const content = contentOf(body);
       if (!content.length) return j({ error: { code: "invalid_request", message: "Empty message" } }, 400);
+      const blocked = await requireCredits(bearer(request));
+      if (blocked) return blocked;
       const title = String(body?.text || "New chat").replace(/\s+/g, " ").slice(0, 80) || "New chat";
       const { session } = await api<{ session: any }>("/sessions", {
         method: "POST",
@@ -161,6 +198,7 @@ async function handle(request: Request, splat: string): Promise<Response> {
           initial_events: [{ type: "user.message", content }],
         }),
       });
+      await openTurn(bearer(request), session.id, inputCharsOf(content));
       return j({ session: { id: session.id, agentId, title, status: session.status }, agent: agentView(selectedAgent) }, 201);
     }
     if (!sid) return j({ error: { code: "not_found", message: "Not found" } }, 404);
@@ -180,21 +218,44 @@ async function handle(request: Request, splat: string): Promise<Response> {
       return j({ events: r.events, status: session.status });
     }
     if (parts[2] === "stream" && method === "GET") {
+      const jwt = bearer(request);
+      const turnId = await latestOpenTurn(jwt, sid);
       const upstream = await streamSession(sid, request.signal);
       if (!upstream.ok || !upstream.body) return j({ error: { code: "stream_failed", message: `Stream ${upstream.status}` } }, 502);
-      return new Response(upstream.body, {
+      // Measure the turn on the way through: real output characters and real awake
+      // seconds. The client keeps its own copy of the stream, untouched.
+      const [toClient, toMeter] = upstream.body.tee();
+      const meter = new TurnMeter();
+      void (async () => {
+        try {
+          const reader = toMeter.getReader();
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) meter.push(value);
+          }
+        } catch {
+          /* the client disconnected — the sweep settles whatever is left */
+        }
+        const measured = meter.finish();
+        if (turnId) await settleTurn(jwt, turnId, measured.chars, measured.seconds);
+      })();
+      return new Response(toClient, {
         headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store", "X-Accel-Buffering": "no" },
       });
     }
     if (parts[2] === "messages" && method === "POST") {
       const sessionAgent = await getOwnedAgent(uid, session.agentId);
-      if (sessionAgent.metadata?.kind === "media" && await userTier(uid) === "free") return j({ error: { code: "upgrade_required", message: "الصور والفيديو متاحين للمشتركين بس." } }, 402);
+      if (sessionAgent.metadata?.kind === "media" && await userTier(uid) === "free") return j({ error: { code: "upgrade_required", message: "Images and video are available on the Pro plan." } }, 402);
       if (!canUseAgent(await userTier(uid))) {
         const defaultAgent = await ensureDefaultAgent(uid, origin);
-        if (session.agentId !== defaultAgent.id) return j({ error: { code: "upgrade_required", message: "تغيير الوكيل متاح للمشتركين بس." } }, 402);
+        if (session.agentId !== defaultAgent.id) return j({ error: { code: "upgrade_required", message: "Switching agents is available on the Pro plan." } }, 402);
       }
       const content = contentOf(body);
       if (!content.length) return j({ error: { code: "invalid_request", message: "Empty message" } }, 400);
+      const blocked = await requireCredits(bearer(request));
+      if (blocked) return blocked;
+      await openTurn(bearer(request), sid, inputCharsOf(content));
       // No requireIdle: AgentSky queues a message sent while the agent works.
       const r = await api<{ data: any[] }>(`/sessions/${sid}/events`, {
         method: "POST",
@@ -244,6 +305,26 @@ async function handle(request: Request, splat: string): Promise<Response> {
     if (!prompt) return j({ error: { code: "invalid_request", message: "Prompt is required" } }, 400);
     const tier = await userTier(uid);
     const model = pickModel(kind, tier, body?.model);
+    // Media is charged before it runs, at the published rate for this model and the
+    // real duration requested — the one place where the exact cost is already known.
+    const seconds = kind === "video" ? Math.min(Math.max(Number(body?.duration) || 5, 2), 5) : 1;
+    const cost = mediaCostUsd(kind, model.endpoint, seconds);
+    const charge = await chargeKnown(
+      bearer(request),
+      cost,
+      kind === "video" ? "video_generation" : "image_generation",
+      `${model.label} · ${kind === "video" ? `${seconds}s` : "1 asset"}`,
+    );
+    if (!charge.ok)
+      return j(
+        {
+          error: {
+            code: "insufficient_credits",
+            message: `This ${kind} needs ${charge.credits} credits. You are out of credits — upgrade your plan to keep going.`,
+          },
+        },
+        402,
+      );
     const idem = String(body?.idempotencyKey || crypto.randomUUID()).slice(0, 100);
     const run = await startRun(
       model,
