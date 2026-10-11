@@ -67,8 +67,46 @@ function userText(content: any[] | undefined): { text: string; images: string[] 
 
 /* ---------- tool → human step ---------- */
 
+/** First real string among candidate values. Arrays and nested objects are walked, so an
+ *  object argument can never degrade into the useless "[object Object]" in the UI. */
+export function firstText(...vals: unknown[]): string {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    if (Array.isArray(v)) {
+      const s = firstText(...v);
+      if (s) return s;
+    } else if (v && typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      const s = firstText(o.query, o.q, o.text, o.name, o.title, o.prompt, o.url, o.value, o.label);
+      if (s) return s;
+    }
+  }
+  return "";
+}
+
+/** Tool args arrive as a plain object, a JSON string, or wrapped one level down
+ *  (`{ id: "openclaw:core:web_search", args: { … } }`). Normalise all three shapes. */
+export function normalizeArgs(raw: unknown): Record<string, any> {
+  let a: any = raw;
+  if (typeof a === "string") {
+    try {
+      a = JSON.parse(a);
+    } catch {
+      return {};
+    }
+  }
+  if (!a || typeof a !== "object" || Array.isArray(a)) return {};
+  const inner = a.args ?? a.arguments ?? a.parameters ?? a.input;
+  if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+    // A wrapper call keeps the real arguments one level down; merge them over the wrapper.
+    if (["id", "name", "tool", "tool_name", "vendor", "server"].some((k) => k in a)) a = { ...a, ...inner };
+  }
+  return a;
+}
+
 const short = (s: unknown, n = 70) => {
-  const t = String(s ?? "").replace(/\s+/g, " ").trim();
+  const t = (s && typeof s === "object" ? firstText(s) : String(s ?? "")).replace(/\s+/g, " ").trim();
   return t.length > n ? t.slice(0, n - 1) + "…" : t;
 };
 const host = (u: unknown) => {
@@ -131,37 +169,42 @@ const L = {
 export function describeTool(name: string, args: any, lang: Lang): { kind: StepKind; label: string } {
   const t = L[lang];
   const n = base(name);
-  const a = args ?? {};
+  const a = normalizeArgs(args);
   if (n.includes("generate_image") || n === "image_generate") return { kind: "image", label: t.image };
   if (n.includes("generate_video")) return { kind: "video", label: t.video };
   if (n.includes("ask_user")) return { kind: "ask", label: t.ask };
-  if (n.includes("create_task")) return { kind: "task", label: t.task(short(a.title, 50)) };
+  if (n.includes("create_task")) return { kind: "task", label: t.task(short(firstText(a.title, a.name, a.task), 50)) };
   if (n.includes("update_plan")) return { kind: "plan", label: t.plan };
   if (n.includes("spawn") || n.includes("subagent") || n.includes("sessions_send") || n.includes("helper"))
-    return { kind: "helper", label: t.helper(short(a.task || a.label || a.message || a.prompt, 60)) };
-  if (n.includes("search")) return { kind: "search", label: t.searched(short(a.query || a.q || a.queries?.[0], 60)) };
+    return { kind: "helper", label: t.helper(short(firstText(a.task, a.label, a.message, a.prompt), 60)) };
+  if (n.includes("search"))
+    return {
+      kind: "search",
+      label: t.searched(short(firstText(a.query, a.q, a.queries, a.search_query, a.keywords, a.term), 60)),
+    };
   if (n.includes("fetch") || n.includes("contents") || n.includes("read_url") || n === "web_fetch")
-    return { kind: "read", label: t.read(host(a.url || a.urls?.[0] || a.ids?.[0])) };
+    return { kind: "read", label: t.read(host(firstText(a.url, a.urls, a.ids))) };
   if (n.includes("browser") || n.includes("navigate") || n.includes("click")) {
-    const act = String(a.action || a.kind || n).toLowerCase();
-    if (act.includes("click")) return { kind: "browse", label: t.clicked(short(a.text || a.element || a.ref || a.selector, 40)) };
-    if (act.includes("type") || act.includes("fill")) return { kind: "browse", label: t.typed(short(a.text, 40)) };
+    const act = firstText(a.action, a.kind, n).toLowerCase();
+    if (act.includes("click"))
+      return { kind: "browse", label: t.clicked(short(firstText(a.text, a.element, a.ref, a.selector), 40)) };
+    if (act.includes("type") || act.includes("fill")) return { kind: "browse", label: t.typed(short(firstText(a.text, a.value), 40)) };
     if (act.includes("scroll")) return { kind: "browse", label: t.scrolled };
     if (act.includes("snapshot") || act.includes("screenshot")) return { kind: "browse", label: t.looked };
-    return { kind: "browse", label: t.opened(host(a.url || a.targetUrl)) };
+    return { kind: "browse", label: t.opened(host(firstText(a.url, a.targetUrl, a.target_url))) };
   }
-  if (n.includes("python") || n.includes("code_interpreter") || n.includes("jupyter") || (n === "exec" && /python/i.test(String(a.command || a.cmd || "")))) return { kind: "python", label: t.python };
+  if (n.includes("python") || n.includes("code_interpreter") || n.includes("jupyter") || (n === "exec" && /python/i.test(firstText(a.command, a.cmd)))) return { kind: "python", label: t.python };
   if (n.includes("memory") || n.includes("recall")) return { kind: "memory", label: t.memory };
   if (n.includes("mail") || n.includes("gmail")) return { kind: "email", label: t.email };
   if (n.includes("calendar") || n.includes("event")) return { kind: "calendar", label: t.calendar };
   if (n.includes("map") || n.includes("place") || n.includes("location")) return { kind: "map", label: t.map };
   if (n.includes("sql") || n.includes("csv") || n.includes("sheet") || n.includes("chart")) return { kind: "data", label: t.data };
   if (n === "read" || n.includes("read_file") || n.includes("view") || n === "ls" || n.includes("glob") || n.includes("grep"))
-    return { kind: "file", label: t.file(short(String(a.path || a.file_path || a.pattern || "").split("/").pop(), 40)) };
+    return { kind: "file", label: t.file(short(firstText(a.path, a.file_path, a.pattern).split("/").pop(), 40)) };
   if (n.includes("code") || n.includes("sandbox") || n.includes("deploy") || n.includes("build")) return { kind: "code", label: t.code };
   if (n === "exec" || n.includes("bash") || n.includes("shell") || n === "process") return { kind: "command", label: t.command };
   if (n.includes("write") || n.includes("edit") || n.includes("apply_patch"))
-    return { kind: "edit", label: t.edit(short(String(a.path || a.file_path || "").split("/").pop(), 40)) };
+    return { kind: "edit", label: t.edit(short(firstText(a.path, a.file_path).split("/").pop(), 40)) };
   return { kind: "tool", label: t.tool(n.replace(/[_-]+/g, " ")) };
 }
 
@@ -347,20 +390,23 @@ export function buildTranscript(events: RawEvent[], lang: Lang, running: boolean
         callSteps.set(f.callId, s);
         t.steps.push(s);
         const n = base(f.name);
+        // One normalised view of the arguments for every card built below, so a
+        // wrapped call (`{ id, args:{…} }`) reads exactly like a flat one.
+        const ca = normalizeArgs(f.args);
         if (n.includes("ask_user"))
           t.cards.push({
             kind: "question",
             id: f.callId,
-            question: String(f.args.question || ""),
-            options: (Array.isArray(f.args.options) ? f.args.options : []).map(String).slice(0, 8),
-            allowFreeText: !!f.args.allow_free_text,
+            question: firstText(ca.question, ca.text, ca.prompt),
+            options: (Array.isArray(ca.options) ? ca.options : []).map((o) => firstText(o)).filter(Boolean).slice(0, 8),
+            allowFreeText: !!ca.allow_free_text,
             answered: false,
           });
         if (n.includes("create_task"))
-          t.cards.push({ kind: "task", id: f.callId, title: String(f.args.title || ""), dueAt: f.args.due_at || null, taskKind: String(f.args.kind || "task") });
+          t.cards.push({ kind: "task", id: f.callId, title: firstText(ca.title, ca.name, ca.task), dueAt: ca.due_at || null, taskKind: firstText(ca.kind, ca.task_kind) || "task" });
         if (d.kind === "edit" && !n.includes("edit") && !n.includes("patch")) {
-          const path = String(f.args.path || f.args.file_path || f.args.filename || "");
-          const content = f.args.content ?? f.args.contents ?? f.args.text;
+          const path = firstText(ca.path, ca.file_path, ca.filename);
+          const content = ca.content ?? ca.contents ?? ca.text;
           const name = path.split("/").pop() || "";
           if (name && typeof content === "string" && content.length <= MAX_INLINE && DELIVERABLE.test(name) && !/(^|\/)(node_modules|\.git|tmp)\//.test(path)) {
             const card: Card = { kind: "file", id: `file:${path}`, name, content, size: content.length };
@@ -370,7 +416,7 @@ export function buildTranscript(events: RawEvent[], lang: Lang, running: boolean
           }
         }
         if (n.includes("update_plan")) {
-          const plan: Card = { kind: "plan", id: "plan", title: String(f.args.title || ""), steps: Array.isArray(f.args.steps) ? f.args.steps : [] };
+          const plan: Card = { kind: "plan", id: "plan", title: firstText(ca.title, ca.name), steps: Array.isArray(ca.steps) ? ca.steps : [] };
           const i = t.cards.findIndex((c) => c.kind === "plan");
           if (i >= 0) t.cards[i] = plan;
           else t.cards.unshift(plan);

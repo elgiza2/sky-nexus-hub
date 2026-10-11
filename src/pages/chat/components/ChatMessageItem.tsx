@@ -191,7 +191,7 @@ const ChatMessageItemImpl = ({
   const content = (
     <>
       {msg.role === "assistant" && msg.agentSkyState && <>
-        <AgentPresence message={msg} />
+        <AgentPresence message={msg} live={liveThought} />
         {!!msg.agentSkySteps?.length && <div className="px-3 md:px-12" data-agent-color={msg.agentSkyAgent?.color ?? "aurora"}><StepTimeline steps={msg.agentSkySteps} lang={/^[\u0600-\u06ff]/.test(msg.agentSkySteps[0]?.label ?? "") ? "ar" : "en"} /></div>}
       </>}
       {msg.role === "assistant" && msg.agentSkyState && !msg.content ? (

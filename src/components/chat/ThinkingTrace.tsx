@@ -253,11 +253,10 @@ const ThinkingTrace = ({
           </ol>
         )}
 
-        {/* Raw model reasoning stays behind the expander — the collapsed view
-            keeps only clean activity steps, so the chat never fills up with
-            half-sentences from the model's scratchpad. */}
-        {/* While the turn runs the reasoning streams visibly; once it settles
-            the scratchpad folds back behind the expander. */}
+        {/* While the turn runs, the model's raw reasoning streams here live so
+            the user watches the agent think in real time. Once the turn
+            settles the scratchpad folds back behind the expander, so the
+            finished chat keeps only the clean activity steps. */}
         {(open || active) && reasoningLines.length > 0 && (
           <div className="mt-2 flex flex-col gap-1.5 border-t border-border/40 pt-2">
             {reasoningLines.map((line, i) => (
