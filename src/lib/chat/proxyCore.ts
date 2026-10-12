@@ -13,6 +13,13 @@ import {
   markAbliterationFailure,
   markAbliterationUse,
 } from "../keys/abliterationKey";
+import {
+  CEREBRAS_BASE,
+  CEREBRAS_MODELS,
+  getCerebrasKeys,
+  markCerebrasFailure,
+  markCerebrasUse,
+} from "../keys/cerebrasKey";
 
 const BASE = "https://api.abliteration.ai/v1";
 
@@ -76,6 +83,80 @@ export async function hasChatProxyKey(): Promise<boolean> {
   return (await getAbliterationKeys()).length > 0;
 }
 
+/** True when any message carries an image part, so the vision model is used. */
+function hasImagePart(messages: Msg[]): boolean {
+  return messages.some((m) =>
+    Array.isArray(m.content) &&
+    (m.content as Array<Record<string, unknown>>).some((part) =>
+      String((part as Record<string, unknown>)?.type || "").includes("image"),
+    ),
+  );
+}
+
+/**
+ * The Cerebras turn — the fast path for every ordinary chat message.
+ *
+ * Returns null whenever Cerebras cannot serve the request (no key, out of
+ * credit, rate limited, malformed), so the caller transparently falls back to
+ * the abliteration pool instead of failing the turn.
+ */
+async function streamCerebras(
+  payload: ChatProxyPayload,
+  system: string,
+  messages: Msg[],
+  headers: Record<string, string>,
+): Promise<Response | null> {
+  const keys = await getCerebrasKeys();
+  if (!keys.length) return null;
+  const model = hasImagePart(messages) ? CEREBRAS_MODELS.vision : CEREBRAS_MODELS.text;
+  const body = JSON.stringify({
+    model,
+    stream: true,
+    stream_options: { include_usage: true },
+    // "low" is the cheapest reasoning setting Cerebras accepts; it keeps the
+    // first token close while still letting the model think when it must.
+    reasoning_effort: "low",
+    temperature: 0.7,
+    max_completion_tokens: Math.min(Math.max(Number(payload?.maxTokens) || 8192, 512), 40960),
+    messages: [{ role: "system", content: system }, ...messages],
+  });
+  for (const key of keys) {
+    let resp: Response;
+    try {
+      resp = await fetch(`${CEREBRAS_BASE}/chat/completions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key.api_key}`, "Content-Type": "application/json" },
+        body,
+      });
+    } catch (error) {
+      await markCerebrasFailure(
+        key,
+        500,
+        error instanceof Error ? error.message : "upstream_failed",
+      );
+      continue;
+    }
+    if (resp.ok && resp.body) {
+      await markCerebrasUse(key);
+      return new Response(resp.body, {
+        status: 200,
+        headers: {
+          ...headers,
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          "x-model-used": model,
+        },
+      });
+    }
+    const detail = (await resp.text().catch(() => "")).slice(0, 400);
+    const retryAfter = Number(resp.headers.get("retry-after") || "") || undefined;
+    await markCerebrasFailure(key, resp.status, detail || `upstream_${resp.status}`, retryAfter);
+    if (resp.status === 400) return null; // malformed for Cerebras — let the fallback try
+  }
+  return null;
+}
+
 export async function streamChatProxy(
   payload: ChatProxyPayload,
   headers: Record<string, string>,
@@ -86,9 +167,6 @@ export async function streamChatProxy(
       headers: { ...headers, "Content-Type": "application/json", "Cache-Control": "no-store" },
     });
 
-  const keys = await getAbliterationKeys();
-  if (!keys.length) return json({ error: "Chat provider not configured" }, 503);
-
   const messages = normalizeMessages(payload?.messages);
   if (!messages) return json({ error: "A valid messages array is required" }, 400);
 
@@ -97,6 +175,14 @@ export async function streamChatProxy(
   const system = [SYSTEM, typeof payload?.customSystem === "string" ? payload.customSystem : ""]
     .filter(Boolean)
     .join("\n\n");
+
+  // Cerebras first: it is the fastest text path by a wide margin. Only when it
+  // cannot serve the turn do we fall through to the abliteration pool below.
+  const fast = await streamCerebras(payload, system, messages, headers);
+  if (fast) return fast;
+
+  const keys = await getAbliterationKeys();
+  if (!keys.length) return json({ error: "Chat provider not configured" }, 503);
 
   const body = JSON.stringify({
     model,
