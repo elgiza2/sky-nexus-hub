@@ -94,9 +94,9 @@ const TOOLS = [
     },
   },
   {
-    name: "show_widget",
+    name: "megsy_card",
     description:
-      "Render an interactive card in the chat instead of plain text. Use it whenever the answer is visual: an order, a map, the weather, a chart, a form, an email draft, a calendar slot, a payment, a shipment, a record. The user can interact with the card and their choice comes back to you. Widget names: " +
+      "THE ONLY WAY to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see them; only this tool draws in the chat. Call it whenever an answer is visual or interactive: an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results. The user interacts with the card and their choice comes back to you. Widget names: " +
       "image, image_grid, video, audio, file, code, diff, chart, table, diagram | " +
       "kpi, kpi_grid, result_list, result_detail, funnel, schema_card, query_result | " +
       "calendar_event, slot_picker, day_view, countdown, timezone | " +
@@ -239,7 +239,7 @@ async function runTool(userId: string, origin: string, name: string, args: any, 
     }
     case "ask_user":
       return { text: "The question is shown to the user. End your turn now and wait for the answer." };
-    case "show_widget": {
+    case "megsy_card": {
       const widget = String(args?.widget || "").trim();
       if (!widget) return { text: "Missing widget name." };
       const data = (args?.data ?? {}) as Record<string, unknown>;

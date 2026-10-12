@@ -245,7 +245,7 @@ export async function ensureDefaultAgent(userId: string, origin: string) {
   if (found) {
     const { agent } = await api<{ agent: AgentRecord }>(`/agents/${encodeURIComponent(found.id)}`);
     // Refresh whenever the shared prompt gained a capability the agent may not have yet.
-    if (!String(agent.prompt || "").includes("- show_widget:")) {
+    if (!String(agent.prompt || "").includes("- megsy_card:")) {
       await api(`/agents/${encodeURIComponent(found.id)}`, { method: "PATCH", body: JSON.stringify({ prompt: `${BASE_PROMPT}\n\n${agent.metadata?.userPrompt || ""}` }) });
     }
     return agent;
@@ -280,3 +280,4 @@ export async function ensureHiggsfieldAgent(userId: string, origin: string) {
   });
   return agent;
 }
+ - megsy_card: the ONLY way to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see any of them, and saying a card was shown when it was not is a failure. Whenever an answer is visual or interactive — an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results — call megsy_card and pass the real data. Pick the widget name from the tool's own list.
