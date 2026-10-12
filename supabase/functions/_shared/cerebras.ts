@@ -2,7 +2,8 @@
  * Cerebras Inference — primary text-model provider (OpenAI-compatible).
  *
  * Endpoint: https://api.cerebras.ai/v1/chat/completions
- * Key: function secret `CEREBRAS_API_KEY`.
+ * Keys: encrypted service_keys vault, active legacy provider_api_keys pool, or
+ * the function secret `CEREBRAS_API_KEY`.
  *
  * The public endpoints serve a small catalog, so every agent role is mapped onto
  * one of them (verified live against /v1/models). The largest served model
@@ -95,18 +96,36 @@ import {
   providerBlocked,
 } from "./providerBreaker.ts";
 import { noteKeyFail, noteKeyOk, vaultKeys, type VaultKey } from "./keyVault.ts";
+import { mergeCerebrasKeyCandidates } from "./cerebrasKeyPool.ts";
 
 export interface CerebrasResult {
   response: Response;
   model: string;
 }
 
-/** Vault keys first (rotated, auto-banned), then the function secret. */
-async function candidateKeys(): Promise<VaultKey[]> {
+interface CandidateAdmin {
+  from: (table: string) => any;
+}
+
+/** Encrypted vault first, legacy shared pool second, then the function secret. */
+async function candidateKeys(admin?: CandidateAdmin | null): Promise<VaultKey[]> {
   const keys = await vaultKeys("cerebras").catch(() => [] as VaultKey[]);
-  const env = cerebrasKey();
-  if (env && !keys.some((k) => k.key === env)) keys.push({ id: "", key: env });
-  return keys;
+  let legacyRows: Array<{ api_key?: unknown }> = [];
+  if (admin) {
+    try {
+      const { data, error } = await admin
+        .from("provider_api_keys")
+        .select("api_key,last_used_at")
+        .eq("provider", "cerebras")
+        .eq("status", "active")
+        .order("last_used_at", { ascending: true, nullsFirst: true })
+        .limit(10);
+      if (!error) legacyRows = (data ?? []) as Array<{ api_key?: unknown }>;
+    } catch {
+      // The shared legacy pool is optional; keep trying the vault and env key.
+    }
+  }
+  return mergeCerebrasKeyCandidates(keys, legacyRows, cerebrasKey());
 }
 
 /**
@@ -118,8 +137,9 @@ export async function callCerebras(
   models: string[],
   payload: Record<string, unknown>,
   role?: string | null,
+  admin?: CandidateAdmin | null,
 ): Promise<CerebrasResult | null> {
-  const keys = await candidateKeys();
+  const keys = await candidateKeys(admin);
   if (!keys.length) return null;
 
   const preferred = models.length
