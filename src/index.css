@@ -390,6 +390,20 @@ html:not(.dark) .ambient-bg__blob { opacity: 0.10; }
   from { background-position: -40% 0; }
   to { background-position: 140% 0; }
 }
+/* Megsy plus-star: brand star with a periodic silver light sweep */
+.megsy-plus-star { position: relative; display: inline-flex; overflow: hidden; border-radius: 6px; }
+.megsy-plus-star::after {
+  content: ""; position: absolute; inset: -40%;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.95) 50%, transparent 58%);
+  transform: translateX(-70%);
+  animation: megsy-star-sweep 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes megsy-star-sweep {
+  0%, 55% { transform: translateX(-70%); opacity: 0; }
+  62% { opacity: 1; }
+  85%, 100% { transform: translateX(70%); opacity: 0; }
+}
 
 /* Mobile partners marquee — pure CSS so it works inside overflow:hidden */
 @keyframes mobile-partners-marquee {

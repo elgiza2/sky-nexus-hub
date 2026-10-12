@@ -41,6 +41,8 @@ const TASK_TIMEOUT_MS = 45 * 60 * 1000;
 export default function ComputerTaskCard({ taskId }: Props) {
   const [task, setTask] = useState<ComputerTask | null>(null);
   const [events, setEvents] = useState<ComputerEvent[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
+  const notesRef = useRef(0);
   const [timedOut, setTimedOut] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [decision, setDecision] = useState<"allow" | "deny" | null>(null);
@@ -153,6 +155,30 @@ export default function ComputerTaskCard({ taskId }: Props) {
           }
         } else {
           setActiveComputerRun(taskId);
+          // Periodic user-facing progress note (~every 2 min): a milestone, a
+          // problem, or steady progress — generated from the fresh step list.
+          const seen = notesRef.current;
+          const elapsedMin = (Date.now() - (Date.parse(res.task.created_at || "") || Date.now())) / 60000;
+          if (elapsedMin >= (seen + 1) * 2 && (res.events?.length ?? 0) >= 2) {
+            notesRef.current = seen + 1;
+            const stepLines = (res.events ?? []).map((e: ComputerEvent) =>
+              e.detail ? `${e.title} — ${e.detail}` : e.title,
+            );
+            const prompt = res.task.prompt || task?.prompt || "";
+            void (async () => {
+              try {
+                const { generateProgressNote } = await import("@/lib/computer/narration");
+                const note = await generateProgressNote({
+                  task: prompt,
+                  steps: stepLines,
+                  minutes: Math.round(elapsedMin),
+                });
+                if (note && !cancelled) setNotes((prev) => [...prev.slice(-3), note]);
+              } catch {
+                /* a missing note is never an error */
+              }
+            })();
+          }
           timer.current = setTimeout(tick, POLL_MS);
         }
       } catch {
@@ -211,7 +237,21 @@ export default function ComputerTaskCard({ taskId }: Props) {
     const live = events.at(-1);
     // Mirror the provider: show its own internal reasoning when it streams it.
     const status = live?.detail || live?.title || task?.progress;
-    if (!liveUrl) return <AgentThinkingLine text={status} />;
+    const notesView = notes.length ? (
+      <div className="mt-2 space-y-1.5">
+        {notes.map((n, i) => (
+          <p key={i} className="text-[13px] leading-relaxed text-foreground/85">{n}</p>
+        ))}
+      </div>
+    ) : null;
+    if (!liveUrl) {
+      return (
+        <div className="my-2">
+          <AgentThinkingLine text={status} />
+          {notesView}
+        </div>
+      );
+    }
     return (
       <div className="my-4 max-w-md overflow-hidden rounded-[26px] bg-card p-3 ring-1 ring-border/60">
         <div className="flex items-center gap-3 px-1 pb-3 pt-1">
@@ -223,6 +263,7 @@ export default function ComputerTaskCard({ taskId }: Props) {
             <span className="ai-shimmer block truncate text-[12.5px]">{status || (isAr ? "بيشتغل…" : "Working…")}</span>
           </span>
         </div>
+        {notesView}
         <div className="aspect-video overflow-hidden rounded-2xl bg-muted">
           <iframe src={liveUrl} title="Browser" className="pointer-events-none h-full w-full border-0" />
         </div>

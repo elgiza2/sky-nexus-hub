@@ -46,15 +46,38 @@ export async function runComputerTurn({
   const prompt = stripComputerMention(text);
   const computerPrompt = prompt || text;
   const assistantClientId = `assistant-${localTurnId}`;
-
-
+  const preIsAr = /[\u0600-\u06FF]/.test(computerPrompt);
+  // Pre-start message: the user always reads what the agent is about to do
+  // BEFORE it starts. A concrete step plan fills in below it as soon as it
+  // is ready — both generated in parallel with the task creation so the
+  // first paint never waits on them.
+  const preStartText = preIsAr
+    ? `تمام، هبدأ دلوقتي: ${computerPrompt.slice(0, 160)}`
+    : `On it — starting now: ${computerPrompt.slice(0, 160)}`;
   setMessages((prev) => [
     ...prev,
     userMsg,
-    { role: "assistant", content: "", clientId: assistantClientId, agentPending: true },
+    { role: "assistant", content: preStartText, clientId: assistantClientId, agentPending: true },
   ]);
   setInput("");
   setAttachedFiles([]);
+  void (async () => {
+    try {
+      const { generateRunPlan } = await import("@/lib/computer/narration");
+      const steps = await generateRunPlan(computerPrompt);
+      if (!steps.length) return;
+      const bullet = steps.map((st) => `• ${st}`).join("\n");
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.clientId === assistantClientId && !m.computerTaskId
+            ? { ...m, content: `${preStartText}\n\n${bullet}` }
+            : m,
+        ),
+      );
+    } catch {
+      /* the pre-start line alone is enough */
+    }
+  })();
 
   // Flip the send button into a stop button right away. The computer screen
   // itself only appears later, if the agent really opens a page.

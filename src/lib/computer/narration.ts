@@ -54,6 +54,37 @@ export async function generateRunPlan(
 }
 
 
+/** Short plain-language progress note for a run that is still going.
+ * Called every couple of minutes while the agent works: one or two sentences
+ * on what is done so far and what is happening now — a milestone, a problem,
+ * or steady progress. Returns "" when there is nothing worth saying. */
+export async function generateProgressNote(params: {
+  task: string;
+  steps: string[];
+  minutes: number;
+  conversationId?: string | null;
+}): Promise<string> {
+  const { task, steps, minutes, conversationId } = params;
+  if (steps.length < 2) return "";
+  const { cleanTrace } = await import("@/lib/computer/traceCleanup");
+  const readable = cleanTrace(steps).slice(-12);
+  if (!readable.length) return "";
+  return ask(
+    [
+      `A computer task has been running for about ${minutes} minute(s) and is still going.`,
+      "Write a brief progress note for the user: one or two sentences only.",
+      "Say what is done so far and what is happening right now. If the steps show an error, a retry or being stuck, say so honestly with the concrete next move. Never promise a finish time.",
+      "Write it entirely in the exact same language and dialect as the request — never mix languages.",
+      "Never expose internal engine text: no step ids, checkpoints, tool names, JSON or stack traces.",
+      languageDirective(task),
+      "",
+      `Request: ${task}`,
+      `Recent steps:\n${readable.join("\n")}`,
+    ].join("\n"),
+    conversationId,
+  );
+}
+
 /** Plain-language wrap-up of what actually happened during the run. */
 export async function generateRunSummary(params: {
   task: string;
