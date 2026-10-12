@@ -29,6 +29,7 @@ import AppSidebar from "@/components/layout/AppSidebar";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { isPaidUser } from "@/lib/subscriptionGating";
 import { getUserLang } from "@/lib/authI18n";
+import { shouldUseFastChat } from "@/lib/chat/shouldUseFastChat";
 
 // Background job helpers and one-off lib utilities that are still referenced
 // from the surviving body (cancel/cleanup paths, etc.).
@@ -1551,9 +1552,21 @@ const ChatPage = () => {
       return;
     }
 
-    // AgentSky is the single provider for chat, browsing, tools, images and
-    // video. The original Megsy shell remains unchanged around this turn.
-    if (text.trim() && chatUserId) {
+    // Ordinary text-only chat starts on the low-latency stream; explicitly
+    // selected agents, files, media, and existing AgentSky sessions stay there.
+    const requestedAgentId = new URLSearchParams(location.search).get("agent") || undefined;
+    const useFastChat = shouldUseFastChat({
+      userId: chatUserId,
+      text,
+      chatMode,
+      messages,
+      requestedAgentId,
+      selectedAgentId: selectedAgent?.id,
+      hasSelectedModel: Boolean(selectedModel),
+      hasAttachments: attachedFiles.length > 0,
+      computerUseEnabled,
+    });
+    if (text.trim() && chatUserId && !useFastChat) {
       isSubmittingRef.current = true;
       submitLockAtRef.current = Date.now();
       const pendingAttachments = attachedFiles.filter(
@@ -1578,7 +1591,6 @@ const ChatPage = () => {
       };
       const previousSessionId =
         [...messages].reverse().find((message) => message.agentSkySessionId)?.agentSkySessionId;
-      const requestedAgentId = new URLSearchParams(location.search).get("agent") || undefined;
       const lastAgentId = [...messages].reverse().find((message) => message.agentSkyAgent)?.agentSkyAgent?.id;
       try {
         await runAgentSkyTurn({
