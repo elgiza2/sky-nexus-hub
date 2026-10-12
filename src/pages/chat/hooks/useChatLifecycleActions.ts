@@ -35,7 +35,7 @@ interface NewChatArgs {
  * Resets the chat surface to a brand-new conversation:
  *  - Invalidates any in-flight slides generation token + timers
  *  - Stops/clears the focus-music audio element
- *  - Clears messages, attachments, share state, pinned state, mode, model
+ *  - Clears messages, attachments, share state, pinned state, mode, model, and computer use
  *  - Resets the loading/submitting flags so the composer is interactive
  */
 export function useChatNewChat(args: NewChatArgs) {
@@ -62,7 +62,7 @@ export function useChatNewChat(args: NewChatArgs) {
     args.resetToolUi();
     args.setChatMode("normal");
     args.setSearchEnabled(true);
-    args.setComputerUseEnabled(true);
+    args.setComputerUseEnabled(false);
     args.setIsShared(false);
     args.setShareId(null);
     args.setShareMode("private");
