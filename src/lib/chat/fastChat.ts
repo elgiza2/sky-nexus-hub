@@ -89,6 +89,7 @@ export async function tryFastChat({
   const onOuterAbort = () => ctl.abort();
   signal?.addEventListener("abort", onOuterAbort, { once: true });
   const reqSignal = ctl.signal;
+  const requestedMaxTokens = maxTokens ?? (force ? 8192 : undefined);
   let headersTimer: ReturnType<typeof setTimeout> | null = setTimeout(
     () => ctl.abort(),
     HEADERS_MS,
@@ -101,7 +102,7 @@ export async function tryFastChat({
     messages,
     lane: "fast",
     thinking: thinking === true,
-    maxTokens: force ? 8192 : maxTokens,
+    ...(requestedMaxTokens ? { maxTokens: requestedMaxTokens } : {}),
     ...(routingContext ? { routingContext } : {}),
   });
   /** Fallback runtime: this app's own serverless chat endpoint. */
@@ -149,7 +150,8 @@ export async function tryFastChat({
           messages,
           thinking: thinking === true,
           ...(routingContext ? { routingContext } : {}),
-          ...(force ? { force: true, maxTokens: 8192 } : maxTokens ? { maxTokens } : {}),
+          ...(force ? { force: true } : {}),
+          ...(requestedMaxTokens ? { maxTokens: requestedMaxTokens } : {}),
         }),
         signal: reqSignal,
       });
