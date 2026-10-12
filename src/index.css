@@ -405,6 +405,17 @@ html:not(.dark) .ambient-bg__blob { opacity: 0.10; }
   85%, 100% { transform: translateX(70%); opacity: 0; }
 }
 
+/* Megsy thinking star: brand star (gold) with the same periodic silver light
+   sweep — shown in place of the orb creature while the agent thinks/works. */
+.megsy-thinking-star { position: relative; display: inline-flex; overflow: hidden; border-radius: 8px; color: var(--megsy-gold, #e8b64c); flex: none; }
+.megsy-thinking-star::after {
+  content: ""; position: absolute; inset: -40%;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.95) 50%, transparent 58%);
+  transform: translateX(-70%);
+  animation: megsy-star-sweep 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
 /* Mobile partners marquee — pure CSS so it works inside overflow:hidden */
 @keyframes mobile-partners-marquee {
   from { transform: translate3d(0, 0, 0); }

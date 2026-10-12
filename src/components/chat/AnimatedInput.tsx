@@ -1,6 +1,5 @@
 import { memo, useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
-import { ArrowUp, Square, X, Sparkles, Loader2, Pencil } from "lucide-react";
-import MegsyStar from "@/components/branding/MegsyStar";
+import { ArrowUp, Square, X, Sparkles, Loader2, Pencil, Plus } from "lucide-react";
 import { m as motion, AnimatePresence } from "framer-motion";
 
 import ModelPickerDropdown from "@/components/model-picker/ModelPickerDropdown";
@@ -457,9 +456,7 @@ const AnimatedInput = ({
               aria-label={uiT("openTools")}
               data-plus-trigger
             >
-              <span className="megsy-plus-star" aria-hidden>
-                <MegsyStar className="h-[19px] w-[19px]" />
-              </span>
+              <Plus className="h-[19px] w-[19px]" strokeWidth={2.2} aria-hidden />
               <span className="hidden text-[11px] font-semibold sm:inline">
                 {isArabicUi ? "أدوات" : "Tools"}
               </span>
