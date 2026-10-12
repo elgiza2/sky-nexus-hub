@@ -24,7 +24,8 @@ export type Card =
   | { kind: "task"; id: string; title: string; dueAt: string | null; taskKind: string }
   | { kind: "plan"; id: string; title: string; steps: { title: string; status: string }[] }
   | { kind: "file"; id: string; name: string; url?: string; content?: string; mime?: string; size?: number }
-  | { kind: "service-action"; id: string; data: ServiceAction };
+  | { kind: "service-action"; id: string; data: ServiceAction }
+  | { kind: "widget"; id: string; name: string; data: Record<string, unknown> };
 
 /** Deliverable files the agent writes in its workspace and the user should be able to download. */
 const DELIVERABLE = /\.(md|txt|csv|tsv|json|html?|xml|ya?ml|py|js|ts|tsx|jsx|css|sql|sh|svg)$/i;
@@ -457,6 +458,14 @@ export function buildTranscript(events: RawEvent[], lang: Lang, running: boolean
         // single widget renders every integration without per-service code.
         if (p?.type === "megsy.service" && p.service) {
           const card: Card = { kind: "service-action", id: f.callId, data: { ...p, status: f.ok ? "done" : "error" } };
+          const i = t.cards.findIndex((c) => c.id === card.id);
+          if (i >= 0) t.cards[i] = card;
+          else t.cards.push(card);
+        }
+        // Named widgets let a tool pick an exact card (cart, map, weather, …) while
+        // anything unnamed still lands on the universal service card.
+        if (p?.type === "megsy.widget" && p.widget) {
+          const card: Card = { kind: "widget", id: f.callId, name: String(p.widget), data: (p.data ?? {}) as Record<string, unknown> };
           const i = t.cards.findIndex((c) => c.id === card.id);
           if (i >= 0) t.cards[i] = card;
           else t.cards.push(card);

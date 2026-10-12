@@ -1,4 +1,5 @@
 /** AgentSky-specific steps and interactive results embedded in Megsy's original messages. */
+import { Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserLang } from "@/lib/authI18n";
 import { useWorkspaceStore } from "@/lib/agentsky/store";
@@ -6,6 +7,8 @@ import type { Message } from "../chatConstants";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { ApprovalCard, FileCard, MediaCard, PlanCard, QuestionCard, TaskCard, VideoProposalCard } from "@/components/agent/Cards";
 import { AgentProposalCard } from "@/components/agent/AgentProposalCard";
+import ServiceActionWidget from "@/components/chat/widgets/ServiceActionWidget";
+import { renderWidget } from "@/components/chat/widgets/registry";
 
 const toolState = (state: "running" | "done" | "error") =>
   state === "running" ? "input-available" as const : state === "error" ? "output-error" as const : "output-available" as const;
@@ -45,10 +48,12 @@ export default function AgentSkyBlocks({ message, onSend }: { message: Message; 
         if (card.kind === "task") return <TaskCard key={card.id} title={card.title} dueAt={card.dueAt} lang={lang} onOpen={() => navigate("/chat")} />;
         if (card.kind === "plan") return <PlanCard key={card.id} title={card.title} steps={card.steps} lang={lang} />;
         if (card.kind === "service-action") return <ServiceActionWidget key={card.id} data={card.data} onSend={onSend} />;
+        // Named widgets come from the registry; anything unknown already fell back to
+        // the universal service card inside renderWidget.
+        if (card.kind === "widget") return <Fragment key={card.id}>{renderWidget(card.name, card.data, { onSend })}</Fragment>;
         return null;
       })}
       {requests.map((request) => <ApprovalCard key={request.id} request={request} lang={lang} onAnswer={onSend} />)}
     </div>
   );
 }
-import ServiceActionWidget from "@/components/chat/widgets/ServiceActionWidget";
