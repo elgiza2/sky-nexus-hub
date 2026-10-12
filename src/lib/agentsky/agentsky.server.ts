@@ -246,7 +246,16 @@ export async function ensureDefaultAgent(userId: string, origin: string) {
     const { agent } = await api<{ agent: AgentRecord }>(`/agents/${encodeURIComponent(found.id)}`);
     // Refresh whenever the shared prompt gained a capability the agent may not have yet.
     if (!String(agent.prompt || "").includes("- megsy_card:")) {
-      await api(`/agents/${encodeURIComponent(found.id)}`, { method: "PATCH", body: JSON.stringify({ prompt: `${BASE_PROMPT}\n\n${agent.metadata?.userPrompt || ""}` }) });
+      // The tool list is bound when the agent is created, so refreshing the prompt is
+      // not enough: re-send the MCP server config as well to pick up newly added tools.
+      await api(`/agents/${encodeURIComponent(found.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          prompt: `${BASE_PROMPT}\n\n${agent.metadata?.userPrompt || ""}`,
+          capabilities: AGENT_CAPABILITIES,
+          mcpServers: [{ type: "url", name: "megsy", url: `${origin}/api/public/agent-tools/${mcpToken(userId)}` }],
+        }),
+      });
     }
     return agent;
   }
