@@ -93,6 +93,62 @@ const TOOLS = [
       required: ["name", "description", "prompt"],
     },
   },
+  {
+    name: "show_widget",
+    description:
+      "Render an interactive card in the chat instead of plain text. Use it whenever the answer is visual: an order, a map, the weather, a chart, a form, an email draft, a calendar slot, a payment, a shipment, a record. The user can interact with the card and their choice comes back to you. Widget names: " +
+      "image, image_grid, video, audio, file, code, diff, chart, table, diagram | " +
+      "kpi, kpi_grid, result_list, result_detail, funnel, schema_card, query_result | " +
+      "calendar_event, slot_picker, day_view, countdown, timezone | " +
+      "map, places, route, address, weather_now, weather_forecast | " +
+      "approval, form, question, connect_app, account_picker, error_card | " +
+      "product_menu, option_picker, cart, checkout, order_status, receipt | " +
+      "email_draft, email_list, message_card, channel_picker, task_card, note_card, sheet_row, crm_record, ticket_card, payment_link, invoice_card, shipment, social_post, campaign, repo_card, issue_card, deploy_status, employee_card, leave_card, contact.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        widget: { type: "string", description: "One of the widget names listed in the tool description" },
+        data: {
+          type: "object",
+          description:
+            "The card content. Use the field names each widget expects, e.g. cart:{items:[{name,price,qty}],subtotal,delivery,total,currency}, " +
+            "weather_now:{city,temp,description,feelsLike,humidity,wind}, map:{name,address,url}, " +
+            "email_draft:{to,subject,body}, calendar_event:{title,when,duration,attendees,location}, " +
+            "chart:{title,series:[{label,value}]}, table:{title,columns,rows}, kpi:{label,value,delta}, " +
+            "form:{title,fields:[{name,label,required}]}, approval:{title,summary,effects:[…]}, " +
+            "checkout:{store,total,currency,address,methods:[{id,label}]}, order_status:{orderId,steps:[{label,at,done}]}.",
+          additionalProperties: true,
+        },
+      },
+      required: ["widget", "data"],
+    },
+  },
+  {
+    name: "show_service_result",
+    description:
+      "Render the result of a connected service (any of the 600+ apps the user linked) as a clean card. Call this after you run a service action so the user sees a real card instead of raw JSON.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        service: { type: "string", description: "Service name, e.g. HubSpot, Stripe, Shopify, Gmail" },
+        logo: { type: "string", description: "Brand logo URL when you have one" },
+        action: { type: "string", description: "What was run, e.g. 'Search contacts'" },
+        summary: { type: "string", description: "One line describing the outcome" },
+        url: { type: "string", description: "Deep link into the service, optional" },
+        count: { type: "number" },
+        ms: { type: "number", description: "How long the action took, in milliseconds" },
+        fields: {
+          type: "array",
+          description: "Key/value details to show above the result",
+          items: { type: "object", properties: { label: { type: "string" }, value: { type: "string" } }, required: ["label"] },
+        },
+        columns: { type: "array", items: { type: "string" }, description: "Table headers when the result is tabular" },
+        rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+        text: { type: "string", description: "Plain result text when it is not tabular" },
+      },
+      required: ["service", "action"],
+    },
+  },
 ];
 
 TOOLS.push({
@@ -183,6 +239,39 @@ async function runTool(userId: string, origin: string, name: string, args: any, 
     }
     case "ask_user":
       return { text: "The question is shown to the user. End your turn now and wait for the answer." };
+    case "show_widget": {
+      const widget = String(args?.widget || "").trim();
+      if (!widget) return { text: "Missing widget name." };
+      const data = (args?.data ?? {}) as Record<string, unknown>;
+      return {
+        text: `The ${widget} card is now shown to the user. Do not repeat its contents as text — add at most one short sentence of context.`,
+        payload: { type: "megsy.widget", widget, data },
+      };
+    }
+    case "show_service_result": {
+      const service = String(args?.service || "Service").slice(0, 60);
+      const tabular = Array.isArray(args?.columns) && Array.isArray(args?.rows);
+      const payload = {
+        type: "megsy.service",
+        service,
+        logo: args?.logo,
+        action: String(args?.action || "Action").slice(0, 120),
+        summary: args?.summary ? String(args.summary).slice(0, 400) : undefined,
+        url: args?.url,
+        count: args?.count,
+        ms: args?.ms,
+        fields: Array.isArray(args?.fields) ? args.fields.slice(0, 12) : undefined,
+        result: tabular
+          ? { columns: args.columns.slice(0, 8), rows: args.rows.slice(0, 50) }
+          : args?.text
+            ? { text: String(args.text).slice(0, 4000) }
+            : null,
+      };
+      return {
+        text: `The ${service} result is shown to the user as a card. Do not paste the raw data again — summarise it in one or two sentences.`,
+        payload,
+      };
+    }
     case "create_task":
       return { text: "Task added to the user's list." };
     case "update_plan":

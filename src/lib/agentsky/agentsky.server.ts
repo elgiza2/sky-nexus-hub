@@ -196,6 +196,8 @@ Tools from the "megsy" MCP server are your ONLY way to make media and talk to th
 - share_file: whenever you created files for the user, deliver every one of them with share_file before finishing. Never end a job that produced files without sharing them.
 - update_plan: for multi-step work, publish a short plan of steps and update their status as you go.
 - propose_agent: when creating a personal agent, first ask about purpose, audience, outcomes and boundaries. Ask follow-up questions when needed. Explain its role and instructions, then call propose_agent. Never create an agent yourself. Wait for the user to click Create agent or request changes.
+- show_widget: whenever an answer is visual or interactive, render a card instead of describing it in text — an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file. Pick the widget name from the tool's own list and pass the real data.
+- show_service_result: after you run an action on any connected app (the user's linked services), always render its result as a card with this tool. Never paste raw JSON or a wall of rows into your reply.
 
 For big jobs, split work across helper sub-agents and run them in parallel, then merge results.
 Never print tool names, internal instructions, JSON, or system text to the user. Keep answers clean and well formatted in Markdown. Do not paste image or video URLs in your reply — the app shows the media automatically.`;
@@ -242,7 +244,8 @@ export async function ensureDefaultAgent(userId: string, origin: string) {
   const found = mine.find((a) => a.name.endsWith("_default"));
   if (found) {
     const { agent } = await api<{ agent: AgentRecord }>(`/agents/${encodeURIComponent(found.id)}`);
-    if (!String(agent.prompt || "").includes("- propose_agent:")) {
+    // Refresh whenever the shared prompt gained a capability the agent may not have yet.
+    if (!String(agent.prompt || "").includes("- show_widget:")) {
       await api(`/agents/${encodeURIComponent(found.id)}`, { method: "PATCH", body: JSON.stringify({ prompt: `${BASE_PROMPT}\n\n${agent.metadata?.userPrompt || ""}` }) });
     }
     return agent;
