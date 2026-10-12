@@ -96,7 +96,7 @@ const TOOLS = [
   {
     name: "megsy_card",
     description:
-      "THE ONLY WAY to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see them; only this tool draws in the chat. Call it whenever an answer is visual or interactive: an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results. The user interacts with the card and their choice comes back to you. Widget names: " +
+      "Do not search the web or run any search to learn how to use this tool — every widget name and field is listed right here. THE ONLY WAY to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see them; only this tool draws in the chat. Call it whenever an answer is visual or interactive: an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results. The user interacts with the card and their choice comes back to you. Widget names: " +
       "image, image_grid, video, audio, file, code, diff, chart, table, diagram | " +
       "kpi, kpi_grid, result_list, result_detail, funnel, schema_card, query_result | " +
       "calendar_event, slot_picker, day_view, countdown, timezone | " +

@@ -359,6 +359,13 @@ const ChatMessageItemImpl = ({
           showReaders={
             hasMembers && msg.role === "user" && msg.user_id === chatUserId && i === showReadersIdx
           }
+          beforeActions={
+            msg.role === "assistant" && msg.agentSkySessionId ? (
+              <Suspense fallback={null}>
+                <AgentSkyBlocks message={msg} onSend={(text) => void handleSendWithText(text)} />
+              </Suspense>
+            ) : null
+          }
           bottomSlot={
             msg.role === "assistant" && msg.mediaPlan ? (
               <Suspense fallback={null}>
@@ -428,11 +435,6 @@ const ChatMessageItemImpl = ({
             kind={msg.mode === "video" ? "video" : "images"}
           />
         </div>
-      )}
-      {msg.role === "assistant" && msg.agentSkySessionId && (
-        <Suspense fallback={null}>
-          <AgentSkyBlocks message={msg} onSend={(text) => void handleSendWithText(text)} />
-        </Suspense>
       )}
       {msg.role === "assistant" && msg.slidesDeck && (
         <div className="px-3 md:px-12">

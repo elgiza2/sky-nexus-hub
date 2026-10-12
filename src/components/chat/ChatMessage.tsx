@@ -172,6 +172,8 @@ interface ChatMessageProps {
   showReaders?: boolean;
   /** Optional slot rendered between message body and the action buttons. Used for artifact cards (docs/slides) so actions appear below the artifact. */
   bottomSlot?: React.ReactNode;
+  /** Cards and approvals rendered between the answer and the like/copy row. */
+  beforeActions?: React.ReactNode;
   /** Hide action buttons (copy/like/dislike) — used when an interactive clarify card is shown below. */
   hideActions?: boolean;
   /** When set, a download action is shown next to like / dislike / copy. */
@@ -880,6 +882,7 @@ const ChatMessage = ({
   readers,
   showReaders,
   bottomSlot,
+  beforeActions,
   hideActions,
   downloadUrl,
   downloadName,
@@ -2031,6 +2034,7 @@ const ChatMessage = ({
 
             {/* Optional artifact slot (e.g. docs/slides card) — rendered before action buttons */}
             {bottomSlot && !isStreaming && <div className="mt-3">{bottomSlot}</div>}
+            {beforeActions}
 
             {/* Action buttons: like + copy + dislike — flat, no shadow, small playful feedback */}
             {!isStreaming && !hasRunningTool && content && !showSlidesInfoBox && !hideActions && (

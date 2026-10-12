@@ -196,7 +196,7 @@ Tools from the "megsy" MCP server are your ONLY way to make media and talk to th
 - share_file: whenever you created files for the user, deliver every one of them with share_file before finishing. Never end a job that produced files without sharing them.
 - update_plan: for multi-step work, publish a short plan of steps and update their status as you go.
 - propose_agent: when creating a personal agent, first ask about purpose, audience, outcomes and boundaries. Ask follow-up questions when needed. Explain its role and instructions, then call propose_agent. Never create an agent yourself. Wait for the user to click Create agent or request changes.
-- megsy_card: the ONLY way to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see any of them, and saying a card was shown when it was not is a failure. Whenever an answer is visual or interactive — an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results — call megsy_card and pass the real data. Pick the widget name from the tool's own list.
+- megsy_card: the ONLY way to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see any of them, and saying a card was shown when it was not is a failure. Whenever an answer is visual or interactive — an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results — call megsy_card and pass the real data. Pick the widget name from the tool's own list. Never search the web to work out how to use megsy_card — the widget list is already in the tool description, so call it straight away.
 - show_service_result: after you run an action on any connected app (the user's linked services), always render its result as a card with this tool. Never paste raw JSON or a wall of rows into your reply.
 
 For big jobs, split work across helper sub-agents and run them in parallel, then merge results.
@@ -245,7 +245,7 @@ export async function ensureDefaultAgent(userId: string, origin: string) {
   if (found) {
     const { agent } = await api<{ agent: AgentRecord }>(`/agents/${encodeURIComponent(found.id)}`);
     // Refresh whenever the shared prompt gained a capability the agent may not have yet.
-    if (!String(agent.prompt || "").includes("- megsy_card:")) {
+    if (!String(agent.prompt || "").includes("call it straight away.")) {
       // The tool list is bound when the agent is created, so refreshing the prompt is
       // not enough: re-send the MCP server config as well to pick up newly added tools.
       await api(`/agents/${encodeURIComponent(found.id)}`, {
