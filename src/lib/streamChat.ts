@@ -4,6 +4,7 @@ import { isFastLaneEligible, tryFastChat } from "@/lib/chat/fastChat";
 import { readChatModelPreferences } from "@/lib/chatModelPreferences";
 import { edgeAnonKey, edgeUrl } from "@/lib/edgeRuntime";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/edgeRuntime";
+import { isTrivialTurn, shouldForceFastTurn } from "@/lib/chat/trivialTurn";
 
 /**
  * Provider keys live server-side in the deployed Supabase functions, so both
@@ -22,20 +23,6 @@ function deepThinkingEnabled(): boolean {
   } catch {
     return true;
   }
-}
-
-/**
- * Greetings and one-liners ("hi", "شكرا", "ok") must feel instant: no thinking
- * budget and a small output budget, so the answer lands in well under a second.
- */
-function isTrivialTurn(messages: { role: string; content: unknown }[]): boolean {
-  const last = messages[messages.length - 1];
-  if (!last || typeof last.content !== "string") return false;
-  const t = last.content.trim();
-  if (t.length > 60 || /\n/.test(t)) return false;
-  return /^(hi|hey|hello|yo|sup|thanks|thank you|ok|okay|good (morning|evening|night)|اهلا|أهلا|هاي|مرحبا|السلام عليكم|صباح الخير|مساء الخير|شكرا|شكرًا|تمام|ازيك|إزيك|كيف الحال|عامل ايه)\b[\s!.،؟?]*$/i.test(
-    t,
-  );
 }
 
 export const GUEST_QUOTA_ERROR = "GUEST_QUOTA_EXCEEDED";
@@ -386,6 +373,7 @@ export async function streamChat({
         onModel,
         onUsage,
         onReasoning,
+        force: shouldForceFastTurn(messages),
         thinking: deepThinkingEnabled() && !isTrivialTurn(messages),
         ...(isTrivialTurn(messages) ? { maxTokens: 700 } : {}),
         routingContext: [
