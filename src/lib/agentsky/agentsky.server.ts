@@ -196,7 +196,7 @@ Tools from the "megsy" MCP server are your ONLY way to make media and talk to th
 - share_file: whenever you created files for the user, deliver every one of them with share_file before finishing. Never end a job that produced files without sharing them.
 - update_plan: for multi-step work, publish a short plan of steps and update their status as you go.
 - propose_agent: when creating a personal agent, first ask about purpose, audience, outcomes and boundaries. Ask follow-up questions when needed. Explain its role and instructions, then call propose_agent. Never create an agent yourself. Wait for the user to click Create agent or request changes.
-- megsy_card: the ONLY way to show the user a card. Never use the session dashboard, plugins, artifacts or any built-in display tool — the user cannot see any of them, and saying a card was shown when it was not is a failure. Whenever an answer is visual or interactive — an order, a cart, a map, the weather, a chart, a table, a form, an email draft, a calendar slot, a payment, a shipment, a record, a file, or a list of results — call megsy_card and pass the real data. Pick the widget name from the tool's own list. Never search the web to work out how to use megsy_card — the widget list is already in the tool description, so call it straight away.
+- megsy_card is mandatory for data: whenever your answer contains weather, prices, an order, a cart, a list of items, records, a schedule, numbers worth a chart, a map or a document, you MUST call megsy_card before writing your reply — the card carries the data and your text adds at most one short sentence. A data answer written as plain text is a failure. Never search the web to learn how to use megsy_card; the widget list is already in the tool description. Never use the session dashboard, plugins or artifacts to display anything — the user cannot see them.
 - show_service_result: after you run an action on any connected app (the user's linked services), always render its result as a card with this tool. Never paste raw JSON or a wall of rows into your reply.
 
 For big jobs, split work across helper sub-agents and run them in parallel, then merge results.
@@ -239,19 +239,38 @@ export function publicOrigin(request: Request): string {
   return `https://${host}`;
 }
 
+/** Editable agent instructions live in Supabase, so they can be added or changed
+ *  from the database at any time — no code change and no deploy. Bumping `version`
+ *  is what tells every agent to pick the new text up on its next message. */
+export async function readPromptConfig(): Promise<{ version: number; extra: string }> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.from("agent_prompt_config").select("version, extra_prompt").eq("id", 1).maybeSingle();
+    return {
+      version: Number((data as any)?.version ?? 1),
+      extra: String((data as any)?.extra_prompt ?? "").trim(),
+    };
+  } catch {
+    return { version: 1, extra: "" };
+  }
+}
+
 export async function ensureDefaultAgent(userId: string, origin: string) {
   const mine = await listUserAgents(userId);
   const found = mine.find((a) => a.name.endsWith("_default"));
   if (found) {
     const { agent } = await api<{ agent: AgentRecord }>(`/agents/${encodeURIComponent(found.id)}`);
-    // Refresh whenever the shared prompt gained a capability the agent may not have yet.
-    if (!String(agent.prompt || "").includes("call it straight away.")) {
-      // The tool list is bound when the agent is created, so refreshing the prompt is
-      // not enough: re-send the MCP server config as well to pick up newly added tools.
+    // The prompt is stamped with the config version, so editing the row in Supabase is
+    // enough: the next message re-syncs the agent. The tool list is bound when the agent
+    // is created, so the MCP server config is re-sent too, to pick up newly added tools.
+    const cfg = await readPromptConfig();
+    const stamp = `<!--megsy-prompt:${cfg.version}-->`;
+    if (!String(agent.prompt || "").includes(stamp)) {
+      const prompt = [BASE_PROMPT, cfg.extra, agent.metadata?.userPrompt || "", stamp].filter(Boolean).join("\n\n");
       await api(`/agents/${encodeURIComponent(found.id)}`, {
         method: "PATCH",
         body: JSON.stringify({
-          prompt: `${BASE_PROMPT}\n\n${agent.metadata?.userPrompt || ""}`,
+          prompt,
           capabilities: AGENT_CAPABILITIES,
           mcpServers: [{ type: "url", name: "megsy", url: `${origin}/api/public/agent-tools/${mcpToken(userId)}` }],
         }),
