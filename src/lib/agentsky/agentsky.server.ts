@@ -245,7 +245,7 @@ export function publicOrigin(request: Request): string {
 export async function readPromptConfig(): Promise<{ version: number; extra: string }> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin.from("agent_prompt_config").select("version, extra_prompt").eq("id", 1).maybeSingle();
+    const { data } = await (supabaseAdmin as any).from("agent_prompt_config").select("version, extra_prompt").eq("id", 1).maybeSingle();
     return {
       version: Number((data as any)?.version ?? 1),
       extra: String((data as any)?.extra_prompt ?? "").trim(),
