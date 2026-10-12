@@ -158,7 +158,7 @@ export async function callModel(
   const role = typeof (payload as Record<string, unknown>).agentRole === "string"
     ? String((payload as Record<string, unknown>).agentRole)
     : null;
-  const cerebras = await callCerebras(models, payload, role);
+  const cerebras = await callCerebras(models, payload, role, admin);
   if (cerebras) return { response: cerebras.response, model: cerebras.model };
 
   // Legacy fallback provider, kept behind an opt-in switch and off by default.
