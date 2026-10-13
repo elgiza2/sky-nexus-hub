@@ -1566,7 +1566,18 @@ const ChatPage = () => {
       hasAttachments: attachedFiles.length > 0,
       computerUseEnabled,
     });
-    if (text.trim() && chatUserId && !useFastChat) {
+    // The chat itself decides when the agent is needed: only an explicitly
+    // requested/selected agent, or a turn continuing an existing AgentSky
+    // session, goes straight to the agent. Every other ordinary turn flows
+    // into the normal text path below, where chat-fast answers directly and
+    // escalates by itself only when the turn really needs tools/tasks.
+    const continuesAgentSession = messages.some((message) => message.agentSkySessionId);
+    if (
+      text.trim() &&
+      chatUserId &&
+      !useFastChat &&
+      (requestedAgentId || selectedAgent?.id || continuesAgentSession)
+    ) {
       isSubmittingRef.current = true;
       submitLockAtRef.current = Date.now();
       const pendingAttachments = attachedFiles.filter(

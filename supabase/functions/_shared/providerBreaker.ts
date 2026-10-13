@@ -6,10 +6,12 @@
  * answer. Retrying it costs the user real latency — on a dead account the fast
  * lane spent ~6s walking a ladder of 402s before falling back.
  *
- * So a hard rejection opens the breaker for that provider (and for that
- * provider+model) for a short window; callers skip it with no network round
- * trip and go straight to the next option. Rate limits get a much shorter
- * window because they really do clear on their own.
+ * So a hard rejection opens the breaker for that provider+model for a short
+ * window; callers skip it with no network round trip and go straight to the
+ * next option. The block is scoped per model on purpose: one model's quota
+ * rejection must not take down the sibling models on the same account.
+ * Rate limits get a much shorter window because they really do clear on
+ * their own.
  *
  * State is per isolate on purpose: no DB write on the hot path, and a cold
  * start naturally re-probes the provider.
@@ -39,9 +41,11 @@ export function providerBlocked(provider: string, model?: string): boolean {
 export function noteProviderFailure(provider: string, model: string, status: number): void {
   if (openUntil.size > 500) openUntil.clear();
   if ([401, 402, 403].includes(status)) {
-    // The whole provider is unusable, not just this model: the account is the
-    // thing that was rejected.
-    openUntil.set(provider, Date.now() + HARD_MS);
+    // Scope the block to this provider+model, not the whole provider: one
+    // model's quota rejection (e.g. gpt-oss-120b 402) must not take down the
+    // cheap lane (qwen-3.8-27b) for a full minute — that is what pushed every
+    // simple turn onto the slow agent fallback.
+    openUntil.set(`${provider}:${model}`, Date.now() + HARD_MS);
     return;
   }
   if (status === 429) openUntil.set(`${provider}:${model}`, Date.now() + SOFT_MS);
