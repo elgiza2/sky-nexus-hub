@@ -56,12 +56,22 @@ export function MediaCard({ media, lang, aspect }: { media: MediaPayload; lang: 
           {error || tr(lang, "This one didn't work. Ask me to try again.", "دي معرفتش تخلص. اطلب مني أجرب تاني.")}
         </div>
       ) : pending || !urls.length ? (
-        <div className="ag-media" style={{ aspectRatio: ratio(aspect) }}>
+        <div className="ag-media overflow-hidden" style={{ aspectRatio: ratio(aspect) }}>
           <div className="ag-media__glow ag-gradient" />
           <div className="ag-media__shine" />
-          <div className="relative flex flex-col items-center gap-2 text-sm font-medium">
-            <Loader2 className="animate-spin" size={20} />
-            {isVideo ? tr(lang, "Making your video…", "بعمل الفيديو…") : tr(lang, "Making your image…", "بعمل الصورة…")}
+          {/* Skeleton shimmer + staged progress while the run executes */}
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/10 via-transparent to-black/20" />
+          <div className="relative flex w-full max-w-[280px] flex-col items-center gap-3 px-6 text-sm font-medium">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-black/45 text-white backdrop-blur">
+              {isVideo ? <Film size={20} /> : <Sparkles size={20} />}
+            </span>
+            <p className="text-center leading-snug">
+              {isVideo ? tr(lang, "Making your video…", "بعمل الفيديو…") : tr(lang, "Making your image…", "بعمل الصورة…")}
+            </p>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/40">
+              <div className="ag-media__progress h-full w-1/3 rounded-full bg-white/85" />
+            </div>
+            <p className="line-clamp-2 text-center text-[12px] font-normal opacity-75">{media.prompt}</p>
           </div>
         </div>
       ) : (
