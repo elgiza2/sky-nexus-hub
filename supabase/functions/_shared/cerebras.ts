@@ -18,7 +18,7 @@
 const BASE = Deno.env.get("CEREBRAS_API_BASE") || "https://api.cerebras.ai/v1";
 
 export const CEREBRAS_MODELS = {
-  fast: "qwen-3.8-27b",
+  fast: "gpt-oss-120b",
   worker: "gpt-oss-120b",
   manager: "gpt-oss-120b",
 } as const;
