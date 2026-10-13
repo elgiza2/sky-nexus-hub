@@ -423,6 +423,7 @@ export async function runActionTool(
       const data = await callFunction(ctx, "anything-api", {
         prompt: String(args?.prompt ?? ""),
         aspect_ratio: args?.aspect_ratio ?? "1:1",
+        model_slug: "wan2.7-image",
       });
       const url =
         data?.url ?? data?.image_url ?? data?.images?.[0]?.url ?? data?.output?.[0] ?? null;
