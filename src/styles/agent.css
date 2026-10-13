@@ -244,6 +244,8 @@
 .ag-media img, .ag-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ag-media__shine { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%); background-size: 200% 100%; animation: ag-shimmer 1.6s linear infinite; }
 .ag-media__glow { position: absolute; inset: 20%; filter: blur(40px); opacity: .55; border-radius: 50%; }
+.ag-media__progress { animation: ag-progress-slide 1.4s ease-in-out infinite; }
+@keyframes ag-progress-slide { 0% { margin-inline-start: -40%; } 100% { margin-inline-start: 100%; } }
 
 /* ---------- Composer ---------- */
 .ag-composer { border: 1px solid var(--ag-line); background: var(--ag-surface); border-radius: 26px; box-shadow: var(--ag-shadow); padding: 8px; transition: border-color .2s; }

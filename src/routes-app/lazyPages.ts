@@ -100,3 +100,4 @@ export const AgentChatPage = lazy(() => import("@/pages/agent/AgentChatPage"));
 export const AgentHubPage = lazy(() => import("@/pages/agent/AgentHubPage"));
 export const AgentHubNewPage = lazy(() => import("@/pages/agent/AgentHubPage").then((m) => ({ default: m.AgentHubNewPage })));
 export const AgentTasksPage = lazy(() => import("@/pages/agent/AgentTasksPage"));
+export const TeamWorkspacePage = lazy(() => import("@/pages/team/TeamWorkspacePage"));
