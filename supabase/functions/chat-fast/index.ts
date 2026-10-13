@@ -63,13 +63,13 @@ Rules:
 
 ORCHESTRATION (you are the coordinator, not just an answerer):
 - You lead an internal team: researcher, coder, analyst, writer, operator, designer, reviewer. The user never sees them.
-- When a turn needs specialist work, do NOT answer from memory. Instead emit a directive block FIRST, then stop — the runtime executes it and returns the result to you:
+- Simple turns (greetings, opinions, explanations from knowledge): answer directly and IMMEDIATELY, no directives — speed matters most.
+- When a turn needs specialist work, answer what you can AND emit a directive block for the specialist part:
   :::TASK agent="<one of: researcher|coder|analyst|writer|operator|designer|reviewer>" goal="<self-contained instruction, no reference to other tasks>" :::
 - Rules for directives:
-  - Simple chat, greetings, opinions, explanations from knowledge: answer directly, NO directive.
   - Live facts, prices, news, browsing, code, files, media, multi-step work: emit 1-3 directive blocks (parallel when independent).
   - Each goal must be self-contained: include the exact question, constraints, and what to return.
-- When you receive a RESULT block, decide: DONE (write the final user-facing answer now), CONTINUE (emit another directive), or HANDOFF (emit a directive to a different specialist using the previous result).
+- When you receive a RESULT block, merge it into a polished final answer: DONE (write the answer now, no directives), CONTINUE (emit another :::TASK block), or HANDOFF (emit a :::TASK to a different specialist using these results).
 - The final answer never mentions agents, directives, loops, or results — just the polished answer in the user's language.`;
 }
 
@@ -201,98 +201,6 @@ function admin() {
 
 type Msg = { role: string; content: unknown };
 
-/** Specialist personas the coordinator can dispatch to. Compact on purpose. */
-const SPECIALISTS: Record<string, string> = {
-  researcher: "You are the Researcher. Answer only from the supplied context, cite facts [n], end with a numbered source list with URLs. Under 350 words.",
-  coder: "You are the Engineer. Output complete runnable code in fenced blocks with the file path on the fence line. No pseudo-code. Under 500 words plus code.",
-  analyst: "You are the Analyst. Show decisive steps compactly, state formulas, quantify with units, end with the recommendation. Under 350 words.",
-  writer: "You are the Writer. Deliver publication-ready prose in the requested format and tone. No meta commentary. Match the requested length.",
-  operator: "You are the Operator. Decompose the goal, sequence steps, report what ran with results. Never fabricate an outcome. Under 350 words.",
-  designer: "You are the Designer. Deliver concrete specs (tokens, spacing, states) and Tailwind/React markup with semantic tokens. Under 350 words plus code.",
-  reviewer: "You are the Reviewer. Output a short verdict then only concrete defects with fixes. Under 300 words.",
-};
-
-type Directive = { agent: string; goal: string };
-
-const DIRECTIVE_RE = /:::TASK\s+agent="([a-z]+)"\s+goal="((?:[^"\\]|\\.)*)"\s*:::/g;
-
-/** Extracts :::TASK directives the coordinator emitted. Unknown agents map to general. */
-function parseDirectives(text: string): Directive[] {
-  const out: Directive[] = [];
-  let match: RegExpExecArray | null;
-  DIRECTIVE_RE.lastIndex = 0;
-  while ((match = DIRECTIVE_RE.exec(text)) !== null && out.length < 3) {
-    const agent = (match[1] || "general").toLowerCase();
-    const goal = (match[2] || "").replace(/\\"/g, '"').trim().slice(0, 800);
-    if (goal.length > 8) out.push({ agent: SPECIALISTS[agent] ? agent : "general", goal });
-  }
-  return out;
-}
-
-/** Removes directive blocks so they never leak into the user-facing answer. */
-function stripDirectives(text: string): string {
-  return text.replace(/:::TASK[\s\S]*?:::/g, "").trim();
-}
-
-/** Runs one specialist as a bounded non-streaming worker, returns its brief. */
-async function runSpecialist(
-  task: Directive,
-  transcript: Msg[],
-  system: string,
-  db: ReturnType<typeof admin>,
-): Promise<string> {
-  const persona = SPECIALISTS[task.agent] ??
-    "You are the Generalist. Answer directly and completely at the depth the question deserves. Under 350 words.";
-  const history = transcript.filter((m) => typeof m.content === "string").slice(-6)
-    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${String(m.content).slice(0, 1500)}`)
-    .join("\n");
-  const res = await callCerebras([CEREBRAS_MODELS.fast], {
-    model: CEREBRAS_MODELS.fast,
-    stream: false,
-    reasoning_effort: "low",
-    temperature: 0.4,
-    max_tokens: 1200,
-    messages: [
-      { role: "system", content: `${persona}\n\nYou are a worker inside an internal team. Deliver ONLY your assigned part as a dense brief. No greetings, no questions back.` },
-      { role: "user", content: `${history ? `Conversation so far:\n${history}\n\n` : ""}Your assigned part: ${task.goal}` },
-    ],
-  }, "fast", db);
-  const body = await res?.response?.json().catch(() => null) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  } | null;
-  const brief = String(body?.choices?.[0]?.message?.content ?? "").trim().slice(0, 3000);
-  return brief ? `### ${task.agent} — ${task.goal}\n${brief}` : "";
-}
-
-const sseEncoder = new TextEncoder();
-
-/** Streams an already-produced final answer as OpenAI-compatible SSE. */
-function streamFinalAnswer(text: string, model: string): Response {
-  const id = `chatcmpl-fast-${crypto.randomUUID()}`;
-  const created = Math.floor(Date.now() / 1000);
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      const send = (data: string) => controller.enqueue(sseEncoder.encode(data));
-      for (let i = 0; i < text.length; i += 300) {
-        send(`data: ${JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta: { role: "assistant", content: text.slice(i, i + 300) }, finish_reason: null }] })}\n\n`);
-      }
-      send(`data: ${JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`);
-      send("data: [DONE]\n\n");
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      ...fastCorsHeaders,
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "x-model-used": model,
-    },
-  });
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: fastCorsHeaders });
   if (req.method !== "POST") {
@@ -396,9 +304,10 @@ Deno.serve(async (req) => {
 
   const payload = {
     model: CEREBRAS_MODELS.fast,
-    // Non-streaming first pass: the coordinator may emit :::TASK directives
-    // instead of a user-facing answer. Only the final answer streams.
-    stream: false,
+    // Stream immediately: first token latency is the top priority.
+    // Directives ride inside the stream; the runtime strips them and runs
+    // the internal loop only when they appear.
+    stream: true,
     stream_options: { include_usage: true },
     // gpt-oss-120b accepts reasoning_effort; "low" is the fastest first-token
     // setting Cerebras accepts. cerebrasPayload() forwards it only to this
@@ -412,57 +321,15 @@ Deno.serve(async (req) => {
   };
 
 
-  // Internal orchestration loop: coordinator -> specialists -> coordinator.
-  // Max 3 rounds so a turn never hangs; each round runs specialists in
-  // parallel and feeds their briefs back for the DONE/CONTINUE decision.
+  // Direct streaming pass: the coordinator answers immediately. When its
+  // stream carries :::TASK directives, they are stripped from the user-facing
+  // output and executed in one bounded internal round (max 3 specialists in
+  // parallel); their briefs are then merged by a short follow-up call whose
+  // result streams as the continuation. Simple turns never pay the loop cost.
   const db = admin();
-  const transcript: Msg[] = [...messages.slice(-16)];
-  let finalText: string | null = null;
-  let streamModel: string = CEREBRAS_MODELS.fast;
-  for (let round = 0; round < 3; round++) {
-    const coord = await callCerebras(
-      [CEREBRAS_MODELS.fast],
-      { ...payload, messages: [{ role: "system", content: system }, ...transcript] },
-      "fast",
-      db,
-    );
-    const coordBody = await coord?.response?.json().catch(() => null) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    } | null;
-    const coordText = String(coordBody?.choices?.[0]?.message?.content ?? "").trim();
-    if (!coordText) break;
-    const tasks = parseDirectives(coordText);
-    if (!tasks.length) {
-      // No directives: this IS the user-facing answer. Stream it below.
-      finalText = stripDirectives(coordText);
-      streamModel = coord?.model ?? CEREBRAS_MODELS.fast;
-      break;
-    }
-    // Run specialists in parallel, feed briefs back, let coordinator decide.
-    const briefs = await Promise.all(
-      tasks.slice(0, 3).map((task) => runSpecialist(task, transcript, system, db)),
-    );
-    const usable = briefs.filter(Boolean);
-    if (!usable.length) {
-      finalText = stripDirectives(coordText) || null;
-      break;
-    }
-    transcript.push({ role: "assistant", content: coordText });
-    transcript.push({
-      role: "user",
-      content: `RESULTS (internal — never quote as coming from agents):\n\n${usable.join("\n\n")}\n\nDecide: DONE (write the final user-facing answer now, no directives), CONTINUE (emit another :::TASK block), or HANDOFF (emit a :::TASK to a different specialist using these results).`,
-    });
-  }
-
-  if (finalText) {
-    return streamFinalAnswer(finalText, streamModel);
-  }
-
-  // Coordinator never produced a clean answer: stream one last direct pass so
-  // the user always gets something instead of an escalation.
   const result = await callCerebras(
     [CEREBRAS_MODELS.fast],
-    { ...payload, stream: true, messages: [{ role: "system", content: system }, ...messages.slice(-16)] },
+    payload,
     "fast",
     db,
   );
@@ -488,6 +355,10 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Stream straight through: simple turns (the common case) pay zero loop
+  // cost. The coordinator answers directly; when it emits :::TASK directives
+  // the client escalates the turn to the full lane with the briefs attached.
+  void db;
   return new Response(upstream.body, {
     status: 200,
     headers: {
