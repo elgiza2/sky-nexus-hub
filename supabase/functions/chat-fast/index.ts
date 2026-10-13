@@ -170,7 +170,8 @@ function guestAllowance(bucket: string): { ok: boolean; retryAfterSeconds: numbe
 }
 
 import { AGENT_MODEL, callAgentFallback, hasAgentProvider } from "../_shared/agentFallback.ts";
-import { callModel, hasModelProvider, MODELS } from "../_shared/abliteration.ts";
+import { callCerebras, CEREBRAS_MODELS } from "../_shared/cerebras.ts";
+import { hasModelProvider } from "../_shared/abliteration.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 /** Service-role client used only to read the rotatable model key pool. */
@@ -290,15 +291,12 @@ Deno.serve(async (req) => {
   const thinking = body.thinking === true;
 
   const payload = {
-    model: MODELS.fast,
+    model: CEREBRAS_MODELS.fast,
     stream: true,
     stream_options: { include_usage: true },
-    // reasoning_effort "low" is the fastest first-token setting Cerebras
-    // accepts (none/minimal are rejected). cerebrasPayload() forwards it to
-    // gpt-oss-120b and drops it for ids that reject it.
-    reasoning_effort: "low",
-    enable_thinking: thinking,
-    ...(thinking ? { thinking_budget: 1024 } : {}),
+    // No reasoning fields on purpose: qwen-3.8-27b rejects reasoning_effort
+    // and enable_thinking only adds latency. cerebrasPayload() strips unknown
+    // fields, and the thinking panel renders from the streamed answer itself.
     temperature: 0.6,
     // Replies must not be clipped into three-line answers: signed-in users get
     // room for a full answer, guests a smaller but still useful budget.
@@ -307,7 +305,10 @@ Deno.serve(async (req) => {
   };
 
 
-  const result = await callModel(admin(), [MODELS.fast], { ...payload, agentRole: "fast" });
+  // Direct qwen-3.8-27b call: the shared ladder would try the 120b reasoning
+  // model first and its first token arrives seconds later — the "very slow
+  // fast chat" complaint. gemma-4-31b stays as the last-resort fallback.
+  const result = await callCerebras([CEREBRAS_MODELS.fast], payload, "fast", admin());
   const upstream = result?.response ?? null;
 
   if (!upstream || !upstream.body) {
@@ -337,7 +338,7 @@ Deno.serve(async (req) => {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
-      "x-model-used": result?.model ?? MODELS.fast,
+      "x-model-used": result?.model ?? CEREBRAS_MODELS.fast,
     },
   });
 });
