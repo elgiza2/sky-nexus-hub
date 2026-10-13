@@ -294,9 +294,10 @@ Deno.serve(async (req) => {
     model: CEREBRAS_MODELS.fast,
     stream: true,
     stream_options: { include_usage: true },
-    // No reasoning fields on purpose: qwen-3.8-27b rejects reasoning_effort
-    // and enable_thinking only adds latency. cerebrasPayload() strips unknown
-    // fields, and the thinking panel renders from the streamed answer itself.
+    // gpt-oss-120b accepts reasoning_effort; "low" is the fastest first-token
+    // setting Cerebras accepts. cerebrasPayload() forwards it only to this
+    // model and drops it for ids that reject it.
+    reasoning_effort: "low",
     temperature: 0.6,
     // Replies must not be clipped into three-line answers: signed-in users get
     // room for a full answer, guests a smaller but still useful budget.
@@ -305,9 +306,8 @@ Deno.serve(async (req) => {
   };
 
 
-  // Direct qwen-3.8-27b call: the shared ladder would try the 120b reasoning
-  // model first and its first token arrives seconds later — the "very slow
-  // fast chat" complaint. gemma-4-31b stays as the last-resort fallback.
+  // Direct gpt-oss-120b call for the fast lane (per product decision).
+  // gemma-4-31b stays as the last-resort fallback inside the shared ladder.
   const result = await callCerebras([CEREBRAS_MODELS.fast], payload, "fast", admin());
   const upstream = result?.response ?? null;
 
