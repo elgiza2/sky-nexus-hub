@@ -1684,6 +1684,7 @@ Deno.serve(async (req) => {
     try {
       let done: { url: string; provider: string; slug: string; apiModel: string } | null = null;
       let lastErr: unknown = null;
+      let providerSucceeded = false;
       for (const attemptSlug of attempts) {
         try {
           done = await runOne(attemptSlug);
@@ -1694,12 +1695,22 @@ Deno.serve(async (req) => {
         }
       }
       if (!done) throw lastErr ?? new Error("image generation failed");
+      providerSucceeded = true;
       if (freeImageReservationId) {
-        await admin
+        const reservationId = freeImageReservationId;
+        const { data: completedRow, error: finalizeError } = await admin
           .from("image_generations")
           .update({ model: done.slug, status: "completed" })
-          .eq("id", freeImageReservationId)
-          .eq("user_id", userId);
+          .eq("id", reservationId)
+          .eq("user_id", userId)
+          .select("id")
+          .maybeSingle();
+        if (finalizeError || !completedRow) {
+          // Keep the pending reservation: the quota RPC counts same-day
+          // reservations until UTC reset, so a DB blip cannot grant a free slot.
+          console.error("image quota finalize failed; reservation remains counted", finalizeError?.message || "reservation missing");
+        }
+        freeImageReservationId = null;
       }
       return json({
         image_url: done.url,
@@ -1710,7 +1721,7 @@ Deno.serve(async (req) => {
         fell_back: done.slug !== slug,
       });
     } catch (e) {
-      if (freeImageReservationId) {
+      if (freeImageReservationId && !providerSucceeded) {
         await admin
           .from("image_generations")
           .delete()

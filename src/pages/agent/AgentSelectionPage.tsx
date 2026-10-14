@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, Check, ChevronRight, Crown, Loader2, Plus, RotateCw, Users } from "lucide-react";
 import { useWorkspaceStore, loadWorkspace } from "@/lib/agentsky/store";
+import { AGENT_ROSTER_STORAGE_KEY } from "@/lib/agentsky/rosterSettings";
 import { AgentIcon } from "@/components/agent/AgentIcon";
 import ProfileGlassShell, { GlassCard, GlassSection } from "@/components/profile/ProfileGlassShell";
 import SEOHead from "@/components/common/SEOHead";
@@ -10,12 +11,11 @@ import { canUseAgent } from "@/lib/octoberOffer";
 import { promptUpgrade } from "@/lib/upgradeMoment";
 
 type RosterSettings = { enabledIds: string[]; autoJoinIds: string[] };
-const STORAGE_KEY = "megsy.agent-roster.v1";
 const emptySettings: RosterSettings = { enabledIds: [], autoJoinIds: [] };
 
 function readSettings(): RosterSettings {
   try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const value = JSON.parse(localStorage.getItem(AGENT_ROSTER_STORAGE_KEY) || "{}");
     return {
       enabledIds: Array.isArray(value.enabledIds) ? value.enabledIds.filter((x: unknown) => typeof x === "string") : [],
       autoJoinIds: Array.isArray(value.autoJoinIds) ? value.autoJoinIds.filter((x: unknown) => typeof x === "string") : [],
@@ -53,7 +53,7 @@ export default function AgentSelectionPage() {
 
   const save = useCallback((next: RosterSettings) => {
     setSettings(next);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* storage may be unavailable */ }
+    try { localStorage.setItem(AGENT_ROSTER_STORAGE_KEY, JSON.stringify(next)); } catch { /* storage may be unavailable */ }
   }, []);
 
   const available = useMemo(() => agents.filter((agent) => !agent.isDefault && !agent.mediaOnly), [agents]);

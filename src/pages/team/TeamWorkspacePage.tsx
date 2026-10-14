@@ -9,9 +9,8 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, Crown, Loader2, Send } from "lucide-react";
+import { Bot, Crown, Loader2, PauseCircle, Play, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { isPaidUser } from "@/lib/subscriptionGating";
 import SEOHead from "@/components/common/SEOHead";
 
 type TeamAgent = {
@@ -22,6 +21,7 @@ type TeamAgent = {
   status: string;
   last_result: string;
   updated_at: string;
+  cycles?: number;
 };
 
 const ROLE_SUGGESTIONS = [
@@ -38,36 +38,49 @@ export default function TeamWorkspacePage() {
   const [paid, setPaid] = useState(false);
   const [goal, setGoal] = useState("");
   const [agents, setAgents] = useState<TeamAgent[]>([]);
+  const [workspaceStatus, setWorkspaceStatus] = useState("active");
   const [busy, setBusy] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let dead = false;
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { if (!dead) setLoading(false); return; }
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (dead) return;
-      const ok = Boolean(data && data.status === "active" && isPaidUser(data.plan));
-      setPaid(ok);
-      if (ok) await refresh(dead);
-      setLoading(false);
-    })();
-    return () => { dead = true; };
-    async function refresh(deadFlag: boolean) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || deadFlag) return;
-      const ws = await supabase.from("team_workspaces").select("id").eq("user_id", user.id).maybeSingle();
-      if (!ws.data) return;
-      const rows = await supabase.from("team_agents").select("id, name, role, task, status, last_result, updated_at").eq("workspace_id", ws.data.id).order("updated_at", { ascending: false }).limit(24);
-      if (!deadFlag && rows.data) setAgents(rows.data as TeamAgent[]);
-    }
+    let firstLoad = true;
+    const refresh = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          if (!dead) { setPaid(false); setAgents([]); }
+          return;
+        }
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-orchestrate`, {
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+        if (resp.status === 402 || resp.status === 401) {
+          if (!dead) { setPaid(false); setAgents([]); setError(null); }
+          return;
+        }
+        if (!resp.ok) throw new Error(`workspace ${resp.status}`);
+        const result = await resp.json();
+        if (!dead) {
+          setPaid(true);
+          setAgents((result.agents ?? []) as TeamAgent[]);
+          setWorkspaceStatus(String(result.workspace?.status ?? "active"));
+          setError(null);
+        }
+      } catch (e) {
+        if (!dead) setError(e instanceof Error ? e.message : "Could not refresh workspace");
+      } finally {
+        if (firstLoad && !dead) setLoading(false);
+        firstLoad = false;
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 15_000);
+    return () => { dead = true; window.clearInterval(timer); };
   }, []);
 
   const start = useCallback(async () => {
@@ -89,6 +102,7 @@ export default function TeamWorkspacePage() {
       if (!resp.ok) throw new Error(`orchestrator ${resp.status}`);
       const body = await resp.json();
       setAgents((body.agents ?? []) as TeamAgent[]);
+      setWorkspaceStatus("active");
       setGoal("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "failed to start team");
@@ -96,6 +110,32 @@ export default function TeamWorkspacePage() {
       setBusy(false);
     }
   }, [goal, busy]);
+
+  const toggleWorkspace = useCallback(async () => {
+    if (statusBusy) return;
+    setStatusBusy(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const action = workspaceStatus === "active" ? "pause" : "resume";
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-orchestrate`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ action }),
+      });
+      if (!resp.ok) throw new Error(`workspace ${resp.status}`);
+      const result = await resp.json();
+      setWorkspaceStatus(String(result.workspace?.status ?? "active"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update workspace");
+    } finally {
+      setStatusBusy(false);
+    }
+  }, [statusBusy, workspaceStatus]);
 
   if (loading) {
     return (
@@ -116,8 +156,9 @@ export default function TeamWorkspacePage() {
           <h1 className="mt-6 text-3xl font-bold">Team Workspace</h1>
           <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed opacity-75">
             Send one message describing your goal. Megsy assembles a named agent team —
-            each agent with its own role and task — and they keep working for you 24/7.
+            each agent with its own role and task — and advances active tasks in the background.
           </p>
+          {error && <p role="alert" className="mx-auto mt-3 max-w-xl text-sm text-red-500">{error}</p>}
           <ul className="mx-auto mt-8 grid max-w-xl gap-2 text-start text-sm">
             {ROLE_SUGGESTIONS.map((r) => (
               <li key={r.role} className="flex items-center gap-3 rounded-xl border px-4 py-3">
@@ -142,8 +183,18 @@ export default function TeamWorkspacePage() {
     <>
       <SEOHead title="Team Workspace — Megsy" description="Your 24/7 AI agent team at work." />
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Team Workspace</h1>
-        <p className="mt-1 text-sm opacity-60">Describe the goal once — your agents keep running 24/7.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Team Workspace</h1>
+            <p className="mt-1 text-sm opacity-60">Agents take a background work step about every 5 minutes while the workspace is active.</p>
+          </div>
+          {["active", "paused"].includes(workspaceStatus) && agents.length > 0 && (
+            <button type="button" onClick={toggleWorkspace} disabled={statusBusy} className="ag-btn shrink-0">
+              {statusBusy ? <Loader2 size={16} className="animate-spin" /> : workspaceStatus === "active" ? <PauseCircle size={16} /> : <Play size={16} />}
+              {workspaceStatus === "active" ? "Pause team" : "Resume team"}
+            </button>
+          )}
+        </div>
         <div className="mt-4 flex gap-2">
           <input
             value={goal}
@@ -158,17 +209,19 @@ export default function TeamWorkspacePage() {
             Start team
           </button>
         </div>
+        <p className="mt-2 text-xs opacity-50">Background agents work from the saved goal and notes; web searches and external app actions are not available in this runner yet.</p>
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
         <div className="mt-6 space-y-3">
           {agents.map((a) => (
             <div key={a.id} className="ag-card ag-fade-in p-4">
               <div className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${a.status === "running" ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+                <span className={`h-2.5 w-2.5 rounded-full ${a.status === "running" ? "bg-green-500 animate-pulse" : a.status === "blocked" ? "bg-amber-500" : "bg-gray-400"}`} />
                 <strong>{a.name}</strong>
                 <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">{a.role}</span>
                 <span className="ms-auto text-xs opacity-50">{a.status}</span>
               </div>
               <p className="mt-2 text-sm opacity-80">{a.task}</p>
+              {typeof a.cycles === "number" && <p className="mt-1 text-[11px] opacity-45">Background steps: {a.cycles}</p>}
               {a.last_result && (
                 <p className="mt-2 line-clamp-3 rounded-xl bg-black/5 p-3 text-[13px] dark:bg-white/5">{a.last_result}</p>
               )}

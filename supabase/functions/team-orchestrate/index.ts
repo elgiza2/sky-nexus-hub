@@ -3,8 +3,8 @@
  * Paid-only Team Workspace backend: turns one goal message into a named
  * agent team (each with a role + task), persisted for 24/7 execution.
  *
- * Auth: caller JWT verified against the data project; the caller's active
- * paid subscription is required (checked server-side, never trusted from UI).
+ * Auth: caller JWT verified against the data project; paid entitlement is
+ * required (checked server-side, never trusted from UI).
  * The fast coordinator (gpt-oss-120b) proposes the team as JSON; this function
  * stores the workspace + agents and returns them for immediate render.
  * A scheduled ticker re-invokes per-agent turns so the team keeps running.
@@ -13,7 +13,6 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { dataAnonKey, dataServiceKey, dataUrl } from "../_shared/dataProject.ts";
 import { callCerebras, CEREBRAS_MODELS } from "../_shared/cerebras.ts";
-import { isPaidUser } from "./gating.ts";
 
 const cors = {
   ...corsHeaders,
@@ -69,7 +68,9 @@ function parseTeam(raw: string): Array<{ name: string; role: string; task: strin
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return out({ error: "Method not allowed" }, 405);
+  if (!["POST", "GET", "PATCH"].includes(req.method)) {
+    return out({ error: "Method not allowed" }, 405);
+  }
 
   const db = admin();
   if (!db) return out({ error: "server misconfigured" }, 500);
@@ -87,16 +88,43 @@ Deno.serve(async (req) => {
   const userId = meBody?.id;
   if (!userId) return out({ error: "invalid session" }, 401);
 
-  // Paid-only gate, checked server-side from subscriptions.
-  const { data: sub } = await db
-    .from("subscriptions")
-    .select("plan, status")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!sub || sub.status !== "active" || !isPaidUser(sub.plan)) {
+  // The database entitlement is the server-side source of truth shared with the ticker.
+  const { data: hasPaidPlan, error: planError } = await db.rpc("has_paid_plan", {
+    p_user_id: userId,
+  });
+  if (planError || hasPaidPlan !== true) {
     return out({ error: "subscription required", code: "upgrade_required" }, 402);
+  }
+
+  if (req.method === "GET") {
+    const { data: workspace } = await db
+      .from("team_workspaces")
+      .select("id, goal, status, created_at, updated_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!workspace) return out({ workspace: null, agents: [] });
+    const { data: agents, error } = await db
+      .from("team_agents")
+      .select("id, name, role, task, status, last_result, updated_at, cycles")
+      .eq("workspace_id", workspace.id)
+      .order("updated_at", { ascending: false })
+      .limit(24);
+    if (error) return out({ error: "could not load workspace" }, 500);
+    return out({ workspace, agents: agents ?? [] });
+  }
+
+  if (req.method === "PATCH") {
+    const body = (await req.json().catch(() => null)) as { action?: string } | null;
+    const status = body?.action === "pause" ? "paused" : body?.action === "resume" ? "active" : null;
+    if (!status) return out({ error: "invalid action" }, 400);
+    const { data: workspace } = await db
+      .from("team_workspaces")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .select("id, status")
+      .maybeSingle();
+    if (!workspace) return out({ error: "workspace not found" }, 404);
+    return out({ workspace });
   }
 
   const body = (await req.json().catch(() => null)) as { goal?: string } | null;
