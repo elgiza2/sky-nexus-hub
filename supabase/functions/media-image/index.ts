@@ -1,3 +1,4 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   noteKeyAttempt,
   noteKeyFail,
@@ -94,6 +95,17 @@ async function generateRunway(
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const url = Deno.env.get("SUPABASE_URL") || "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!url || !serviceKey || !token) return out({ error: true, message: "sign in required" }, 401);
+  const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+  const { data: auth } = await admin.auth.getUser(token);
+  if (!auth?.user) return out({ error: true, message: "invalid session" }, 401);
+  const { data: paid } = await admin.rpc("has_paid_plan", { p_user_id: auth.user.id });
+  if (paid !== true) {
+    return out({ error: true, paywall: true, message: "الصور المجانية بتتولد عبر Wan فقط، بحد أقصى 5 صور يوميًا." }, 402);
+  }
   let body: any;
   try {
     body = await request.json();

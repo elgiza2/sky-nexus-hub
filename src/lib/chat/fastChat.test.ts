@@ -1,6 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tryFastChat } from "./fastChat";
 
+function sseResponse(contents: string[]) {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const content of contents) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
 describe("tryFastChat request options", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -19,6 +33,7 @@ describe("tryFastChat request options", () => {
       fingerprint: "test-fingerprint",
       force: true,
       maxTokens: 700,
+      routingContext: "specialist_auto_join=none",
       onDelta: () => undefined,
     });
 
@@ -29,7 +44,40 @@ describe("tryFastChat request options", () => {
     expect(requestBody).toMatchObject({
       force: true,
       maxTokens: 700,
+      routingContext: "specialist_auto_join=none",
       messages: [{ role: "user", content: "تمام" }],
     });
+  });
+
+  it("intercepts a split route sentinel without showing it", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      sseResponse(["[[MEGSY_ESCALATE_", "TO_FULL_CHAT]]", "\n"]),
+    ));
+    const onDelta = vi.fn();
+
+    const outcome = await tryFastChat({
+      messages: [{ role: "user", content: "ابحث عن آخر الأخبار" }],
+      authToken: "test-token",
+      fingerprint: "test-fingerprint",
+      onDelta,
+    });
+
+    expect(outcome).toBe("escalate");
+    expect(onDelta).not.toHaveBeenCalled();
+  });
+
+  it("streams a direct answer as soon as the route prefix is not a sentinel", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(["Hello", " there"])));
+    const onDelta = vi.fn();
+
+    const outcome = await tryFastChat({
+      messages: [{ role: "user", content: "Say hello" }],
+      authToken: "test-token",
+      fingerprint: "test-fingerprint",
+      onDelta,
+    });
+
+    expect(outcome).toBe("answered");
+    expect(onDelta.mock.calls.flat().join("")).toBe("Hello there");
   });
 });
