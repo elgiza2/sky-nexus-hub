@@ -240,4 +240,18 @@ describe("original chat agent turn lifecycle", () => {
     await runAgentSkyTurn(test.args);
     expect(test.messages()[1].content).toMatch(/401\/403|مفتاح الوكيل/);
   });
+  it("keeps watching through short stream blips instead of failing after 3", async () => {
+    const test = setup();
+    let calls = 0;
+    mocks.stream.mockImplementation(async (_sid, callback) => {
+      calls++;
+      if (calls <= 3) throw new Error("network blip");
+      callback(running);
+      callback(answer);
+      callback(idle);
+    });
+    await runAgentSkyTurn(test.args);
+    expect(calls).toBeGreaterThan(3);
+    expect(test.messages()[1].content).toBe("Hi there");
+  }, 30_000);
 });

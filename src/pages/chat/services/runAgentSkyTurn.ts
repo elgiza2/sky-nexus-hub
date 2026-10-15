@@ -363,9 +363,12 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
       }
     }, 2500);
     try {
-      // Recover transient drops, but do not leave the user on an endless
-      // reconnect loop; after bounded retries the Browser Use fallback can run.
+      // Long missions: keep the stream alive for hours. Transient drops are
+      // recovered with backoff; a heartbeat reconcile keeps progress moving
+      // even when status frames are sparse. Only a long outage (or an explicit
+      // stop) ends the watch — never a short blip.
       let failures = 0;
+      let lastProgressAt = Date.now();
       while (!terminalSeen && !controller.signal.aborted) {
         const attemptController = new AbortController();
         const abortAttempt = () => attemptController.abort();
@@ -373,10 +376,13 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
         let idleTimer: ReturnType<typeof setTimeout> | null = null;
         const resetIdleTimer = () => {
           if (idleTimer) clearTimeout(idleTimer);
-          idleTimer = setTimeout(() => attemptController.abort(), 30_000);
+          // 10 minutes of total silence before recycling the connection; the
+          // reconcile below keeps pulling persisted events in between.
+          idleTimer = setTimeout(() => attemptController.abort(), 600_000);
         };
         const acceptStreamEvent = (event: RawEvent) => {
           failures = 0;
+          lastProgressAt = Date.now();
           resetIdleTimer();
           return accept(event);
         };
@@ -388,18 +394,21 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
         } catch {
           if (terminalSeen || controller.signal.aborted) break;
           failures++;
-          if (failures >= 3) {
-            throw new Error("AgentSky stream unavailable after reconnect attempts");
+          // ~30 minutes of continuous outage before giving up the watch.
+          if (failures >= 60 || Date.now() - lastProgressAt > 30 * 60_000) {
+            throw new Error("AgentSky stream unavailable after extended reconnect attempts");
           }
         } finally {
           if (idleTimer) clearTimeout(idleTimer);
           feedController.signal.removeEventListener("abort", abortAttempt);
         }
         if (terminalSeen || controller.signal.aborted) break;
-        if (failures >= 3) {
-          throw new Error("AgentSky stream unavailable after reconnect attempts");
+        if (failures >= 60 || Date.now() - lastProgressAt > 30 * 60_000) {
+          throw new Error("AgentSky stream unavailable after extended reconnect attempts");
         }
-        await new Promise((r) => setTimeout(r, Math.min(4000, 1000 * 2 ** Math.min(failures, 2))));
+        await new Promise((r) =>
+          setTimeout(r, Math.min(30_000, 1000 * 2 ** Math.min(failures, 4))),
+        );
       }
     } finally {
       clearInterval(reconcile);

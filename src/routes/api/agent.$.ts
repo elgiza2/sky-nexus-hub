@@ -40,7 +40,8 @@ const j = (b: unknown, status = 200) =>
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 
-type Content = { type: "text"; text: string } | { type: "image"; source: { type: "url"; url: string } };
+type Content =
+  { type: "text"; text: string } | { type: "image"; source: { type: "url"; url: string } };
 
 function contentOf(body: any): Content[] {
   const text = String(body?.text ?? "").slice(0, 20000);
@@ -48,7 +49,8 @@ function contentOf(body: any): Content[] {
   const out: Content[] = [];
   if (text) out.push({ type: "text", text });
   for (const url of images)
-    if (typeof url === "string" && /^https:\/\//.test(url)) out.push({ type: "image", source: { type: "url", url } });
+    if (typeof url === "string" && /^https:\/\//.test(url))
+      out.push({ type: "image", source: { type: "url", url } });
   return out;
 }
 
@@ -93,19 +95,41 @@ async function fullAgents(userId: string, origin: string) {
   await ensureDefaultAgent(userId, origin);
   const list = await listUserAgents(userId);
   const details = await Promise.all(
-    list.map((a) => api<{ agent: any }>(`/agents/${a.id}`).then((r) => r.agent).catch(() => a)),
+    list.map((a) =>
+      api<{ agent: any }>(`/agents/${a.id}`)
+        .then((r) => r.agent)
+        .catch(() => a),
+    ),
   );
   const templates = await listAgentTemplates();
   const catalogue = templates.map((a, index) => ({
-    id: `template:${a.id}`, name: String(a.name).replace(/^Chat · /, ""),
-    description: a.llm || "", color: ["ocean", "mint", "rose", "ember"][index % 4],
-    prompt: "", isDefault: false, isTemplate: true, createdAt: a.createdAt,
+    id: `template:${a.id}`,
+    name: String(a.name).replace(/^Chat · /, ""),
+    description: a.llm || "",
+    color: ["ocean", "mint", "rose", "ember"][index % 4],
+    prompt: "",
+    isDefault: false,
+    isTemplate: true,
+    createdAt: a.createdAt,
   }));
   const higgsfield = {
-    id: "higgsfield", name: "Higgsfield", description: "Images & video",
-    color: "sun", prompt: "", isDefault: false, isTemplate: true, mediaOnly: true, createdAt: "",
+    id: "higgsfield",
+    name: "Higgsfield",
+    description: "Images & video",
+    color: "sun",
+    prompt: "",
+    isDefault: false,
+    isTemplate: true,
+    mediaOnly: true,
+    createdAt: "",
   };
-  return [...details.filter((a) => !a.metadata?.templateId && a.metadata?.kind !== "media").map(agentView), ...catalogue, higgsfield].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+  return [
+    ...details
+      .filter((a) => !a.metadata?.templateId && a.metadata?.kind !== "media")
+      .map(agentView),
+    ...catalogue,
+    higgsfield,
+  ].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
 
 async function handle(request: Request, splat: string): Promise<Response> {
@@ -115,19 +139,34 @@ async function handle(request: Request, splat: string): Promise<Response> {
   const origin = publicOrigin(request);
   const parts = splat.split("/").filter(Boolean);
   const method = request.method;
-  const body = method === "GET" || method === "DELETE" ? null : await request.json().catch(() => ({}));
+  const body =
+    method === "GET" || method === "DELETE" ? null : await request.json().catch(() => ({}));
 
   // GET bootstrap
   if (parts[0] === "bootstrap" && method === "GET") {
     const [agents, tier] = await Promise.all([fullAgents(uid, origin), userTier(uid)]);
-    return j({ agents, tier, models: publicModels(tier), offer: { active: isOctoberOfferActive(), endsAt: OCTOBER_OFFER_END } });
+    return j({
+      agents,
+      tier,
+      models: publicModels(tier),
+      offer: { active: isOctoberOfferActive(), endsAt: OCTOBER_OFFER_END },
+    });
   }
 
   // Agents
   if (parts[0] === "agents") {
     if (method === "POST" && !parts[1]) {
       const parsed = agentProposalSchema.safeParse(body);
-      if (!parsed.success) return j({ error: { code: "invalid_request", message: "Please provide a valid name, description and instructions." } }, 400);
+      if (!parsed.success)
+        return j(
+          {
+            error: {
+              code: "invalid_request",
+              message: "Please provide a valid name, description and instructions.",
+            },
+          },
+          400,
+        );
       const { name, description, prompt, color } = parsed.data;
       const { agent } = await api<{ agent: any }>("/agents", {
         method: "POST",
@@ -147,7 +186,8 @@ async function handle(request: Request, splat: string): Promise<Response> {
     }
     if (parts[1] && method === "DELETE") {
       const a = await getOwnedAgent(uid, parts[1]);
-      if (String(a.name).endsWith("_default")) return j({ error: { code: "forbidden", message: "Default agent" } }, 403);
+      if (String(a.name).endsWith("_default"))
+        return j({ error: { code: "forbidden", message: "Default agent" } }, 403);
       await api(`/agents/${a.id}/archive`, { method: "POST", body: "{}" });
       return j({ ok: true });
     }
@@ -156,8 +196,19 @@ async function handle(request: Request, splat: string): Promise<Response> {
   // Gate media intent server-side before creating or continuing any paid work.
   if (parts[0] === "sessions" && method === "POST" && (!parts[1] || parts[2] === "messages")) {
     const { detectMediaIntent } = await import("@/lib/agentsky/mediaIntent");
-    if ((body?.agentId === "higgsfield" || detectMediaIntent(String(body?.text || ""))) && await userTier(uid) === "free")
-      return j({ error: { code: "upgrade_required", message: "Images and video are available on the Pro plan." } }, 402);
+    if (
+      (body?.agentId === "higgsfield" || detectMediaIntent(String(body?.text || ""))) &&
+      (await userTier(uid)) === "free"
+    )
+      return j(
+        {
+          error: {
+            code: "upgrade_required",
+            message: "Images and video are available on the Pro plan.",
+          },
+        },
+        402,
+      );
   }
 
   // Sessions
@@ -166,47 +217,89 @@ async function handle(request: Request, splat: string): Promise<Response> {
     if (!sid && method === "GET") {
       const agents = await listUserAgents(uid);
       const lists = await Promise.all(
-        agents.map((a) => api<{ sessions: any[] }>(`/sessions?agent=${a.id}`).then((r) => r.sessions).catch(() => [])),
+        agents.map((a) =>
+          api<{ sessions: any[] }>(`/sessions?agent=${a.id}`)
+            .then((r) => r.sessions)
+            .catch(() => []),
+        ),
       );
       const sessions = lists
         .flat()
         .filter((s) => s.metadata?.owner === uid && !s.archived)
         .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-        .map((s) => ({ id: s.id, agentId: s.agentId, title: s.title || "New chat", status: s.status, createdAt: s.createdAt }));
+        .map((s) => ({
+          id: s.id,
+          agentId: s.agentId,
+          title: s.title || "New chat",
+          status: s.status,
+          createdAt: s.createdAt,
+        }));
       return j({ sessions });
     }
     if (!sid && method === "POST") {
       const requestedId = typeof body?.agentId === "string" ? body.agentId : undefined;
       if (requestedId && !canUseAgent(await userTier(uid), requestedId === "higgsfield")) {
         const defaultAgent = await ensureDefaultAgent(uid, origin);
-        if (requestedId !== defaultAgent.id) return j({ error: { code: "upgrade_required", message: "Switching agents is available on the Pro plan." } }, 402);
+        if (requestedId !== defaultAgent.id)
+          return j(
+            {
+              error: {
+                code: "upgrade_required",
+                message: "Switching agents is available on the Pro plan.",
+              },
+            },
+            402,
+          );
       }
       const selectedAgent = await resolveUserAgent(uid, origin, requestedId);
       const agentId = selectedAgent.id;
       const content = contentOf(body);
-      if (!content.length) return j({ error: { code: "invalid_request", message: "Empty message" } }, 400);
+      if (!content.length)
+        return j({ error: { code: "invalid_request", message: "Empty message" } }, 400);
       const blocked = await requireCredits(bearer(request));
       if (blocked) return blocked;
-      const title = String(body?.text || "New chat").replace(/\s+/g, " ").slice(0, 80) || "New chat";
+      const title =
+        String(body?.text || "New chat")
+          .replace(/\s+/g, " ")
+          .slice(0, 80) || "New chat";
       const { session } = await api<{ session: any }>("/sessions", {
         method: "POST",
         body: JSON.stringify({
           agent: agentId,
           title,
           metadata: { owner: uid },
-          idleTimeoutSeconds: 300,
+          // Long missions can run for hours: keep the session alive for up to
+          // 12h of idle time so the agent keeps working without interruption.
+          idleTimeoutSeconds: 43200,
           initial_events: [{ type: "user.message", content }],
         }),
       });
       await openTurn(bearer(request), session.id, inputCharsOf(content));
-      return j({ session: { id: session.id, agentId, title, status: session.status }, agent: agentView(selectedAgent) }, 201);
+      return j(
+        {
+          session: { id: session.id, agentId, title, status: session.status },
+          agent: agentView(selectedAgent),
+        },
+        201,
+      );
     }
     if (!sid) return j({ error: { code: "not_found", message: "Not found" } }, 404);
     const session = await getOwnedSession(uid, sid);
 
-    if (!parts[2] && method === "GET") return j({ session: { id: session.id, agentId: session.agentId, title: session.title, status: session.status } });
+    if (!parts[2] && method === "GET")
+      return j({
+        session: {
+          id: session.id,
+          agentId: session.agentId,
+          title: session.title,
+          status: session.status,
+        },
+      });
     if (!parts[2] && method === "PATCH") {
-      await api(`/sessions/${sid}`, { method: "PATCH", body: JSON.stringify({ title: String(body?.title || "").slice(0, 120) }) });
+      await api(`/sessions/${sid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: String(body?.title || "").slice(0, 120) }),
+      });
       return j({ ok: true });
     }
     if (!parts[2] && method === "DELETE") {
@@ -221,7 +314,8 @@ async function handle(request: Request, splat: string): Promise<Response> {
       const jwt = bearer(request);
       const turnId = await latestOpenTurn(jwt, sid);
       const upstream = await streamSession(sid, request.signal);
-      if (!upstream.ok || !upstream.body) return j({ error: { code: "stream_failed", message: `Stream ${upstream.status}` } }, 502);
+      if (!upstream.ok || !upstream.body)
+        return j({ error: { code: "stream_failed", message: `Stream ${upstream.status}` } }, 502);
       // Measure the turn on the way through: real output characters and real awake
       // seconds. The client keeps its own copy of the stream, untouched.
       const [toClient, toMeter] = upstream.body.tee();
@@ -241,18 +335,41 @@ async function handle(request: Request, splat: string): Promise<Response> {
         if (turnId) await settleTurn(jwt, turnId, measured.chars, measured.seconds);
       })();
       return new Response(toClient, {
-        headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store", "X-Accel-Buffering": "no" },
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-store",
+          "X-Accel-Buffering": "no",
+        },
       });
     }
     if (parts[2] === "messages" && method === "POST") {
       const sessionAgent = await getOwnedAgent(uid, session.agentId);
-      if (sessionAgent.metadata?.kind === "media" && await userTier(uid) === "free") return j({ error: { code: "upgrade_required", message: "Images and video are available on the Pro plan." } }, 402);
+      if (sessionAgent.metadata?.kind === "media" && (await userTier(uid)) === "free")
+        return j(
+          {
+            error: {
+              code: "upgrade_required",
+              message: "Images and video are available on the Pro plan.",
+            },
+          },
+          402,
+        );
       if (!canUseAgent(await userTier(uid))) {
         const defaultAgent = await ensureDefaultAgent(uid, origin);
-        if (session.agentId !== defaultAgent.id) return j({ error: { code: "upgrade_required", message: "Switching agents is available on the Pro plan." } }, 402);
+        if (session.agentId !== defaultAgent.id)
+          return j(
+            {
+              error: {
+                code: "upgrade_required",
+                message: "Switching agents is available on the Pro plan.",
+              },
+            },
+            402,
+          );
       }
       const content = contentOf(body);
-      if (!content.length) return j({ error: { code: "invalid_request", message: "Empty message" } }, 400);
+      if (!content.length)
+        return j({ error: { code: "invalid_request", message: "Empty message" } }, 400);
       const blocked = await requireCredits(bearer(request));
       if (blocked) return blocked;
       await openTurn(bearer(request), sid, inputCharsOf(content));
@@ -264,7 +381,10 @@ async function handle(request: Request, splat: string): Promise<Response> {
       return j({ event: r.data?.[0] ?? null });
     }
     if (parts[2] === "interrupt" && method === "POST") {
-      const r = await api<{ status: string }>(`/sessions/${sid}/interrupt`, { method: "POST", body: "{}" });
+      const r = await api<{ status: string }>(`/sessions/${sid}/interrupt`, {
+        method: "POST",
+        body: "{}",
+      });
       return j(r);
     }
     if (parts[2] === "requests" && method === "GET") {
@@ -279,7 +399,8 @@ async function handle(request: Request, splat: string): Promise<Response> {
     const ids = new Set(agents.map((a) => a.id));
     if (parts[1]) {
       const result = await api<{ task: any }>(`/tasks/${encodeURIComponent(parts[1])}`);
-      if (!result.task?.agent_id || !ids.has(result.task.agent_id)) return j({ error: { code: "not_found", message: "Task not found" } }, 404);
+      if (!result.task?.agent_id || !ids.has(result.task.agent_id))
+        return j({ error: { code: "not_found", message: "Task not found" } }, 404);
       return j({ sessions: result.task.sessions ?? [] });
     }
     const r = await api<{ tasks: any[] }>("/tasks").catch(() => ({ tasks: [] }));
@@ -301,8 +422,11 @@ async function handle(request: Request, splat: string): Promise<Response> {
   // Direct media generation (studio and video cards)
   if (parts[0] === "media" && method === "POST") {
     const kind = body?.kind === "video" ? "video" : "image";
-    const prompt = String(body?.prompt || "").trim().slice(0, 5000);
-    if (!prompt) return j({ error: { code: "invalid_request", message: "Prompt is required" } }, 400);
+    const prompt = String(body?.prompt || "")
+      .trim()
+      .slice(0, 5000);
+    if (!prompt)
+      return j({ error: { code: "invalid_request", message: "Prompt is required" } }, 400);
     const tier = await userTier(uid);
     const model = pickModel(kind, tier, body?.model);
     // Media is charged before it runs, at the published rate for this model and the
@@ -328,10 +452,19 @@ async function handle(request: Request, splat: string): Promise<Response> {
     const idem = String(body?.idempotencyKey || crypto.randomUUID()).slice(0, 100);
     const run = await startRun(
       model,
-      model.build({ prompt, aspect: String(body?.aspect || (kind === "video" ? "16:9" : "1:1")), duration: Number(body?.duration) || 5 }),
+      model.build({
+        prompt,
+        aspect: String(body?.aspect || (kind === "video" ? "16:9" : "1:1")),
+        duration: Number(body?.duration) || 5,
+      }),
       `${kind}-${uid}-${idem}`,
     );
-    return j({ runId: run.runId, token: runStatusToken(run.runId), model: model.label, status: run.status });
+    return j({
+      runId: run.runId,
+      token: runStatusToken(run.runId),
+      model: model.label,
+      status: run.status,
+    });
   }
 
   return j({ error: { code: "not_found", message: "Not found" } }, 404);

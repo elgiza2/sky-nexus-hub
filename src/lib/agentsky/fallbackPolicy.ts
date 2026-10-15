@@ -23,7 +23,7 @@ export function shouldFallbackToBrowserUse(error: unknown, context: AgentFallbac
   }
 
   if (error instanceof TypeError) return true;
-  return /network|fetch|connection|stream|timeout|timed out|unavailable|agent.*failed|session\.error/i.test(
+  return /network|fetch|connection|stream|timeout|timed out|unavailable|agent.*failed|session\.error|extended reconnect/i.test(
     message,
   );
 }

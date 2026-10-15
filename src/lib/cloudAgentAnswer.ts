@@ -62,7 +62,10 @@ export async function runCloudAgentAnswer(
   if (!created?.task_id || created.status === "failed") return null;
   options.onTask?.(created.task_id);
 
-  const deadline = Date.now() + Math.min(Math.max(options.budgetMs ?? 240_000, 20_000), 6 * 60 * 60_000);
+  // Long missions can run for hours; the cap is 12h so a fallback turn never
+  // silently truncates a big job.
+  const deadline =
+    Date.now() + Math.min(Math.max(options.budgetMs ?? 240_000, 20_000), 12 * 60 * 60_000);
   let seenSteps = 0;
   const steps: string[] = [];
 
