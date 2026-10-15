@@ -1,5 +1,29 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { tryFastChat } from "./fastChat";
+import { isFastLaneEligible, tryFastChat } from "./fastChat";
+
+describe("isFastLaneEligible media routing", () => {
+  it("routes Arabic image requests straight to the full lane", () => {
+    expect(
+      isFastLaneEligible({
+        messages: [{ role: "user", content: "اعملي صورة تعبر عنه" }],
+      }),
+    ).toBe(false);
+  });
+  it("routes Arabic video requests straight to the full lane", () => {
+    expect(
+      isFastLaneEligible({
+        messages: [{ role: "user", content: "اعمل فيديو قصير" }],
+      }),
+    ).toBe(false);
+  });
+  it("keeps ordinary text questions on the fast lane", () => {
+    expect(
+      isFastLaneEligible({
+        messages: [{ role: "user", content: "ما هي عاصمة مصر؟" }],
+      }),
+    ).toBe(true);
+  });
+});
 
 function sseResponse(contents: string[]) {
   const encoder = new TextEncoder();

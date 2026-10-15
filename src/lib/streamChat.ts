@@ -10,9 +10,12 @@ import { isTrivialTurn, shouldForceFastTurn } from "@/lib/chat/trivialTurn";
 /**
  * Provider keys live server-side in the deployed Supabase functions, so both
  * dev and production stream through the same edge lane. The local /api/chat
- * proxy stays opt-in (VITE_LOCAL_CHAT_PROXY=1) for offline provider work only.
+ * proxy is the automatic fallback: when the edge lane is unreachable or
+ * unconfigured (fresh deploy, no keys), the app's own serverless runtime
+ * (`/api/chat` on Vercel) serves the turn from the DB key pools instead —
+ * zero Vercel env vars required. VITE_LOCAL_CHAT_PROXY=0 opts out.
  */
-let localChatProxyUsable = import.meta.env.VITE_LOCAL_CHAT_PROXY === "1";
+let localChatProxyUsable = import.meta.env.VITE_LOCAL_CHAT_PROXY !== "0";
 
 /**
  * Internal reasoning is ON by default: users expect to see the thinking trace
@@ -512,10 +515,12 @@ export async function streamChat({
       zone: (typeof window !== "undefined" && (window as any).__MEGSY_ZONE__) || "megsy",
     });
     let resp: Response | null = null;
-    // Primary runtime (dev only): this app's own serverless chat endpoint streams
-    // the model's reasoning deltas. In production that path does not exist, so
-    // the request goes straight to the deployed edge function below.
-    if (import.meta.env.DEV && localChatProxyUsable) {
+    // Second deployment path: this app's own serverless chat endpoint
+    // (`/api/chat` on Vercel, Vite middleware in dev) serves the turn from the
+    // DB key pools — no Supabase edge deploy and no Vercel env vars needed.
+    // Tried first because it is co-located with the app; the edge lane below
+    // is the fallback when the local runtime has no provider key (503).
+    if (localChatProxyUsable) {
       try {
         const primary = await fetch("/api/chat", {
           method: "POST",
@@ -590,11 +595,10 @@ export async function streamChat({
         signal?.removeEventListener("abort", onOuterAbort);
       }
     }
-    // Second deployment path (dev only): when the Supabase edge function is
+    // Second deployment path: when the Supabase edge function is
     // unreachable or failing, the same turn is served by this app's local
     // serverless runtime (`/api/chat`), which streams the identical SSE.
     if (
-      import.meta.env.DEV &&
       localChatProxyUsable &&
       (!resp || resp.status >= 500 || resp.status === 404)
     ) {

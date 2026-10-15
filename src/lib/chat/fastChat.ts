@@ -30,6 +30,24 @@ export function isFastLaneEligible(opts: {
   // so this used to send every simple message down the slow path (~9s).
   // `chat-fast` escalates by itself whenever a turn really needs live data.
   if (opts.deepResearch || opts.computerUseEnabled) return false;
+  // Media creation (image/video) can never be answered by the text-only fast
+  // lane — the model used to leak its internal route sentinel
+  // (`[[MEGSY_ESCALATE_TO_FULL_CHAT:media]]`) into the visible answer. Route
+  // these turns straight to the full lane so media renders as a card.
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  if (typeof lastUser?.content === "string") {
+    const t = lastUser.content;
+    const hasMediaVerb =
+      /(اعمل|اعملي|ارسم|صمم|ولد|ولّد|انشئ|أنشئ|عايز|عاوز|محتاج|سوي|create|generate|make|draw|design|render|animate)/i.test(
+        t,
+      );
+    const mentionsMedia =
+      /(صورة|صوره|صور|بوستر|لوجو|شعار|رسمة|فيديو|كليب|ريلز|image|photo|picture|poster|logo|video|clip|animation)/i.test(
+        t,
+      );
+    const negated = /(بلاش|بدون|من غير|don't|do not)\s*(صور|فيديو|image|video)/i.test(t);
+    if (hasMediaVerb && mentionsMedia && !negated) return false;
+  }
   // The fast agent is now the front door for every service. It receives a
   // routing hint below and escalates to the full lane when a tool, file,
   // browser, media or long-running task is required.
@@ -113,9 +131,11 @@ export async function tryFastChat({
       signal: reqSignal,
     });
   try {
-    // Optional local runtime (opt-in via VITE_LOCAL_CHAT_PROXY=1). Provider keys
-    // live in the deployed edge functions, so the edge lane below is the default.
-    if (import.meta.env.VITE_LOCAL_CHAT_PROXY !== "1") throw new Error("PROXY_DISABLED");
+    // Local runtime first: the app's own serverless endpoint (`/api/chat` on
+    // Vercel) serves the turn from the DB key pools — zero Vercel env vars
+    // needed. The edge lane below is the fallback. VITE_LOCAL_CHAT_PROXY=0
+    // opts out.
+    if (import.meta.env.VITE_LOCAL_CHAT_PROXY === "0") throw new Error("PROXY_DISABLED");
     resp = await viaProxy();
     if (!resp.ok || !(resp.headers.get("content-type") || "").includes("text/event-stream")) {
       try {

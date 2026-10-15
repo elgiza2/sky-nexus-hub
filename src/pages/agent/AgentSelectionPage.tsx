@@ -1,7 +1,7 @@
 /** Agent roster settings: choose the primary chat assistant and which specialists may auto-join. */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, Check, ChevronRight, Crown, Loader2, Plus, RotateCw, Users } from "lucide-react";
+import { Bot, Check, ChevronRight, Crown, Loader2, Plus, RotateCw, Users, Wrench } from "lucide-react";
 import { useWorkspaceStore, loadWorkspace } from "@/lib/agentsky/store";
 import { AGENT_ROSTER_STORAGE_KEY } from "@/lib/agentsky/rosterSettings";
 import { AgentIcon } from "@/components/agent/AgentIcon";
@@ -9,6 +9,33 @@ import ProfileGlassShell, { GlassCard, GlassSection } from "@/components/profile
 import SEOHead from "@/components/common/SEOHead";
 import { canUseAgent } from "@/lib/octoberOffer";
 import { promptUpgrade } from "@/lib/upgradeMoment";
+
+/** Raw backend errors are never shown: map them to one friendly line + action. */
+function friendlyWorkspaceError(raw: string): { title: string; hint: string } {
+  const msg = String(raw || "");
+  if (/not_configured|no AgentSky key|signing secret missing/i.test(msg)) {
+    return {
+      title: "Specialist agents are unavailable right now",
+      hint: "The agent service is not connected on the server yet. Quick Chat keeps working — try again in a bit.",
+    };
+  }
+  if (/unauthorized|please sign in|401|403/i.test(msg)) {
+    return {
+      title: "Please sign in to manage specialists",
+      hint: "Your session may have expired. Sign in again and retry.",
+    };
+  }
+  if (/network|fetch|timeout|unavailable|502|503|504/i.test(msg)) {
+    return {
+      title: "Could not reach the agent service",
+      hint: "Check your connection and try again.",
+    };
+  }
+  return {
+    title: "Could not load specialist agents",
+    hint: "Quick Chat keeps working — try again in a bit.",
+  };
+}
 
 type RosterSettings = { enabledIds: string[]; autoJoinIds: string[] };
 const emptySettings: RosterSettings = { enabledIds: [], autoJoinIds: [] };
@@ -111,7 +138,21 @@ export default function AgentSelectionPage() {
 
         <GlassSection title={`Specialists${selectedCount ? ` · ${selectedCount} auto-join` : ""}`}>
           {!ready && <GlassCard><div className="gx-loading" role="status"><Loader2 size={17} className="animate-spin" />Loading agents…</div></GlassCard>}
-          {error && <GlassCard className="gx-card-pad"><p role="alert" className="gx-field-hint">{error}</p><button type="button" className="gx-pill gx-pill-wide" onClick={() => void loadWorkspace(true)}><RotateCw size={16} />Try again</button></GlassCard>}
+          {error && (() => {
+            const friendly = friendlyWorkspaceError(error);
+            return (
+              <GlassCard className="gx-card-pad">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-muted/60 text-muted-foreground"><Wrench size={18} /></span>
+                  <div className="min-w-0 flex-1">
+                    <strong className="block text-sm">{friendly.title}</strong>
+                    <p role="alert" className="mt-1 text-sm text-muted-foreground">{friendly.hint}</p>
+                  </div>
+                </div>
+                <button type="button" className="gx-pill gx-pill-wide mt-3" onClick={() => void loadWorkspace(true)}><RotateCw size={16} />Try again</button>
+              </GlassCard>
+            );
+          })()}
           {ready && !available.length && !error && <GlassCard className="gx-card-pad"><p className="text-sm text-muted-foreground">No specialist agents are available yet.</p></GlassCard>}
           {available.map((agent) => {
             const enabled = settings.enabledIds.includes(agent.id);

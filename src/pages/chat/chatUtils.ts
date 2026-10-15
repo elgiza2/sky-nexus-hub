@@ -5,6 +5,23 @@
 const LEAKED_ACTION_NAMES =
   "generate_image|generate_video|generate_music|generate_voice|edit_image|create_image|image_generation|video_generation|deep_research|web_search|browse_website";
 
+/**
+ * Internal routing markers must never reach the user. The fast lane emits
+ * `[[MEGSY_ESCALATE_TO_FULL_CHAT]]` (optionally with a `:suffix`) as its very
+ * first content when the full lane is required — but a model can also leak it
+ * mid-answer (e.g. "We need to generate an image using the tool.
+ * [[MEGSY_ESCALATE_TO_FULL_CHAT:media]]"). Strip the marker wherever it
+ * appears, plus the tool-announcement preamble that usually comes with it.
+ */
+export const stripRouteSentinel = (value: string) =>
+  String(value || "")
+    .replace(/\[\[\s*MEGSY_ESCALATE_TO_FULL_CHAT(?:\s*:\s*[a-z0-9_-]+)?\s*\]\]/gi, "")
+    .replace(
+      /(?:^|\n)\s*(?:we need to generate an?\s+\w+[^\n]*?using the tool\.?|سأستخدم أداة[^\n]*?لتنفيذ[^\n]*?\.?)\s*(?:\n|$)/gi,
+      "\n",
+    )
+    .replace(/[ \t]{2,}/g, " ");
+
 export const stripLeakedToolText = (value: string) =>
   String(value || "")
     .replace(
@@ -90,11 +107,14 @@ export const stripPlanClaims = (value: string) => {
 
 
 export const sanitizeLeakedToolText = (value: string) =>
-  stripInternalAgentTrace(stripPlanClaims(stripLeakedToolText(value)));
+  stripInternalAgentTrace(stripPlanClaims(stripLeakedToolText(stripRouteSentinel(value))));
 
 export const makeLeakedToolStreamSanitizer = () => {
   let buffer = "";
   let droppingToolLine = false;
+  // Internal routing markers are stripped the moment they stream in, so the
+  // user never sees `[[MEGSY_ESCALATE_TO_FULL_CHAT...]]` mid-answer.
+  const ROUTE_SENTINEL_RE = /\[\[\s*MEGSY_ESCALATE_TO_FULL_CHAT(?:\s*:\s*[a-z0-9_-]+)?\s*\]\]/gi;
   const markers = [
     "${tool_code}",
     "print(default_api.",
@@ -109,9 +129,11 @@ export const makeLeakedToolStreamSanitizer = () => {
     "```json",
     '{"action"',
     '{ "action"',
+    "[[MEGSY_ESCALATE",
+    "[[megsy_escalate",
   ];
   return (chunk: string, force = false) => {
-    buffer += chunk;
+    buffer += String(chunk || "").replace(ROUTE_SENTINEL_RE, "");
     const lower = buffer.toLowerCase();
     if (droppingToolLine) {
       const nl = buffer.indexOf("\n");

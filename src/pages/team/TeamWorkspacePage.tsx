@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { Bot, Crown, Loader2, PauseCircle, Play, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/common/SEOHead";
+import { edgeAnonKey, edgeUrl } from "@/lib/edgeRuntime";
 
 type TeamAgent = {
   id: string;
@@ -53,9 +54,11 @@ export default function TeamWorkspacePage() {
           if (!dead) { setPaid(false); setAgents([]); }
           return;
         }
-        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-orchestrate`, {
+        // edgeUrl()/edgeAnonKey() carry built-in fallbacks, so the page works on
+        // a fresh deploy without manually setting VITE_* vars in Vercel.
+        const resp = await fetch(edgeUrl("team-orchestrate"), {
           headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            apikey: edgeAnonKey("team-orchestrate"),
             Authorization: `Bearer ${session.access_token}`,
           },
         });
@@ -90,12 +93,12 @@ export default function TeamWorkspacePage() {
     setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-orchestrate`, {
+      const resp = await fetch(edgeUrl("team-orchestrate"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          apikey: edgeAnonKey("team-orchestrate"),
+          Authorization: `Bearer ${session?.access_token ?? edgeAnonKey("team-orchestrate")}`,
         },
         body: JSON.stringify({ goal: text }),
       });
@@ -118,12 +121,12 @@ export default function TeamWorkspacePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const action = workspaceStatus === "active" ? "pause" : "resume";
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-orchestrate`, {
+      const resp = await fetch(edgeUrl("team-orchestrate"), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          apikey: edgeAnonKey("team-orchestrate"),
+          Authorization: `Bearer ${session?.access_token ?? edgeAnonKey("team-orchestrate")}`,
         },
         body: JSON.stringify({ action }),
       });
@@ -148,7 +151,7 @@ export default function TeamWorkspacePage() {
   if (!paid) {
     return (
       <>
-        <SEOHead title="Team Workspace — Megsy" description="Your 24/7 AI agent team. Subscribe to unlock." />
+        <SEOHead path="/team" title="Team Workspace — Megsy" description="Your 24/7 AI agent team. Subscribe to unlock." />
         <div className="mx-auto max-w-3xl px-6 py-16 text-center">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-500 text-white">
             <Bot size={26} />
@@ -181,7 +184,7 @@ export default function TeamWorkspacePage() {
 
   return (
     <>
-      <SEOHead title="Team Workspace — Megsy" description="Your 24/7 AI agent team at work." />
+      <SEOHead path="/team" title="Team Workspace — Megsy" description="Your 24/7 AI agent team at work." />
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="flex items-start justify-between gap-3">
           <div>
