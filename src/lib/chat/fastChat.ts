@@ -207,7 +207,8 @@ export async function tryFastChat({
       routePrefix += content;
       const candidate = routePrefix.replace(/^\s+/, "");
       const upper = candidate.toUpperCase();
-      if (routeSentinel.toUpperCase().startsWith(upper) && upper.length < routeSentinel.length) return;
+      if (routeSentinel.toUpperCase().startsWith(upper) && upper.length < routeSentinel.length)
+        return;
       if (routeSentinelPattern.test(candidate)) throw new Error("__ESCALATE__");
       routeResolved = true;
       const buffered = routePrefix;
@@ -219,8 +220,8 @@ export async function tryFastChat({
   };
 
   const handleLine = (line: string) => {
-    if (!line.startsWith("data: ")) return false;
-    const jsonStr = line.slice(6).trim();
+    if (!line.startsWith("data:")) return false;
+    const jsonStr = line.slice(5).trim();
     if (jsonStr === "[DONE]") return true;
     try {
       const parsed = JSON.parse(jsonStr);
@@ -275,6 +276,10 @@ export async function tryFastChat({
         }
       }
     }
+    // Some providers close the stream without a final newline. Do not drop
+    // that last event (which may carry the final answer or [DONE]).
+    textBuffer += decoder.decode();
+    if (textBuffer.trim()) handleLine(textBuffer.trim());
   } catch (e) {
     if ((e as Error)?.message === "__ESCALATE__") {
       try {

@@ -33,8 +33,9 @@ describe("shouldUseFastChat", () => {
     expect(shouldUseFastChat({ ...base, hasSelectedModel: true })).toBe(false);
   });
 
-  it("keeps media requests, attachments, and computer turns off the quick lane", () => {
-    expect(shouldUseFastChat({ ...base, text: "Make a logo for my cafe" })).toBe(false);
+  it("lets the fast agent decide text-only media requests while preserving explicit attachment and computer routing", () => {
+    expect(shouldUseFastChat({ ...base, text: "Make a logo for my cafe" })).toBe(true);
+    expect(shouldUseFastChat({ ...base, text: "عايز فيديو قصير" })).toBe(true);
     expect(shouldUseFastChat({ ...base, hasAttachments: true })).toBe(false);
     expect(shouldUseFastChat({ ...base, computerUseEnabled: true })).toBe(false);
   });

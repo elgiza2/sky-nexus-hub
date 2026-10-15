@@ -42,7 +42,7 @@ export async function runComputerTurn({
   createOrUpdateConversation,
   saveMessage,
   ownInsertedIdsRef,
-}: RunComputerArgs) {
+}: RunComputerArgs): Promise<boolean> {
   const prompt = stripComputerMention(text);
   const computerPrompt = prompt || text;
   const assistantClientId = `assistant-${localTurnId}`;
@@ -54,11 +54,20 @@ export async function runComputerTurn({
   const preStartText = preIsAr
     ? `تمام، هبدأ دلوقتي: ${computerPrompt.slice(0, 160)}`
     : `On it — starting now: ${computerPrompt.slice(0, 160)}`;
-  setMessages((prev) => [
-    ...prev,
-    userMsg,
-    { role: "assistant", content: preStartText, clientId: assistantClientId, agentPending: true },
-  ]);
+  setMessages((prev) => {
+    const userExists = prev.some((message) => message.clientId === userMsg.clientId);
+    const withUser = userExists ? prev : [...prev, userMsg];
+    const assistantExists = withUser.some((message) => message.clientId === assistantClientId);
+    const placeholder = {
+      role: "assistant" as const,
+      content: preStartText,
+      clientId: assistantClientId,
+      agentPending: true,
+    };
+    return assistantExists
+      ? withUser.map((message) => (message.clientId === assistantClientId ? placeholder : message))
+      : [...withUser, placeholder];
+  });
   setInput("");
   setAttachedFiles([]);
   void (async () => {
@@ -137,7 +146,7 @@ export async function runComputerTurn({
         ),
       );
       window.dispatchEvent(new CustomEvent("megsy:conversations-changed"));
-      return;
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "تعذّر بدء المهمة على الكمبيوتر.";
       setMessages((prev) =>
@@ -154,7 +163,7 @@ export async function runComputerTurn({
       clearActiveComputerRun(PENDING_COMPUTER_RUN);
       clearComputerLiveView(PENDING_COMPUTER_RUN);
       toast.error(msg);
-      return;
+      return false;
     }
   } catch (e) {
     clearActiveComputerRun(PENDING_COMPUTER_RUN);
@@ -168,5 +177,6 @@ export async function runComputerTurn({
       ),
     );
     toast.error(msg);
+    return false;
   }
 }

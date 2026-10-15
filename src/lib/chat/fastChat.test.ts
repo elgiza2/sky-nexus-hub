@@ -6,9 +6,22 @@ function sseResponse(contents: string[]) {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       for (const content of contents) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`));
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`),
+        );
       }
       controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
+function rawSseResponse(frame: string) {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(frame));
       controller.close();
     },
   });
@@ -50,9 +63,10 @@ describe("tryFastChat request options", () => {
   });
 
   it("intercepts a split route sentinel without showing it", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      sseResponse(["[[MEGSY_ESCALATE_", "TO_FULL_CHAT]]", "\n"]),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(sseResponse(["[[MEGSY_ESCALATE_", "TO_FULL_CHAT]]", "\n"])),
+    );
     const onDelta = vi.fn();
 
     const outcome = await tryFastChat({
@@ -79,5 +93,67 @@ describe("tryFastChat request options", () => {
 
     expect(outcome).toBe("answered");
     expect(onDelta.mock.calls.flat().join("")).toBe("Hello there");
+  });
+
+  it("parses a final data: frame without a space or trailing newline", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          rawSseResponse(
+            `data:${JSON.stringify({ choices: [{ delta: { content: "وصل الرد" } }] })}`,
+          ),
+        ),
+    );
+    const onDelta = vi.fn();
+
+    const outcome = await tryFastChat({
+      messages: [{ role: "user", content: "سؤال سريع" }],
+      authToken: "test-token",
+      fingerprint: "test-fingerprint",
+      onDelta,
+    });
+
+    expect(outcome).toBe("answered");
+    expect(onDelta.mock.calls.flat().join("")).toBe("وصل الرد");
+  });
+
+  it("delivers reasoning separately from visible answer text", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: "تحليل" } }] })}\n\n` +
+              `data: ${JSON.stringify({ choices: [{ delta: { content: "الإجابة" } }] })}\n\n` +
+              "data: [DONE]\n\n",
+          ),
+        );
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(body, { headers: { "content-type": "text/event-stream" } }),
+        ),
+    );
+    const onDelta = vi.fn();
+    const onReasoning = vi.fn();
+
+    const outcome = await tryFastChat({
+      messages: [{ role: "user", content: "اشرح" }],
+      authToken: "test-token",
+      fingerprint: "test-fingerprint",
+      onDelta,
+      onReasoning,
+    });
+
+    expect(outcome).toBe("answered");
+    expect(onReasoning.mock.calls.flat().join("")).toBe("تحليل");
+    expect(onDelta.mock.calls.flat().join("")).toBe("الإجابة");
   });
 });

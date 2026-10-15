@@ -18,6 +18,7 @@ function setup(sessionId?: string) {
     setInput: vi.fn(), setAttachedFiles: vi.fn(), setIsLoading: vi.fn(), setIsThinking: vi.fn(),
     abortControllerRef: { current: null as AbortController | null }, createOrUpdateConversation: vi.fn().mockResolvedValue("conversation"),
     saveMessage, ownInsertedIdsRef: { current: new Set<string>() }, onRequests: vi.fn(), onSession: vi.fn(),
+    onFallback: vi.fn().mockResolvedValue(false),
   };
   return { args, messages: () => messages, saveMessage };
 }
@@ -84,5 +85,36 @@ describe("original chat agent turn lifecycle", () => {
     await runAgentSkyTurn(test.args);
     expect(test.messages()[1]).toMatchObject({ content: "Hi there", agentSkyStopped: true });
     expect(test.saveMessage).toHaveBeenCalledWith("conversation", "assistant", "Hi there", undefined, expect.objectContaining({ agentSkyStopped: true }));
+  });
+  it("uses the Browser Use fallback when AgentSky is temporarily unavailable", async () => {
+    const test = setup();
+    mocks.createSession.mockRejectedValue(Object.assign(new Error("upstream unavailable"), { status: 503 }));
+    test.args.onFallback = vi.fn(async () => {
+      test.args.setMessages((prev) =>
+        prev.map((message) =>
+          message.clientId === "assistant-turn"
+            ? { ...message, content: "Browser Use fallback running", agentPending: false }
+            : message,
+        ),
+      );
+      return true;
+    });
+
+    await runAgentSkyTurn(test.args);
+
+    expect(test.args.onFallback).toHaveBeenCalledWith("upstream unavailable");
+    expect(test.messages()[1].content).toBe("Browser Use fallback running");
+    expect(test.saveMessage).not.toHaveBeenCalled();
+    expect(test.args.setIsLoading).toHaveBeenLastCalledWith(false);
+  });
+  it("does not use Browser Use as a media-policy bypass", async () => {
+    const test = setup();
+    test.args.text = "Create an image of a cat";
+    mocks.createSession.mockRejectedValue(Object.assign(new Error("upstream unavailable"), { status: 503 }));
+
+    await runAgentSkyTurn(test.args);
+
+    expect(test.args.onFallback).not.toHaveBeenCalled();
+    expect(test.saveMessage).toHaveBeenCalled();
   });
 });

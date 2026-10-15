@@ -1,4 +1,3 @@
-import { detectMediaIntent } from "@/lib/agentsky/mediaIntent";
 import { isFastLaneEligible } from "./fastChat";
 
 type HistoryMessage = {
@@ -137,8 +136,7 @@ export function shouldUseFastChat(options: FastChatDispatchOptions): boolean {
     options.selectedAgentId ||
     options.hasSelectedModel ||
     options.hasAttachments ||
-    options.computerUseEnabled ||
-    detectMediaIntent(prompt)
+    options.computerUseEnabled
   ) {
     return false;
   }

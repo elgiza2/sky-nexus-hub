@@ -1626,6 +1626,21 @@ const ChatPage = () => {
           onSession: (sessionId) => {
             activeAgentSkySessionRef.current = sessionId;
           },
+          onFallback: async (reason) => {
+            console.warn("[agentsky] falling back to Browser Use Cloud:", reason);
+            return runComputerTurn({
+              text,
+              userMsg,
+              localTurnId,
+              attachments: images,
+              setMessages,
+              setInput,
+              setAttachedFiles,
+              createOrUpdateConversation,
+              saveMessage,
+              ownInsertedIdsRef,
+            });
+          },
         });
       } finally {
         isSubmittingRef.current = false;
@@ -1812,68 +1827,6 @@ const ChatPage = () => {
       return;
     }
 
-    // Build/edit requests now go to the same cloud agent as everything else,
-    // so there is no separate coder path to keep in sync.
-
-
-    // ── The single agent (Browser Use Cloud, DeepSeek) handles every turn.
-    // Image/video asks are the only exception: they go to the internal media
-    // tools (fixed image model, tiered video) further below.
-    {
-      let isMediaAsk = chatMode === "images" || chatMode === "video";
-      if (!isMediaAsk && text.trim()) {
-        try {
-          const { detectMediaIntent, detectImageEditIntent } = await import(
-            "@/lib/media/autoMediaIntent"
-          );
-          const hasImage = messages.some((m: any) =>
-            (Array.isArray(m?.mediaResults) ? m.mediaResults : []).some(
-              (r: any) => r?.type === "image" && r?.url,
-            ),
-          );
-          isMediaAsk =
-            !!detectMediaIntent(text) || (hasImage && detectImageEditIntent(text));
-        } catch {
-          /* default to the agent */
-        }
-      }
-      const intent: { use: boolean; task: string } = { use: !isMediaAsk, task: text };
-      if (intent.use) pendingComputerIntentRef.current = intent.task || text;
-      // Every non-media turn — fast or slow — goes to the one agent
-      // (Browser Use on DeepSeek). No other chat service is used.
-      if (intent.use) {
-        if (!intent.task.trim()) intent.task = "Look at the attached files and help me with them.";
-        const { canRunComputerTask, recordComputerTask, computerDailyLimit } =
-          await import("@/lib/computer/usageLimits");
-        if (!canRunComputerTask(userPlan)) {
-          toast.error(
-            `Agent daily limit reached (${computerDailyLimit(userPlan)} tasks/day). Upgrade for more.`,
-          );
-          isSubmittingRef.current = false;
-          return;
-        }
-        recordComputerTask();
-        try {
-          await runComputerTurn({
-            text: intent.task || text,
-            userMsg,
-            localTurnId,
-            attachments: imageAttachments.map((f) => f.data),
-            setMessages,
-            setInput,
-            setAttachedFiles,
-            createOrUpdateConversation,
-
-            saveMessage,
-            ownInsertedIdsRef,
-          });
-        } finally {
-          isSubmittingRef.current = false;
-        }
-        return;
-      }
-    }
-
     // ── Operator mode: keep the normal chat flow; render operator output as the assistant reply ──
     if (chatMode === "operator") {
       try {
@@ -1898,49 +1851,11 @@ const ChatPage = () => {
       return;
     }
 
-    // ── Auto-route plain "اعملي صورة / make me a video" asks typed in normal mode ──
-    let autoMediaMode: "images" | "video" | null = null;
-    let autoMediaModel: typeof mediaModel = null;
-    if (chatMode === "normal" && text.trim()) {
-      try {
-        const { detectMediaIntent, detectImageEditIntent, pickDefaultMediaModel } =
-          await import("@/lib/media/autoMediaIntent");
-        let intent = detectMediaIntent(text);
-        if (!intent) {
-          // A short follow-up like "now make the bicycle red" only means an edit
-          // when this conversation already produced an image; otherwise it stays
-          // a normal text turn.
-          const hasImage = messages.some((m: any) => {
-            const res = Array.isArray(m?.mediaResults) ? m.mediaResults : [];
-            return (
-              res.some((r: any) => r?.type === "image" && r?.url) ||
-              (Array.isArray(m?.images) && m.images.length > 0)
-            );
-          });
-          if (hasImage && detectImageEditIntent(text)) intent = "image";
-        }
-        if (intent) {
-          const picked =
-            mediaModel && mediaModel.type === intent
-              ? mediaModel
-              : await pickDefaultMediaModel(intent);
-          if (picked) {
-            autoMediaMode = intent === "video" ? "video" : "images";
-            autoMediaModel = picked;
-            setMediaModel(picked);
-          }
-        }
-      } catch {
-        /* auto-routing is best-effort — fall back to a normal chat turn */
-      }
-    }
-
-
     // ── Images / Video mode: plan first, then generation ──
-    if (chatMode === "images" || chatMode === "video" || autoMediaMode) {
-      const activeMediaMode = autoMediaMode ?? (chatMode as "images" | "video");
+    if (chatMode === "images" || chatMode === "video") {
+      const activeMediaMode = chatMode;
       const expectedMediaType = activeMediaMode === "video" ? "video" : "image";
-      let activeMediaModel = autoMediaModel ?? mediaModel;
+      let activeMediaModel = mediaModel;
       // No model picked yet (or a leftover model of the wrong kind): pick the
       // sensible default instead of throwing the user's prompt away.
       if (!activeMediaModel || activeMediaModel.type !== expectedMediaType) {

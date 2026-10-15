@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCachedUser } from "@/lib/cachedUser";
 import { streamChat, GUEST_QUOTA_ERROR } from "@/lib/streamChat";
 import { shouldUseWebSearch } from "@/lib/shouldUseWebSearch";
-import { shouldDelegateToDeepResearch } from "@/lib/research/deepResearchTool";
 import type { WebSource } from "@/lib/search/webSearchClient";
 
 import {
@@ -519,16 +518,10 @@ export async function runChatStreamTurn(opts: RunChatStreamTurnOptions): Promise
   }
 
   const lastUserText = (userMsg?.content || "").toString();
-  // Deep Research mode always uses the agent; in normal chat the main agent
-  // delegates to it as a tool whenever the request is a real research task.
-  // Normal chat stays on the fast chat path. Deep Research is entered only
-  // when the user explicitly selects that service; this also keeps its large
-  // agent module out of the first-send bundle.
-  // Asking for a research report in normal chat should give the real research
-  // engine (live sources, citations), not a chat answer written from memory.
-  const isDeepResearch =
-    chatMode === "deep-research" ||
-    (chatMode === "normal" && shouldDelegateToDeepResearch(lastUserText));
+  // Only an explicitly selected Deep Research mode enters this specialized
+  // pipeline. Normal chat reaches Fast Chat first; its model decides whether
+  // to answer or escalate to the full execution lane.
+  const isDeepResearch = chatMode === "deep-research";
 
   // Short conversation context so follow-up research questions resolve.
   const researchContext = messages
@@ -718,6 +711,7 @@ export async function runChatStreamTurn(opts: RunChatStreamTurnOptions): Promise
     onDelta: updateAssistant,
     onReasoning: (delta: string) => {
       if (!delta) return;
+      setIsThinking(true);
       assistantReasoning += delta;
       updateAssistantMessage((message) => ({
         ...message,

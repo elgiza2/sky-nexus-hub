@@ -5,6 +5,7 @@ import { buildTranscript, orbStateFor, type AgentTurn, type Lang } from "@/lib/a
 import type { Message, ToolPart } from "../chatConstants";
 import { loadWorkspace, workspace } from "@/lib/agentsky/store";
 import { detectMediaIntent } from "@/lib/agentsky/mediaIntent";
+import { shouldFallbackToBrowserUse } from "@/lib/agentsky/fallbackPolicy";
 import type { AttachedFile } from "../hooks/useAttachments";
 
 type Args = {
@@ -33,6 +34,7 @@ type Args = {
   ownInsertedIdsRef: React.MutableRefObject<Set<string>>;
   onRequests: (requests: AgentRequest[]) => void;
   onSession: (sessionId: string) => void;
+  onFallback?: (reason: string) => Promise<boolean>;
 };
 
 const toToolParts = (turn?: AgentTurn): ToolPart[] | undefined =>
@@ -69,6 +71,7 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
   let requests: AgentRequest[] = [];
   let identity: Message["agentSkyAgent"];
   let failure: string | undefined;
+  let fallbackUsed = false;
   let stopped = false;
   const baseline = new Set<string>();
   const received = new Set<string>();
@@ -83,6 +86,25 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
       agentSkyCards: turn?.cards, agentSkyStopped: stopped,
       reasoning: turn?.steps.filter((step) => step.kind === "thought").map((step) => step.detail || step.label).join("\n"),
     });
+  };
+  const tryFallback = async (error: unknown) => {
+    const hasVisibleOutput = Boolean(turn?.text.trim());
+    const hasPerformedAction = Boolean(turn?.steps.some((step) => step.kind !== "thought"));
+    if (
+      !shouldFallbackToBrowserUse(error, {
+        isMedia: mediaTurn,
+        hasVisibleOutput,
+        hasPerformedAction,
+      }) ||
+      !args.onFallback
+    ) {
+      return false;
+    }
+    try {
+      return await args.onFallback(error instanceof Error ? error.message : String(error));
+    } catch {
+      return false;
+    }
   };
   const conversationPromise = args.createOrUpdateConversation(args.text || "New chat").catch(() => null);
   try {
@@ -145,18 +167,43 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
       finally { checking = false; }
     }, 2500);
     try {
-      // A dropped connection never ends the task: reconnect until a terminal event arrives.
+      // Recover transient drops, but do not leave the user on an endless
+      // reconnect loop; after bounded retries the Browser Use fallback can run.
       let failures = 0;
       while (!terminalSeen && !controller.signal.aborted) {
-        try {
-          await openStream(activeSid, accept, feedController.signal);
+        const attemptController = new AbortController();
+        const abortAttempt = () => attemptController.abort();
+        feedController.signal.addEventListener("abort", abortAttempt, { once: true });
+        let idleTimer: ReturnType<typeof setTimeout> | null = null;
+        const resetIdleTimer = () => {
+          if (idleTimer) clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => attemptController.abort(), 30_000);
+        };
+        const acceptStreamEvent = (event: RawEvent) => {
           failures = 0;
+          resetIdleTimer();
+          return accept(event);
+        };
+        resetIdleTimer();
+        try {
+          await openStream(activeSid, acceptStreamEvent, attemptController.signal);
+          if (terminalSeen) failures = 0;
+          else failures++;
         } catch {
           if (terminalSeen || controller.signal.aborted) break;
           failures++;
+          if (failures >= 3) {
+            throw new Error("AgentSky stream unavailable after reconnect attempts");
+          }
+        } finally {
+          if (idleTimer) clearTimeout(idleTimer);
+          feedController.signal.removeEventListener("abort", abortAttempt);
         }
         if (terminalSeen || controller.signal.aborted) break;
-        await new Promise((r) => setTimeout(r, Math.min(15000, 1000 * 2 ** Math.min(failures, 4))));
+        if (failures >= 3) {
+          throw new Error("AgentSky stream unavailable after reconnect attempts");
+        }
+        await new Promise((r) => setTimeout(r, Math.min(4000, 1000 * 2 ** Math.min(failures, 2))));
       }
     } finally {
       clearInterval(reconcile);
@@ -165,21 +212,36 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
     }
     if (controller.signal.aborted) { stopped = true; return; }
     apply(false);
+    if (turn?.error) {
+      failure = turn.error;
+      fallbackUsed = await tryFallback(new Error(`session.error: ${turn.error}`));
+      if (fallbackUsed) return;
+    }
     requests = (await agentApi.requests(activeSid).catch(() => ({ requests: [], sessions: [] }))).requests;
     args.onRequests(requests);
     update({ agentSkyRequests: requests });
+    if (!turn?.text.trim() && !turn?.cards.length && requests.length === 0 && !turn?.error) {
+      failure = "AgentSky completed without a response";
+      fallbackUsed = await tryFallback(new Error(`session.error: ${failure}`));
+      if (fallbackUsed) return;
+    }
   } catch (error) {
     stopped = controller.signal.aborted;
-    if (!stopped) failure = error instanceof Error ? error.message : (args.lang === "ar" ? "تعذّر تشغيل الوكيل." : "Could not run the agent.");
+    if (!stopped) {
+      failure = error instanceof Error ? error.message : (args.lang === "ar" ? "تعذّر تشغيل الوكيل." : "Could not run the agent.");
+      fallbackUsed = await tryFallback(error);
+    }
   } finally {
     stopped = stopped || controller.signal.aborted;
-    apply(false);
-    update({ agentPending: false, agentSkyState: failure || turn?.error ? "error" : stopped ? "idle" : "done", agentSkyStopped: stopped, ...(failure ? { content: turn?.text ? `${turn.text}\n\n${failure}` : failure } : {}) });
+    if (!fallbackUsed) {
+      apply(false);
+      update({ agentPending: false, agentSkyState: failure || turn?.error ? "error" : stopped ? "idle" : "done", agentSkyStopped: stopped, ...(failure ? { content: turn?.text ? `${turn.text}\n\n${failure}` : failure } : {}) });
+    }
     if (args.abortControllerRef.current === controller) args.abortControllerRef.current = null;
     args.setIsLoading(false);
     args.setIsThinking(false);
     conversationId = await conversationPromise;
-    if (conversationId) {
+    if (conversationId && !fallbackUsed) {
       try {
         const userId = await args.saveMessage(conversationId, "user", args.userMsg.content, args.images);
         if (userId) args.ownInsertedIdsRef.current.add(userId);
