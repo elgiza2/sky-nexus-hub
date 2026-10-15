@@ -91,8 +91,63 @@ function agentView(a: any) {
   };
 }
 
+/** Built-in catalogue shown even when the AgentSky provider key is missing,
+ *  so the Agents page always lists something instead of a bare error card.
+ *  Entries are flagged `isTemplate` and resolve to a real agent once the
+ *  provider is configured. */
+const BUILTIN_SPECIALISTS = [
+  { name: "Researcher", description: "Live facts, news and sources", color: "ocean" },
+  { name: "Engineer", description: "Code, repos and debugging", color: "mint" },
+  { name: "Analyst", description: "Numbers, finance and strategy", color: "rose" },
+  { name: "Writer", description: "Copy, docs and scripts", color: "ember" },
+];
+
+function builtinAgents() {
+  return [
+    {
+      id: "megsy-default",
+      name: "Megsy",
+      description: "Primary assistant",
+      color: "aurora",
+      prompt: "",
+      isDefault: true,
+      createdAt: "",
+    },
+    ...BUILTIN_SPECIALISTS.map((s) => ({
+      id: `template:builtin-${s.name.toLowerCase()}`,
+      name: s.name,
+      description: s.description,
+      color: s.color,
+      prompt: "",
+      isDefault: false,
+      isTemplate: true,
+      createdAt: "",
+    })),
+    {
+      id: "higgsfield",
+      name: "Higgsfield",
+      description: "Images & video",
+      color: "sun",
+      prompt: "",
+      isDefault: false,
+      isTemplate: true,
+      mediaOnly: true,
+      createdAt: "",
+    },
+  ];
+}
+
 async function fullAgents(userId: string, origin: string) {
-  await ensureDefaultAgent(userId, origin);
+  try {
+    await ensureDefaultAgent(userId, origin);
+  } catch (e: any) {
+    // No AgentSky provider key (or provider down): fall back to the built-in
+    // catalogue so the page still lists agents instead of erroring out.
+    if (e instanceof AgentSkyError && (e.code === "not_configured" || e.status >= 500)) {
+      return builtinAgents();
+    }
+    throw e;
+  }
   const list = await listUserAgents(userId);
   const details = await Promise.all(
     list.map((a) =>
@@ -101,7 +156,7 @@ async function fullAgents(userId: string, origin: string) {
         .catch(() => a),
     ),
   );
-  const templates = await listAgentTemplates();
+  const templates = await listAgentTemplates().catch(() => []);
   const catalogue = templates.map((a, index) => ({
     id: `template:${a.id}`,
     name: String(a.name).replace(/^Chat · /, ""),

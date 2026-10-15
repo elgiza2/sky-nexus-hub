@@ -8037,3 +8037,34 @@ a.bg-primary:hover,
   }
   .upgrade-plan-btn * { color: inherit !important; }
 }
+
+/* ── ServiceIcon: Megsy star + distinctive animated service glyph ──────────
+   Base is always the Megsy star. The service glyph sits centered on top.
+   Animations are calm micro-motions, disabled under reduced-motion. */
+.megsy-service-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--megsy-gold, #e8b64c); }
+.megsy-service-thinking > svg { transform-origin: center; animation: megsy-thinking-breathe 1.8s ease-in-out infinite; filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 28%, transparent)); }
+.megsy-service-star { position: absolute; inset: 0; display: grid; place-items: center; opacity: .32; }
+.megsy-service-star > svg { transform-origin: center; }
+.megsy-service-glyph { position: relative; display: grid; place-items: center; color: var(--megsy-blue, #4d7fff); }
+/* calm breathe for every glyph by default */
+.megsy-service-active .megsy-service-glyph { animation: megsy-service-breathe 1.8s ease-in-out infinite; }
+@keyframes megsy-service-breathe { 0%,100% { transform: scale(.94); opacity: .85; } 50% { transform: scale(1.06); opacity: 1; } }
+/* search: ping ring */
+.megsy-service-active.megsy-service-search::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 1.5px solid var(--megsy-blue, #4d7fff); opacity: 0; animation: megsy-service-ping 1.6s ease-out infinite; }
+@keyframes megsy-service-ping { 0% { transform: scale(.6); opacity: .7; } 80%,100% { transform: scale(1.25); opacity: 0; } }
+/* browse: orbiting dot */
+.megsy-service-active.megsy-service-browse::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: conic-gradient(from 0deg, var(--megsy-blue, #4d7fff) 0 25%, transparent 25% 100%); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px)); animation: megsy-service-spin 1.4s linear infinite; }
+@keyframes megsy-service-spin { to { transform: rotate(360deg); } }
+/* agent: rotating dashed ring */
+.megsy-service-active.megsy-service-agent::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px dashed var(--megsy-blue, #4d7fff); opacity: .8; animation: megsy-service-spin 3s linear infinite; }
+/* code: blinking caret */
+.megsy-service-caret { display: none; }
+.megsy-service-active.megsy-service-code .megsy-service-caret { display: block; position: absolute; inset-inline-end: -2px; bottom: 0; width: 2px; height: 55%; border-radius: 1px; background: var(--megsy-blue, #4d7fff); animation: megsy-service-blink 1s steps(2) infinite; }
+@keyframes megsy-service-blink { 50% { opacity: 0; } }
+/* image/video/slides: shimmer sweep */
+.megsy-service-active.megsy-service-image::before, .megsy-service-active.megsy-service-video::before, .megsy-service-active.megsy-service-slides::before { content: ""; position: absolute; inset: -2px; border-radius: 6px; background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,.7) 50%, transparent 58%); transform: translateX(-115%); animation: megsy-star-sweep 2.4s ease-in-out infinite; pointer-events: none; }
+/* computer: soft pulse dot */
+.megsy-service-active.megsy-service-computer::after { content: ""; position: absolute; inset: -2px; border-radius: 6px; border: 1.5px solid var(--megsy-blue, #4d7fff); opacity: 0; animation: megsy-service-ping 2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .megsy-service-thinking > svg, .megsy-service-active .megsy-service-glyph, .megsy-service-active::after, .megsy-service-active::before, .megsy-service-active .megsy-service-caret { animation: none !important; }
+}

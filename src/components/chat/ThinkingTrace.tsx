@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
-import MegsyStar from "@/components/branding/MegsyStar";
+import { ChevronDown } from "lucide-react";
 import { useUserLang } from "@/lib/authI18n";
+import ServiceIcon, { detectServiceKind } from "./ServiceIcon";
 
 export interface ThinkingTraceProps {
   /** Live status line — always the real current operation, never a placeholder. */
@@ -14,10 +14,10 @@ export interface ThinkingTraceProps {
   active?: boolean;
   /**
    * True only while a tool call is really executing. Kept for API
-   * compatibility — the spinner animates while `active` is true.
+   * compatibility — the service icon animates while `active` is true.
    */
   running?: boolean;
-  /** Kept for API compatibility; no longer drives icons. */
+  /** Real tool family currently executing — drives the service icon. */
   tool?: string | null;
   /**
    * "tools" renders the used-tools timeline after the run ends.
@@ -34,10 +34,12 @@ const RTL_LANGS = new Set(["ar", "ar-eg", "fa", "he"]);
  * The single "AI thinking" surface used across chat, deep research, slides,
  * media and tool turns.
  *
- * Redesign goals (from user feedback):
- * - One quiet row: spinner + one live headline + step count, nothing else.
- * - No icon-per-step parade, no shimmer, no raw reasoning wall while running.
- * - The finished trace collapses to a single expandable summary line.
+ * Design (user request):
+ * - The base mark is always the Megsy star (same star as the chat).
+ * - While a service runs, its own distinctive animated icon shows:
+ *   search pings, browse orbits, code blinks, agent rotates — each simple.
+ * - One quiet row: icon + one live headline + step count. Details (with a
+ *   static icon per step) live behind the expander only.
  * - Raw reasoning text is never shown verbatim — only clean activity steps.
  */
 const ThinkingTrace = ({
@@ -45,6 +47,7 @@ const ThinkingTrace = ({
   steps,
   text,
   active,
+  tool,
   variant = "default",
   defaultOpen,
   className = "",
@@ -132,17 +135,21 @@ const ThinkingTrace = ({
   if (!hasBody && !active) return null;
 
   // Live headline: newest real signal wins, capped at one short line.
+  const liveRaw =
+    String(status || "").trim() ||
+    historyRef.current[historyRef.current.length - 1] ||
+    reasoningLines[reasoningLines.length - 1] ||
+    "";
   const headline = useMemo(() => {
-    const live =
-      String(status || "").trim() ||
-      historyRef.current[historyRef.current.length - 1] ||
-      reasoningLines[reasoningLines.length - 1] ||
-      "";
-    const cleaned = clean(live);
+    const cleaned = clean(liveRaw);
     if (cleaned) return cleaned.length > 80 ? `${cleaned.slice(0, 80)}…` : cleaned;
     return isAr ? "جارٍ التفكير…" : "Thinking…";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, status, reasoningLines, historyRef.current.length, isAr]);
+
+  // The header icon follows the live service: tool prop wins, else the
+  // headline text decides (search / code / agent / media / …).
+  const headerKind = tool ? detectServiceKind(tool) : detectServiceKind(liveRaw);
 
   const countLabel =
     stepLines.length > 0
@@ -168,11 +175,7 @@ const ThinkingTrace = ({
         aria-expanded={open}
         className="flex w-full items-center gap-2 text-start"
       >
-        {active ? (
-          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
-        ) : (
-          <MegsyStar className="h-3.5 w-3.5 shrink-0 opacity-70" />
-        )}
+        <ServiceIcon kind={headerKind} active={!!active} size={16} />
         <span className="min-w-0 flex-1 truncate text-[12.5px] text-muted-foreground" aria-live="polite">
           {summary}
         </span>
@@ -189,10 +192,7 @@ const ThinkingTrace = ({
               key={`t-${i}-${line.slice(0, 24)}`}
               className="flex min-w-0 items-start gap-2 text-[12.5px] leading-relaxed text-muted-foreground"
             >
-              <span
-                aria-hidden
-                className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50"
-              />
+              <ServiceIcon kind={detectServiceKind(line)} size={14} className="mt-[2px]" />
               <span className="min-w-0 flex-1 break-words">{line}</span>
             </li>
           ))}

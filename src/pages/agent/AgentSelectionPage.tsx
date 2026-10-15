@@ -1,14 +1,59 @@
 /** Agent roster settings: choose the primary chat assistant and which specialists may auto-join. */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, Check, ChevronRight, Crown, Loader2, Plus, RotateCw, Users, Wrench } from "lucide-react";
+import {
+  Bot,
+  Check,
+  ChevronRight,
+  Crown,
+  Loader2,
+  Plus,
+  RotateCw,
+  Users,
+  Wrench,
+  Search,
+  Code2,
+  BarChart3,
+  PenLine,
+  Clapperboard,
+} from "lucide-react";
 import { useWorkspaceStore, loadWorkspace } from "@/lib/agentsky/store";
 import { AGENT_ROSTER_STORAGE_KEY } from "@/lib/agentsky/rosterSettings";
 import { AgentIcon } from "@/components/agent/AgentIcon";
+import { MegsyMark } from "@/components/agent/AgentIcon";
+import ServiceIcon from "@/components/chat/ServiceIcon";
 import ProfileGlassShell, { GlassCard, GlassSection } from "@/components/profile/ProfileGlassShell";
 import SEOHead from "@/components/common/SEOHead";
 import { canUseAgent } from "@/lib/octoberOffer";
 import { promptUpgrade } from "@/lib/upgradeMoment";
+
+/**
+ * Distinctive icon per specialist (user request): every agent gets its own
+ * mark. Megsy keeps its own robot mark; each specialist gets the icon of
+ * its craft — search, code, analysis, writing, media.
+ */
+function SpecialistMark({ name, mediaOnly }: { name: string; mediaOnly?: boolean }) {
+  const t = String(name || "").toLowerCase();
+  if (mediaOnly || /higgs|image|video|media/.test(t))
+    return <ServiceIcon kind="video" size={22} />;
+  if (/research|search|news|fact/.test(t)) return <ServiceIcon kind="search" size={22} />;
+  if (/engineer|code|dev|debug|repo|program/.test(t)) return <ServiceIcon kind="code" size={22} />;
+  if (/analy|number|financ|strateg|data/.test(t))
+    return (
+      <span className="grid h-[22px] w-[22px] place-items-center text-[var(--megsy-blue)]">
+        <BarChart3 size={20} strokeWidth={2} />
+      </span>
+    );
+  if (/writ|copy|doc|script|content/.test(t))
+    return (
+      <span className="grid h-[22px] w-[22px] place-items-center text-[var(--megsy-blue)]">
+        <PenLine size={20} strokeWidth={2} />
+      </span>
+    );
+  if (/slide|present|deck/.test(t)) return <ServiceIcon kind="slides" size={22} />;
+  if (/browse|web|operator|task/.test(t)) return <ServiceIcon kind="browse" size={22} />;
+  return <ServiceIcon kind="agent" size={22} />;
+}
 
 /** Raw backend errors are never shown: map them to one friendly line + action. */
 function friendlyWorkspaceError(raw: string): { title: string; hint: string } {
@@ -126,7 +171,8 @@ export default function AgentSelectionPage() {
         <GlassSection title="Primary assistant">
           <GlassCard className="gx-card-pad">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary"><Bot size={23} /></span>
+              {/* Megsy keeps its own robot mark — never a generic icon. */}
+              <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-primary/10"><MegsyMark color="aurora" size={30} /></span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2"><strong>Megsy Quick Chat</strong><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Primary</span></div>
                 <p className="mt-1 text-sm text-muted-foreground">Leads every normal conversation. Specialist agents stay off unless enabled below.</p>
@@ -161,7 +207,11 @@ export default function AgentSelectionPage() {
             return (
               <GlassCard key={agent.id} className="gx-card-pad mb-3">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-muted/60"><AgentIcon agent={agent} /></span>
+                  {/* Each specialist gets its own craft icon; brand logos still
+                      win when the agent names a known model/provider. */}
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-muted/60">
+                    <SpecialistMark name={`${agent.name} ${agent.description || ""}`} mediaOnly={agent.mediaOnly} />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <strong className="block truncate">{agent.name}</strong>
                     <span className="mt-0.5 block line-clamp-2 text-sm text-muted-foreground">{agent.description || "Specialist agent"}</span>
