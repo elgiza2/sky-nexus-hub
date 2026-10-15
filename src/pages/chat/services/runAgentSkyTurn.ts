@@ -46,19 +46,95 @@ const toToolParts = (turn?: AgentTurn): ToolPart[] | undefined =>
       state: step.status === "active" ? "running" : step.status,
     }));
 
+/** Transient failures worth one silent retry before bothering the fallback. */
+function isRetriableAgentError(error: unknown): boolean {
+  const status = Number((error as { status?: unknown } | null)?.status);
+  if (Number.isFinite(status) && status > 0) {
+    return status === 408 || status === 425 || status === 429 || status >= 500;
+  }
+  if (error instanceof TypeError) return true;
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /network|fetch|connection|stream|timeout|timed out|unavailable/i.test(message);
+}
+
+/** A dead/gone session must not poison the turn: drop it and start fresh. */
+function isDeadSessionError(error: unknown): boolean {
+  const status = Number((error as { status?: unknown } | null)?.status);
+  if (status === 404 || status === 410) return true;
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /not_found|not found|session.*(expired|archived|deleted|missing)|gone/i.test(message);
+}
+
+/** Never show a raw provider/status string: explain what happened and the fix. */
+function friendlyAgentError(error: unknown, lang: Lang): string {
+  const ar = lang === "ar";
+  const status = Number((error as { status?: unknown } | null)?.status);
+  const raw = error instanceof Error ? error.message : String(error || "");
+  if (/not_configured|AgentSky is not configured/i.test(raw)) {
+    return ar
+      ? "الوكيل مش متظبط على السيرفر (مفيش مفتاح AgentSky). ضيف مفتاحًا من بوت التليجرام وجرب تاني."
+      : "The agent is not configured on the server (no AgentSky key). Add a key from the Telegram bot and try again.";
+  }
+  if (status === 401 || status === 403 || /unauthorized|forbidden/i.test(raw)) {
+    return ar
+      ? "مفتاح الوكيل مرفوض (401/403). حدّث مفتاح AgentSky من بوت التليجرام وجرب تاني."
+      : "The agent key was rejected (401/403). Refresh the AgentSky key from the Telegram bot and try again.";
+  }
+  if (status === 402 || /insufficient_credits|upgrade_required|out of credits/i.test(raw)) {
+    return ar
+      ? "رصيد الوكيل خلص. اشحن الرصيد أو حدّث الخطة وجرب تاني."
+      : "The agent is out of credits. Top up or upgrade the plan and try again.";
+  }
+  if (status === 429 || /rate.?limit|too many requests/i.test(raw)) {
+    return ar
+      ? "الوكيل مضغوط حاليًا (rate limit). استنى ثواني وجرب تبعت تاني."
+      : "The agent is rate-limited right now. Wait a few seconds and resend.";
+  }
+  if (status === 404 || status === 410 || isDeadSessionError(error)) {
+    return ar
+      ? "الجلسة القديمة انتهت، وبدأت جلسة جديدة تلقائيًا. ابعت رسالتك تاني لو متحفظتش."
+      : "The old session expired and a fresh one was started automatically. Resend your message if it was not kept.";
+  }
+  if (isRetriableAgentError(error)) {
+    return ar
+      ? "الاتصال بالوكيل اتقطع مؤقتًا. جرب تبعت تاني، ولو استمرت المشكلة هيتحول تلقائيًا للمسار البديل."
+      : "The agent connection dropped temporarily. Resend, and if it persists it will move to the fallback path automatically.";
+  }
+  return raw || (ar ? "تعذّر تشغيل الوكيل." : "Could not run the agent.");
+}
+
 export async function runAgentSkyTurn(args: Args): Promise<void> {
   const mediaTurn = Boolean(detectMediaIntent(args.text));
   // Higgsfield only handles images and video; other messages go to the regular agent.
-  const selectedAgentId = mediaTurn ? "higgsfield" : args.agentId === "higgsfield" ? undefined : args.agentId;
+  const selectedAgentId = mediaTurn
+    ? "higgsfield"
+    : args.agentId === "higgsfield"
+      ? undefined
+      : args.agentId;
   const assistantClientId = `assistant-${args.localTurnId}`;
   const controller = new AbortController();
   args.abortControllerRef.current = controller;
-  const update = (patch: Partial<Message>) => args.setMessages((prev) => prev.map((message) => message.clientId === assistantClientId ? { ...message, ...patch } : message));
-  args.setMessages((prev) => [...prev, args.userMsg, {
-    role: "assistant", content: "", clientId: assistantClientId, agentPending: true,
-    agentSkyState: args.sessionId || args.hasPriorTurns ? "thinking" : "awakening", modelLabel: mediaTurn ? "higgsfield · Hypit" : "OpenClaw · gpt-5.6-luna",
-    ...(mediaTurn ? { agentSkyAgent: { id: "higgsfield", name: "higgsfield", color: "sun" as const } } : {}),
-  }]);
+  const update = (patch: Partial<Message>) =>
+    args.setMessages((prev) =>
+      prev.map((message) =>
+        message.clientId === assistantClientId ? { ...message, ...patch } : message,
+      ),
+    );
+  args.setMessages((prev) => [
+    ...prev,
+    args.userMsg,
+    {
+      role: "assistant",
+      content: "",
+      clientId: assistantClientId,
+      agentPending: true,
+      agentSkyState: args.sessionId || args.hasPriorTurns ? "thinking" : "awakening",
+      modelLabel: mediaTurn ? "higgsfield · Hypit" : "OpenClaw · gpt-5.6-luna",
+      ...(mediaTurn
+        ? { agentSkyAgent: { id: "higgsfield", name: "higgsfield", color: "sun" as const } }
+        : {}),
+    },
+  ]);
   args.setInput("");
   args.setAttachedFiles([]);
   args.setIsLoading(true);
@@ -80,11 +156,17 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
     const turns = buildTranscript(events, args.lang, running);
     turn = [...turns].reverse().find((item): item is AgentTurn => item.type === "agent");
     update({
-      content: turn?.text || "", agentPending: running && !turn?.text,
+      content: turn?.text || "",
+      agentPending: running && !turn?.text,
       agentSkyState: stopped ? "idle" : orbStateFor(turn, running),
-      agentSkySteps: turn?.steps ?? [], toolParts: toToolParts(turn),
-      agentSkyCards: turn?.cards, agentSkyStopped: stopped,
-      reasoning: turn?.steps.filter((step) => step.kind === "thought").map((step) => step.detail || step.label).join("\n"),
+      agentSkySteps: turn?.steps ?? [],
+      toolParts: toToolParts(turn),
+      agentSkyCards: turn?.cards,
+      agentSkyStopped: stopped,
+      reasoning: turn?.steps
+        .filter((step) => step.kind === "thought")
+        .map((step) => step.detail || step.label)
+        .join("\n"),
     });
   };
   const tryFallback = async (error: unknown) => {
@@ -106,36 +188,143 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
       return false;
     }
   };
-  const conversationPromise = args.createOrUpdateConversation(args.text || "New chat").catch(() => null);
+  const conversationPromise = args
+    .createOrUpdateConversation(args.text || "New chat")
+    .catch(() => null);
   try {
     await loadWorkspace();
     if (mediaTurn) identity = { id: "higgsfield", name: "higgsfield", color: "sun" };
+    // A stale session id must never kill the turn: verify it once, and on a
+    // dead/transient lookup failure drop it and continue as a fresh session.
     if (sid) {
-      const existing = await agentApi.session(sid);
-      identity = workspace.agent(existing.session.agentId);
-      const history = await agentApi.events(sid);
-      history.events.forEach((event) => baseline.add(event.id));
-    } else {
-      if (!mediaTurn) identity = workspace.agent(selectedAgentId);
+      try {
+        const existing = await agentApi.session(sid);
+        identity = workspace.agent(existing.session.agentId);
+        const history = await agentApi.events(sid);
+        history.events.forEach((event) => baseline.add(event.id));
+      } catch (error) {
+        if (controller.signal.aborted) {
+          stopped = true;
+          return;
+        }
+        if (isDeadSessionError(error)) {
+          sid = undefined;
+          baseline.clear();
+        } else if (isRetriableAgentError(error)) {
+          await new Promise((r) => setTimeout(r, 800));
+          try {
+            const existing = await agentApi.session(sid);
+            identity = workspace.agent(existing.session.agentId);
+            const history = await agentApi.events(sid);
+            history.events.forEach((event) => baseline.add(event.id));
+          } catch (retryError) {
+            if (isDeadSessionError(retryError)) {
+              sid = undefined;
+              baseline.clear();
+            } else {
+              throw retryError;
+            }
+          }
+        } else {
+          throw error;
+        }
+      }
     }
+    if (!sid && !mediaTurn) identity = workspace.agent(selectedAgentId);
     if (identity) identity = { id: identity.id, name: identity.name, color: identity.color };
     update({ agentSkyAgent: identity });
-    if (controller.signal.aborted) { stopped = true; return; }
+    if (controller.signal.aborted) {
+      stopped = true;
+      return;
+    }
+    // Session creation/delivery gets one silent retry on transient faults so a
+    // single blip does not push the user to the slower fallback path.
     if (!sid) {
-      const created = await agentApi.createSession({ agentId: selectedAgentId, text: args.text, images: args.images });
+      let created: Awaited<ReturnType<typeof agentApi.createSession>> | null = null;
+      try {
+        created = await agentApi.createSession({
+          agentId: selectedAgentId,
+          text: args.text,
+          images: args.images,
+        });
+      } catch (error) {
+        if (!controller.signal.aborted && isRetriableAgentError(error)) {
+          await new Promise((r) => setTimeout(r, 800));
+          created = await agentApi.createSession({
+            agentId: selectedAgentId,
+            text: args.text,
+            images: args.images,
+          });
+        } else {
+          throw error;
+        }
+      }
       sid = created.session.id;
       workspace.upsertSession(created.session);
       if (created.agent) workspace.addAgent(created.agent);
       const selected = created.agent ?? workspace.agent(created.session.agentId);
       if (selected) identity = { id: selected.id, name: selected.name, color: selected.color };
     } else {
-      await agentApi.send(sid, args.text, args.images);
+      try {
+        await agentApi.send(sid, args.text, args.images);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          stopped = true;
+          return;
+        }
+        if (isDeadSessionError(error)) {
+          // The session died between lookup and send: start fresh in this turn.
+          sid = undefined;
+          baseline.clear();
+          const created = await agentApi.createSession({
+            agentId: selectedAgentId,
+            text: args.text,
+            images: args.images,
+          });
+          sid = created.session.id;
+          workspace.upsertSession(created.session);
+          if (created.agent) workspace.addAgent(created.agent);
+          const selected = created.agent ?? workspace.agent(created.session.agentId);
+          if (selected) identity = { id: selected.id, name: selected.name, color: selected.color };
+        } else if (isRetriableAgentError(error)) {
+          await new Promise((r) => setTimeout(r, 800));
+          try {
+            await agentApi.send(sid, args.text, args.images);
+          } catch (retryError) {
+            if (isDeadSessionError(retryError)) {
+              sid = undefined;
+              baseline.clear();
+              const created = await agentApi.createSession({
+                agentId: selectedAgentId,
+                text: args.text,
+                images: args.images,
+              });
+              sid = created.session.id;
+              workspace.upsertSession(created.session);
+              if (created.agent) workspace.addAgent(created.agent);
+              const selected = created.agent ?? workspace.agent(created.session.agentId);
+              if (selected)
+                identity = { id: selected.id, name: selected.name, color: selected.color };
+            } else {
+              throw retryError;
+            }
+          }
+        } else {
+          throw error;
+        }
+      }
     }
     const activeSid = sid;
     args.onSession(activeSid);
     update({ agentSkySessionId: activeSid, agentSkyAgent: identity });
-    const interrupt = () => { void agentApi.interrupt(activeSid).catch(() => undefined); };
-    if (controller.signal.aborted) { stopped = true; interrupt(); return; }
+    const interrupt = () => {
+      void agentApi.interrupt(activeSid).catch(() => undefined);
+    };
+    if (controller.signal.aborted) {
+      stopped = true;
+      interrupt();
+      return;
+    }
     controller.signal.addEventListener("abort", interrupt, { once: true });
     const feedController = new AbortController();
     const abortFeed = () => feedController.abort();
@@ -146,7 +335,8 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
       if (baseline.has(event.id) || received.has(event.id)) return false;
       received.add(event.id);
       if (event.type === "session.status_idle" && !started) return false;
-      if (event.type === "session.status_running" || event.type.startsWith("agent.")) started = true;
+      if (event.type === "session.status_running" || event.type.startsWith("agent."))
+        started = true;
       events.push(event);
       const terminal = event.type === "session.status_idle" || event.type === "session.error";
       terminalSeen ||= terminal;
@@ -161,10 +351,16 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
         const history = await agentApi.events(activeSid);
         if (controller.signal.aborted || terminalSeen) return;
         for (const event of history.events) {
-          if (accept(event)) { feedController.abort(); break; }
+          if (accept(event)) {
+            feedController.abort();
+            break;
+          }
         }
-      } catch { /* Keep the live feed; the next check can recover. */ }
-      finally { checking = false; }
+      } catch {
+        /* Keep the live feed; the next check can recover. */
+      } finally {
+        checking = false;
+      }
     }, 2500);
     try {
       // Recover transient drops, but do not leave the user on an endless
@@ -210,14 +406,18 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
       controller.signal.removeEventListener("abort", abortFeed);
       controller.signal.removeEventListener("abort", interrupt);
     }
-    if (controller.signal.aborted) { stopped = true; return; }
+    if (controller.signal.aborted) {
+      stopped = true;
+      return;
+    }
     apply(false);
     if (turn?.error) {
       failure = turn.error;
       fallbackUsed = await tryFallback(new Error(`session.error: ${turn.error}`));
       if (fallbackUsed) return;
     }
-    requests = (await agentApi.requests(activeSid).catch(() => ({ requests: [], sessions: [] }))).requests;
+    requests = (await agentApi.requests(activeSid).catch(() => ({ requests: [], sessions: [] })))
+      .requests;
     args.onRequests(requests);
     update({ agentSkyRequests: requests });
     if (!turn?.text.trim() && !turn?.cards.length && requests.length === 0 && !turn?.error) {
@@ -228,14 +428,19 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
   } catch (error) {
     stopped = controller.signal.aborted;
     if (!stopped) {
-      failure = error instanceof Error ? error.message : (args.lang === "ar" ? "تعذّر تشغيل الوكيل." : "Could not run the agent.");
+      failure = friendlyAgentError(error, args.lang);
       fallbackUsed = await tryFallback(error);
     }
   } finally {
     stopped = stopped || controller.signal.aborted;
     if (!fallbackUsed) {
       apply(false);
-      update({ agentPending: false, agentSkyState: failure || turn?.error ? "error" : stopped ? "idle" : "done", agentSkyStopped: stopped, ...(failure ? { content: turn?.text ? `${turn.text}\n\n${failure}` : failure } : {}) });
+      update({
+        agentPending: false,
+        agentSkyState: failure || turn?.error ? "error" : stopped ? "idle" : "done",
+        agentSkyStopped: stopped,
+        ...(failure ? { content: turn?.text ? `${turn.text}\n\n${failure}` : failure } : {}),
+      });
     }
     if (args.abortControllerRef.current === controller) args.abortControllerRef.current = null;
     args.setIsLoading(false);
@@ -243,18 +448,41 @@ export async function runAgentSkyTurn(args: Args): Promise<void> {
     conversationId = await conversationPromise;
     if (conversationId && !fallbackUsed) {
       try {
-        const userId = await args.saveMessage(conversationId, "user", args.userMsg.content, args.images);
+        const userId = await args.saveMessage(
+          conversationId,
+          "user",
+          args.userMsg.content,
+          args.images,
+        );
         if (userId) args.ownInsertedIdsRef.current.add(userId);
         const metadata = {
-          kind: "agentSky", agentSkySessionId: sid, agentSkyAgent: identity,
-          agentSkySteps: turn?.steps ?? [], agentSkyStopped: stopped,
+          kind: "agentSky",
+          agentSkySessionId: sid,
+          agentSkyAgent: identity,
+          agentSkySteps: turn?.steps ?? [],
+          agentSkyStopped: stopped,
           agentSkyState: failure || turn?.error ? "error" : "done",
-          agentSkyCards: turn?.cards ?? [], agentSkyRequests: requests,
-          reasoning: turn?.steps.filter((step) => step.kind === "thought").map((step) => step.detail || step.label).join("\n"),
-          toolParts: toToolParts(turn), modelLabel: mediaTurn ? "higgsfield · Hypit" : "OpenClaw · gpt-5.6-luna",
+          agentSkyCards: turn?.cards ?? [],
+          agentSkyRequests: requests,
+          reasoning: turn?.steps
+            .filter((step) => step.kind === "thought")
+            .map((step) => step.detail || step.label)
+            .join("\n"),
+          toolParts: toToolParts(turn),
+          modelLabel: mediaTurn ? "higgsfield · Hypit" : "OpenClaw · gpt-5.6-luna",
         };
-        const text = failure || turn?.error || turn?.text || (stopped ? (args.lang === "ar" ? "اتوقف." : "Stopped.") : "");
-        const assistantId = await args.saveMessage(conversationId, "assistant", text, undefined, metadata);
+        const text =
+          failure ||
+          turn?.error ||
+          turn?.text ||
+          (stopped ? (args.lang === "ar" ? "اتوقف." : "Stopped.") : "");
+        const assistantId = await args.saveMessage(
+          conversationId,
+          "assistant",
+          text,
+          undefined,
+          metadata,
+        );
         if (assistantId) args.ownInsertedIdsRef.current.add(assistantId);
         update({ id: assistantId });
         window.dispatchEvent(new CustomEvent("megsy:conversations-changed"));
