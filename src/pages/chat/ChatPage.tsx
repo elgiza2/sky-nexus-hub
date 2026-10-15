@@ -1615,7 +1615,6 @@ const ChatPage = () => {
       const isSkyAgentSurface =
         chatMode === "deep-research" ||
         chatMode === "code" ||
-        chatMode === "computer" ||
         selectedAgent?.id === "docs" ||
         selectedAgent?.id === "dev" ||
         selectedAgent?.id === "computer" ||
