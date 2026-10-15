@@ -325,12 +325,38 @@ async function ensureDefaultAgent(uid: string) {
   const found = agents.find((a: any) => String(a.name).endsWith("_default"));
   const spec = await agentSpecFor(uid, "Megsy", "default");
   if (!found) {
-    const { agent } = await api<{ agent: any }>("/agents", {
-      method: "POST",
-      headers: { "Idempotency-Key": `default-agent-${uid}` },
-      body: JSON.stringify(spec),
-    });
-    return agent;
+    try {
+      const { agent } = await api<{ agent: any }>("/agents", {
+        method: "POST",
+        headers: { "Idempotency-Key": `default-agent-edge-v1-${uid}` },
+        body: JSON.stringify(spec),
+      });
+      return agent;
+    } catch (e) {
+      // An older app version may have claimed the legacy idempotency key with a
+      // different MCP URL format. Reuse the existing default agent and migrate it.
+      if (
+        e instanceof ProviderError &&
+        (e.status === 409 || /idempotency/i.test(`${e.code} ${e.message}`))
+      ) {
+        const again = (await listUserAgents(uid)).find((a: any) =>
+          String(a.name).endsWith("_default"),
+        );
+        if (again) {
+          const { agent } = await api<{ agent: any }>(`/agents/${encodeURIComponent(again.id)}`);
+          await api(`/agents/${encodeURIComponent(again.id)}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              mcpServers: spec.mcpServers,
+              prompt: `${basePrompt}\n\n<!--megsy-edge-mcp-v1-->`,
+              capabilities: CAPABILITIES,
+            }),
+          });
+          return { ...agent, mcpServers: spec.mcpServers };
+        }
+      }
+      throw e;
+    }
   }
   const { agent } = await api<{ agent: any }>(`/agents/${encodeURIComponent(found.id)}`);
   const servers = JSON.stringify(agent.mcpServers || []);
