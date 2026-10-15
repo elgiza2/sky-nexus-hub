@@ -256,24 +256,27 @@ export async function streamChat({
             }
           }
         },
-        onDone: () => {
-          if (settled) return;
-          settled = true;
-          try {
-            unsub?.();
-          } catch {}
-          void onDone();
-        },
-        onError: (m) => {
-          if (settled) return;
-          settled = true;
-          try {
-            unsub?.();
-          } catch {}
-          onError?.(m);
-          void onDone();
-        },
-      });
+      onDone: (m) => {
+        if (settled) return;
+        settled = true;
+        try {
+          unsub?.();
+        } catch {}
+        // Do not close the turn here: the error handler owns it and may be
+        // running an asynchronous cloud fallback. Calling onDone as well lets
+        // the normal completion path overwrite that fallback with an empty
+        // placeholder or save it too early.
+        onError?.(m as unknown as string);
+      },
+      onError: (m) => {
+        if (settled) return;
+        settled = true;
+        try {
+          unsub?.();
+        } catch {}
+        onError?.(m);
+      },
+    });
       if (signal) {
         signal.addEventListener(
           "abort",

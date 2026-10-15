@@ -1678,7 +1678,7 @@ const ChatMessage = ({
               })}
             </Suspense>
           </div>
-        ) : isThinking && !content && !showNarration ? (
+        ) : isThinking && !content && !showNarration && !showLiveThinkingTrace && !reasoning ? (
           <div className="my-1 px-1 py-1">
             <ThinkingLoader searchStatus={searchStatus} />
           </div>

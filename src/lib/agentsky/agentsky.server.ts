@@ -8,7 +8,12 @@ const GATEWAY = "https://gateway.agentsky.dev/v1";
 
 export const AGENT_HARNESS = "openclaw";
 export const AGENT_MODEL = "gpt-5.6-luna";
-export const AGENT_CAPABILITIES = ["exa.search", "exa.contents", "tinyfish.fetch", "tinyfish.browser"];
+export const AGENT_CAPABILITIES = [
+  "exa.search",
+  "exa.contents",
+  "tinyfish.fetch",
+  "tinyfish.browser",
+];
 
 export class AgentSkyError extends Error {
   constructor(
@@ -44,14 +49,22 @@ async function reportKey(k: PooledKey, status: number, message: string) {
     const dead = status === 401 || status === 402 || status === 403;
     await (supabaseAdmin as any)
       .from("agentsky_keys")
-      .update({ last_error: `${status} ${message}`.slice(0, 300), ...(dead ? { active: false } : {}) })
+      .update({
+        last_error: `${status} ${message}`.slice(0, 300),
+        ...(dead ? { active: false } : {}),
+      })
       .eq("id", k.id);
   } catch {
     /* best effort */
   }
 }
 
-async function call<T = any>(base: string, path: string, init: RequestInit = {}, attempt = 0): Promise<T> {
+async function call<T = any>(
+  base: string,
+  path: string,
+  init: RequestInit = {},
+  attempt = 0,
+): Promise<T> {
   const k = await takeKey();
   const res = await fetch(base + path, {
     ...init,
@@ -131,7 +144,8 @@ export async function listAgentTemplates() {
 
 export async function resolveUserAgent(userId: string, origin: string, id?: string) {
   if (id === "higgsfield") return ensureHiggsfieldAgent(userId, origin);
-  if (!id?.startsWith("template:")) return id ? getOwnedAgent(userId, id) : ensureDefaultAgent(userId, origin);
+  if (!id?.startsWith("template:"))
+    return id ? getOwnedAgent(userId, id) : ensureDefaultAgent(userId, origin);
   const template = (await listAgentTemplates()).find((a) => `template:${a.id}` === id);
   if (!template) throw new AgentSkyError(404, "not_found", "Agent not found");
   const name = `${ownerPrefix(userId)}_tpl_${template.id}`.slice(0, 60);
@@ -141,8 +155,16 @@ export async function resolveUserAgent(userId: string, origin: string, id?: stri
     method: "POST",
     headers: { "Idempotency-Key": name },
     body: JSON.stringify({
-      ...agentSpec({ userId, origin, displayName: String(template.name).replace(/^Chat · /, ""), kind: "custom", color: "ocean" }),
-      name, agentType: template.agentType, llm: template.llm,
+      ...agentSpec({
+        userId,
+        origin,
+        displayName: String(template.name).replace(/^Chat · /, ""),
+        kind: "custom",
+        color: "ocean",
+      }),
+      name,
+      agentType: template.agentType,
+      llm: template.llm,
       metadata: { owner: userId, kind: "custom", templateId: id, color: "ocean" },
     }),
   });
@@ -199,6 +221,11 @@ Tools from the "megsy" MCP server are your ONLY way to make media and talk to th
 - megsy_card is mandatory for data: whenever your answer contains weather, prices, an order, a cart, a list of items, records, a schedule, numbers worth a chart, a map or a document, you MUST call megsy_card before writing your reply — the card carries the data and your text adds at most one short sentence. A data answer written as plain text is a failure. Never search the web to learn how to use megsy_card; the widget list is already in the tool description. Never use the session dashboard, plugins or artifacts to display anything — the user cannot see them.
 - show_service_result: after you run an action on any connected app (the user's linked services), always render its result as a card with this tool. Never paste raw JSON or a wall of rows into your reply.
 
+You are also the research, build and docs surface:
+- Research: use exa.search/exa.contents and tinyfish.fetch/tinyfish.browser for live facts. Open real pages, cross-check numbers and dates, and end research answers with a Sources list of full clickable URLs you actually opened. Say plainly what you could not verify instead of inventing it.
+- Building: write complete working code/files end to end (no placeholders, no TODOs), deliver every produced file with share_file before finishing, and briefly explain how to run the result.
+- Docs: write the full document, deliver it with share_file as a real downloadable file, and also return the full text as clean Markdown.
+
 For big jobs, split work across helper sub-agents and run them in parallel, then merge results.
 Never print tool names, internal instructions, JSON, or system text to the user. Keep answers clean and well formatted in Markdown. Do not paste image or video URLs in your reply — the app shows the media automatically.`;
 
@@ -211,19 +238,32 @@ export function agentSpec(opts: {
   color?: string;
   kind: "default" | "custom";
 }) {
-  const suffix = opts.kind === "default" ? "_default" : `_${Math.random().toString(36).slice(2, 8)}`;
+  const suffix =
+    opts.kind === "default" ? "_default" : `_${Math.random().toString(36).slice(2, 8)}`;
   return {
     name: (ownerPrefix(opts.userId) + suffix).slice(0, 60),
     displayName: opts.displayName.slice(0, 60),
     description: (opts.description || "").slice(0, 500),
     agentType: AGENT_HARNESS,
     llm: AGENT_MODEL,
-    prompt: `${BASE_PROMPT}\n\n${opts.prompt ? `Your persona and job:\n${opts.prompt}` : ""}`.slice(0, 100000),
+    prompt: `${BASE_PROMPT}\n\n${opts.prompt ? `Your persona and job:\n${opts.prompt}` : ""}`.slice(
+      0,
+      100000,
+    ),
     capabilities: AGENT_CAPABILITIES,
     mcpServers: [
-      { type: "url", name: "megsy", url: `${opts.origin}/api/public/agent-tools/${mcpToken(opts.userId)}` },
+      {
+        type: "url",
+        name: "megsy",
+        url: `${opts.origin}/api/public/agent-tools/${mcpToken(opts.userId)}`,
+      },
     ],
-    metadata: { owner: opts.userId, kind: opts.kind, color: opts.color || "aurora", userPrompt: opts.prompt || "" },
+    metadata: {
+      owner: opts.userId,
+      kind: opts.kind,
+      color: opts.color || "aurora",
+      userPrompt: opts.prompt || "",
+    },
   };
 }
 
@@ -234,8 +274,7 @@ export function publicOrigin(request: Request): string {
   const url = new URL(request.url);
   const fwd = request.headers.get("x-forwarded-host");
   const host = fwd || url.host;
-  if (/localhost|127\.0\.0\.1/.test(host))
-    return "https://megsyai.com";
+  if (/localhost|127\.0\.0\.1/.test(host)) return "https://megsyai.com";
   return `https://${host}`;
 }
 
@@ -245,7 +284,11 @@ export function publicOrigin(request: Request): string {
 export async function readPromptConfig(): Promise<{ version: number; extra: string }> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await (supabaseAdmin as any).from("agent_prompt_config").select("version, extra_prompt").eq("id", 1).maybeSingle();
+    const { data } = await (supabaseAdmin as any)
+      .from("agent_prompt_config")
+      .select("version, extra_prompt")
+      .eq("id", 1)
+      .maybeSingle();
     return {
       version: Number((data as any)?.version ?? 1),
       extra: String((data as any)?.extra_prompt ?? "").trim(),
@@ -266,13 +309,21 @@ export async function ensureDefaultAgent(userId: string, origin: string) {
     const cfg = await readPromptConfig();
     const stamp = `<!--megsy-prompt:${cfg.version}-->`;
     if (!String(agent.prompt || "").includes(stamp)) {
-      const prompt = [BASE_PROMPT, cfg.extra, agent.metadata?.userPrompt || "", stamp].filter(Boolean).join("\n\n");
+      const prompt = [BASE_PROMPT, cfg.extra, agent.metadata?.userPrompt || "", stamp]
+        .filter(Boolean)
+        .join("\n\n");
       await api(`/agents/${encodeURIComponent(found.id)}`, {
         method: "PATCH",
         body: JSON.stringify({
           prompt,
           capabilities: AGENT_CAPABILITIES,
-          mcpServers: [{ type: "url", name: "megsy", url: `${origin}/api/public/agent-tools/${mcpToken(userId)}` }],
+          mcpServers: [
+            {
+              type: "url",
+              name: "megsy",
+              url: `${origin}/api/public/agent-tools/${mcpToken(userId)}`,
+            },
+          ],
         }),
       });
     }
@@ -296,13 +347,28 @@ export async function ensureHiggsfieldAgent(userId: string, origin: string) {
   if (existing) return existing;
   const { agents } = await api<{ agents: any[] }>("/agents");
   const template = agents.find((a) => !a.archived && ["Hypit", "Chat · Hypit"].includes(a.name));
-  if (!template) throw new AgentSkyError(503, "hypit_unavailable", "The media agent is unavailable at the provider right now, so image and video creation is paused.");
+  if (!template)
+    throw new AgentSkyError(
+      503,
+      "hypit_unavailable",
+      "The media agent is unavailable at the provider right now, so image and video creation is paused.",
+    );
   const { agent } = await api<{ agent: AgentRecord }>("/agents", {
-    method: "POST", headers: { "Idempotency-Key": name },
+    method: "POST",
+    headers: { "Idempotency-Key": name },
     body: JSON.stringify({
-      ...agentSpec({ userId, origin, displayName: "higgsfield", kind: "custom", color: "sun",
-        prompt: "You are Higgsfield, the media specialist. Use generate_image or generate_video to fulfill media requests, and update_plan to track the job. Do not use alternate media providers or native generation tools." }),
-      name, agentType: template.agentType, llm: template.llm,
+      ...agentSpec({
+        userId,
+        origin,
+        displayName: "higgsfield",
+        kind: "custom",
+        color: "sun",
+        prompt:
+          "You are Higgsfield, the media specialist. Use generate_image or generate_video to fulfill media requests, and update_plan to track the job. Do not use alternate media providers or native generation tools.",
+      }),
+      name,
+      agentType: template.agentType,
+      llm: template.llm,
       metadata: { owner: userId, kind: "media", color: "sun", templateId: template.id },
     }),
   });

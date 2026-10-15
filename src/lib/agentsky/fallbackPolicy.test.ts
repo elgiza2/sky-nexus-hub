@@ -26,4 +26,8 @@ describe("shouldFallbackToBrowserUse", () => {
       shouldFallbackToBrowserUse(new Error("network error"), { ...safe, hasPerformedAction: true }),
     ).toBe(false);
   });
+
+  it("hands an unconfigured AgentSky turn to the Browser Use fallback", () => {
+    expect(shouldFallbackToBrowserUse(new Error("AgentSky is not configured"), safe)).toBe(true);
+  });
 });

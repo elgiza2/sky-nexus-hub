@@ -151,19 +151,9 @@ const resumeSlidesJobs = (
 const resumeChatJobs = (
   ...args: Parameters<typeof import("./services/resumeChatJobs").resumeChatJobs>
 ) => import("./services/resumeChatJobs").then((m) => m.resumeChatJobs(...args));
-const runOperatorTurn = (
-  ...args: Parameters<typeof import("./services/runOperatorTurn").runOperatorTurn>
-) => import("./services/runOperatorTurn").then((m) => m.runOperatorTurn(...args));
 const runComputerTurn = (
   ...args: Parameters<typeof import("./services/runComputerTurn").runComputerTurn>
 ) => import("./services/runComputerTurn").then((m) => m.runComputerTurn(...args));
-const runMediaTurn = (...args: Parameters<typeof import("./services/runMediaTurn").runMediaTurn>) =>
-  import("./services/runMediaTurn").then((m) => m.runMediaTurn(...args));
-const runSlidesTurn = (
-  ...args: Parameters<typeof import("./services/runSlidesTurn").runSlidesTurn>
-) => import("./services/runSlidesTurn").then((m) => m.runSlidesTurn(...args));
-const runDocsTurn = (...args: Parameters<typeof import("./services/runDocsTurn").runDocsTurn>) =>
-  import("./services/runDocsTurn").then((m) => m.runDocsTurn(...args));
 const runChatStreamTurn = (
   ...args: Parameters<typeof import("./services/runChatStreamTurn").runChatStreamTurn>
 ) => import("./services/runChatStreamTurn").then((m) => m.runChatStreamTurn(...args));
@@ -878,38 +868,41 @@ const ChatPage = () => {
     async (plan: import("@/lib/slides/planTypes").SlidesPlanState) => {
       const { buildSlidesBrief } = await import("@/lib/slides/buildBrief");
       const localTurnId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "", clientId: `assistant-${localTurnId}`, mode: "slides" },
-      ]);
-      setIsLoading(true);
-      setIsThinking(true);
-      await runSlidesTurn({
-        userInput: plan.topic,
+      const userMsg = {
+        role: "user",
+        clientId: `user-${localTurnId}`,
+        content: plan.topic,
+        mode: "slides",
+      } as Message;
+      isSubmittingRef.current = true;
+      submitLockAtRef.current = Date.now();
+      await runAgentSkyTurn({
+        text: `${plan.topic}\n\n${buildSlidesBrief(plan)}`,
+        userMsg,
         localTurnId,
-        chatUserId,
-        slidesTemplate: plan.templateId || slidesTemplate,
-        setChatMode,
-        setSearchEnabled,
+        sessionId: [...messages].reverse().find((message) => message.agentSkySessionId)
+          ?.agentSkySessionId,
+        agentId: undefined,
+        hasPriorTurns: messages.some(
+          (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+        ),
+        lang: getUserLang() === "ar-eg" ? "ar" : "en",
+        images: [],
+        setMessages,
+        setInput,
+        setAttachedFiles,
         setIsLoading,
         setIsThinking,
-        resetToolUi,
-        setMessages,
-        setSearchStatus,
+        abortControllerRef,
         createOrUpdateConversation,
         saveMessage,
         ownInsertedIdsRef,
-        fetchSlidesNarration,
-        insertAssistantNarration,
-        clearSlidesTimeout,
-        slidesTimeoutsRef,
-        slidesGenerationTokenRef,
-        skipUserSave: true,
-        brief: buildSlidesBrief(plan),
-        plan,
+        onRequests: () => undefined,
+        onSession: (sessionId) => {
+          activeAgentSkySessionRef.current = sessionId;
+        },
       });
-      setIsLoading(false);
-      setIsThinking(false);
+      isSubmittingRef.current = false;
     },
     [
       chatUserId,
@@ -967,33 +960,42 @@ const ChatPage = () => {
     async (plan: import("@/lib/docs/planTypes").DocsPlanState) => {
       const { buildDocsBrief } = await import("@/lib/docs/buildBrief");
       const localTurnId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "", clientId: `assistant-${localTurnId}` },
-      ]);
-      setIsLoading(true);
-      setIsThinking(true);
       const previousHtml = await getLastDocHtml();
-      await runDocsTurn({
-        userInput: plan.topic,
+      const userMsg = {
+        role: "user",
+        clientId: `user-${localTurnId}`,
+        content: plan.topic,
+        mode: "normal",
+      } as Message;
+      isSubmittingRef.current = true;
+      submitLockAtRef.current = Date.now();
+      await runAgentSkyTurn({
+        text: `${plan.topic}\n\n${buildDocsBrief(plan, previousHtml || undefined)}`,
+        userMsg,
         localTurnId,
-        chatUserId,
-        navigate: zoneNavigate,
-        messages,
+        sessionId: [...messages].reverse().find((message) => message.agentSkySessionId)
+          ?.agentSkySessionId,
+        agentId: undefined,
+        hasPriorTurns: messages.some(
+          (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+        ),
+        lang: getUserLang() === "ar-eg" ? "ar" : "en",
+        images: [],
         setMessages,
-        setSearchStatus,
+        setInput,
+        setAttachedFiles,
         setIsLoading,
         setIsThinking,
-        resetToolUi,
-        startDocsStatusFallback,
-        stopDocsStatusFallback,
+        abortControllerRef,
         createOrUpdateConversation,
         saveMessage,
         ownInsertedIdsRef,
-        skipUserSave: true,
-        brief: buildDocsBrief(plan, previousHtml || undefined),
-        previousHtml: previousHtml || undefined,
+        onRequests: () => undefined,
+        onSession: (sessionId) => {
+          activeAgentSkySessionRef.current = sessionId;
+        },
       });
+      isSubmittingRef.current = false;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [chatUserId, messages, zoneNavigate],
@@ -1009,78 +1011,6 @@ const ChatPage = () => {
     window.addEventListener("megsy:docs-generate", onDocsGenerate);
     return () => window.removeEventListener("megsy:docs-generate", onDocsGenerate);
   }, [startDocsFromPlan]);
-
-  /**
-   * "عدّل السلايد 3 …" — rewrites a single slide of the latest plan and
-   * regenerates the deck from the updated plan, preserving everything else.
-   */
-  const runSlidesSlideEdit = useCallback(
-    async (
-      intent: { slideNumber: number; instruction: string },
-      plan: import("@/lib/slides/planTypes").SlidesPlanState,
-      localTurnId: string,
-    ) => {
-      const idx = intent.slideNumber - 1;
-      const step = plan.outline?.steps?.[idx];
-      if (!step) {
-        toast.error(
-          plan.language === "ar"
-            ? `There is no slide number ${intent.slideNumber}`
-            : `There is no slide ${intent.slideNumber}`,
-        );
-        setIsLoading(false);
-        setIsThinking(false);
-        return;
-      }
-      const { reviseSingleSlide } = await import("@/lib/slides/generateOutline");
-      const revised = await reviseSingleSlide({
-        slideNumber: intent.slideNumber,
-        currentTitle: step.title,
-        currentBody: plan.content?.[idx]?.body || (step.items || []).join(" "),
-        instruction: intent.instruction,
-        topic: plan.topic,
-        language: plan.language,
-        userId: chatUserId || undefined,
-      }).catch(() => null);
-      if (!revised) {
-        toast.error(
-          plan.language === "ar" ? "Could not edit that slide" : "Could not edit that slide",
-        );
-        setIsLoading(false);
-        setIsThinking(false);
-        return;
-      }
-      const nextPlan: import("@/lib/slides/planTypes").SlidesPlanState = {
-        ...plan,
-        outline: {
-          ...plan.outline,
-          steps: plan.outline.steps.map((s, i) =>
-            i === idx ? { title: revised.title, items: [revised.body] } : s,
-          ),
-        },
-        content: plan.content?.length
-          ? plan.content.map((c, i) => (i === idx ? revised : c))
-          : undefined,
-      };
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.clientId === `assistant-${localTurnId}`
-            ? {
-                ...m,
-                content:
-                  plan.language === "ar"
-                    ? `Updated slide ${intent.slideNumber} and regenerated the deck with the rest unchanged.`
-                    : `Updated slide ${intent.slideNumber} and regenerating the deck.`,
-                slidesPlan: { ...nextPlan, stage: "generating" },
-                mode: "slides",
-              }
-            : m,
-        ),
-      );
-      await startSlidesFromPlan(nextPlan);
-    },
-    [chatUserId, setMessages, setIsLoading, setIsThinking, startSlidesFromPlan],
-  );
 
   // Stable per-user color palette resolver (hash → palette).
   const colorForUser = useMemberColors();
@@ -1486,7 +1416,11 @@ const ChatPage = () => {
         queuedAgentMessagesRef.current.push(text.trim());
         setInput("");
         setAttachedFiles([]);
-        toast.success(getUserLang() === "ar-eg" ? "اتضافت للانتظار وهتتبعت أول ما يخلص" : "Queued and will send when the agent finishes");
+        toast.success(
+          getUserLang() === "ar-eg"
+            ? "اتضافت للانتظار وهتتبعت أول ما يخلص"
+            : "Queued and will send when the agent finishes",
+        );
       }
       return;
     }
@@ -1496,7 +1430,6 @@ const ChatPage = () => {
       if (Date.now() - submitLockAtRef.current < 2_500) return;
       isSubmittingRef.current = false;
     }
-
 
     // Streak/achievement bookkeeping is telemetry, not part of the send path.
     // It used to be `await`ed here, which meant the user's own bubble could not
@@ -1567,16 +1500,28 @@ const ChatPage = () => {
       computerUseEnabled,
     });
     // The chat itself decides when the agent is needed: only an explicitly
-    // requested/selected agent, or a turn continuing an existing AgentSky
-    // session, goes straight to the agent. Every other ordinary turn flows
+    // requested/selected agent, a turn continuing an existing AgentSky
+    // session, or one of the Sky Agent surfaces (media, site building,
+    // research) goes straight to the agent. Every other ordinary turn flows
     // into the normal text path below, where chat-fast answers directly and
     // escalates by itself only when the turn really needs tools/tasks.
     const continuesAgentSession = messages.some((message) => message.agentSkySessionId);
+    const skyAgentSurface =
+      chatMode === "images" ||
+      chatMode === "video" ||
+      chatMode === "code" ||
+      chatMode === "deep-research" ||
+      chatMode === "slides" ||
+      chatMode === "slides-images" ||
+      selectedAgent?.id === "docs" ||
+      selectedAgent?.id === "dev" ||
+      selectedAgent?.id === "computer" ||
+      selectedAgent?.id === "agent";
     if (
       text.trim() &&
       chatUserId &&
       !useFastChat &&
-      (requestedAgentId || selectedAgent?.id || continuesAgentSession)
+      (requestedAgentId || selectedAgent?.id || continuesAgentSession || skyAgentSurface)
     ) {
       isSubmittingRef.current = true;
       submitLockAtRef.current = Date.now();
@@ -1600,17 +1545,29 @@ const ChatPage = () => {
         attachedImages: images,
         mode: chatMode,
       };
-      const previousSessionId =
-        [...messages].reverse().find((message) => message.agentSkySessionId)?.agentSkySessionId;
-      const lastAgentId = [...messages].reverse().find((message) => message.agentSkyAgent)?.agentSkyAgent?.id;
+      const previousSessionId = [...messages]
+        .reverse()
+        .find((message) => message.agentSkySessionId)?.agentSkySessionId;
+      const lastAgentId = [...messages].reverse().find((message) => message.agentSkyAgent)
+        ?.agentSkyAgent?.id;
       try {
         await runAgentSkyTurn({
           text,
           userMsg,
           localTurnId,
-          sessionId: (requestedAgentId && lastAgentId && requestedAgentId !== lastAgentId) || messages.some((message) => message.agentSkyAgent?.id === lastAgentId && message.agentSkyAgent?.name === "higgsfield") ? undefined : previousSessionId,
+          sessionId:
+            (requestedAgentId && lastAgentId && requestedAgentId !== lastAgentId) ||
+            messages.some(
+              (message) =>
+                message.agentSkyAgent?.id === lastAgentId &&
+                message.agentSkyAgent?.name === "higgsfield",
+            )
+              ? undefined
+              : previousSessionId,
           agentId: requestedAgentId,
-          hasPriorTurns: messages.some((message) => message.role === "assistant" && Boolean(message.agentSkySessionId)),
+          hasPriorTurns: messages.some(
+            (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+          ),
           lang: getUserLang() === "ar-eg" ? "ar" : "en",
           images,
           setMessages,
@@ -1650,14 +1607,20 @@ const ChatPage = () => {
       return;
     }
 
-    // ── One agent for everything ────────────────────────────────────────────
-    // The separate main agent, document writer, research engine and coder are
-    // gone: those requests all run on the same cloud agent, which browses, runs
-    // code, writes files and keeps working even if this tab is closed.
+    // ── Sky Agent for research/build/docs surfaces ──────────────────────────
+    // Research, code/site building, docs and computer/agent requests run on
+    // the same Sky Agent session (search/media/build tools via MCP), with the
+    // existing Browser Use Cloud turn as the internal fallback only.
     {
-      const { cloudAgentTarget, buildCloudAgentPrompt } = await import("@/lib/computer/agentModes");
-      const target = cloudAgentTarget(chatMode, selectedAgent?.id);
-      if (target && text.trim()) {
+      const isSkyAgentSurface =
+        chatMode === "deep-research" ||
+        chatMode === "code" ||
+        chatMode === "computer" ||
+        selectedAgent?.id === "docs" ||
+        selectedAgent?.id === "dev" ||
+        selectedAgent?.id === "computer" ||
+        selectedAgent?.id === "agent";
+      if (isSkyAgentSurface && text.trim()) {
         const agentTurnId =
           typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
@@ -1668,104 +1631,85 @@ const ChatPage = () => {
           content: text,
           mode: chatMode,
         } as Message;
+        const images = attachedFiles.filter((f) => f.type === "image").map((f) => f.data);
+        const previousSessionId = [...messages]
+          .reverse()
+          .find((message) => message.agentSkySessionId)?.agentSkySessionId;
         try {
-          await runComputerTurn({
-            text: buildCloudAgentPrompt(target, text),
+          isSubmittingRef.current = true;
+          submitLockAtRef.current = Date.now();
+          await runAgentSkyTurn({
+            text,
             userMsg: agentUserMsg,
             localTurnId: agentTurnId,
-            attachments: attachedFiles.filter((f) => f.type === "image").map((f) => f.data),
+            sessionId: previousSessionId,
+            agentId: requestedAgentId,
+            hasPriorTurns: messages.some(
+              (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+            ),
+            lang: getUserLang() === "ar-eg" ? "ar" : "en",
+            images,
             setMessages,
             setInput,
             setAttachedFiles,
+            setIsLoading,
+            setIsThinking,
+            abortControllerRef,
             createOrUpdateConversation,
             saveMessage,
             ownInsertedIdsRef,
+            onRequests: () => undefined,
+            onSession: (sessionId) => {
+              activeAgentSkySessionRef.current = sessionId;
+            },
+            onFallback: async (reason) => {
+              console.warn("[agentsky] falling back to Browser Use Cloud:", reason);
+              return runComputerTurn({
+                text,
+                userMsg: agentUserMsg,
+                localTurnId: agentTurnId,
+                attachments: images,
+                setMessages,
+                setInput,
+                setAttachedFiles,
+                createOrUpdateConversation,
+                saveMessage,
+                ownInsertedIdsRef,
+              });
+            },
           });
         } finally {
           isSubmittingRef.current = false;
+          const next = queuedAgentMessagesRef.current.shift();
+          if (next) window.setTimeout(() => void sendWithTextRef.current?.(next), 80);
         }
         return;
       }
-    }
-
-    // Code mode → run the inline Megsy Coder agent (Replit/Lovable style) inside the chat feed.
-    if (chatMode === "code" && text.trim()) {
-      const promptText = text.trim();
-      const runId = `coder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const userClientId = `user-coder-${Date.now()}`;
-      const conversationPromise = createOrUpdateConversation(promptText).catch(() => null);
-      const userMsg: Message = {
-        role: "user",
-        clientId: userClientId,
-        content: promptText,
-        mode: "code",
-      } as Message;
-      setMessages((prev) => [...prev, userMsg]);
-      // Host any attached media so Coder can embed the real URLs in the site.
-      let coderAttachments: Array<{ url: string; name?: string; type?: string }> = [];
-      if (attachedFiles.length > 0) {
-        const { uploadAttachmentDataUrl } = await import("@/lib/coderAssets");
-        const uploaded = await Promise.all(
-          attachedFiles
-            .filter((f) => f.type === "image" || f.type === "video")
-            .map(async (f) => {
-              const url = await uploadAttachmentDataUrl(f.data, f.name);
-              return url ? { url, name: f.name, type: f.type } : null;
-            }),
-        );
-        coderAttachments = uploaded.filter(Boolean) as typeof coderAttachments;
-        setAttachedFiles([]);
-      }
-      setCoderRuns((prev) => [
-        ...prev,
-        { id: runId, prompt: promptText, conversationPromise, attachments: coderAttachments },
-      ]);
-      setInput("");
-
-      void (async () => {
-        const resolvedConversationId = await conversationPromise;
-        if (!resolvedConversationId) return;
-        const insertedId = await saveMessage(resolvedConversationId, "user", promptText).catch(
-          () => undefined,
-        );
-        if (insertedId) {
-          ownInsertedIdsRef.current.add(insertedId);
-          window.dispatchEvent(new CustomEvent("megsy:conversations-changed"));
-          setMessages((prev) => {
-            const idx = prev.findIndex((m) => m.clientId === userClientId);
-            if (idx < 0) return prev;
-            const next = [...prev];
-            next[idx] = { ...next[idx], id: insertedId, user_id: chatUserId || undefined };
-            return next;
-          });
-        }
-      })();
-      return;
     }
 
     const isPaidPlan = isPaidUser(userPlan);
 
     // All video models in the curated picker are premium-only.
     if (chatMode === "video" && !isPaidPlan) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "user",
-            clientId: `user-paywall-${Date.now()}`,
-            content: text,
-            mode: chatMode,
-          } as Message,
-          {
-            role: "assistant",
-            clientId: `assist-paywall-${Date.now()}`,
-            content: "",
-            mode: chatMode,
-            paywall: { feature: "video" },
-          } as Message,
-        ]);
-        setInput("");
-        isSubmittingRef.current = false;
-        return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          clientId: `user-paywall-${Date.now()}`,
+          content: text,
+          mode: chatMode,
+        } as Message,
+        {
+          role: "assistant",
+          clientId: `assist-paywall-${Date.now()}`,
+          content: "",
+          mode: chatMode,
+          paywall: { feature: "video" },
+        } as Message,
+      ]);
+      setInput("");
+      isSubmittingRef.current = false;
+      return;
     }
 
     isSubmittingRef.current = true;
@@ -1804,131 +1748,126 @@ const ChatPage = () => {
       hiddenFromTranscript: isLearningAnswer,
     };
 
-    // ── Dev Agent: builds/edits real React projects in a cloud VM (@dev) ──
-    if (selectedAgent?.id === "dev") {
+    // ── Dev / Operator surfaces: run inside Sky Agent ──
+    // The old standalone dev-VM and operator turns are retired; Sky Agent now
+    // owns building and operating, with Browser Use Cloud as its fallback.
+    if (selectedAgent?.id === "dev" || chatMode === "operator") {
+      const surfaceImages = attachedFiles
+        .filter((file) => file.type === "image")
+        .map((file) => file.data);
+      const previousSurfaceSessionId = [...messages]
+        .reverse()
+        .find((message) => message.agentSkySessionId)?.agentSkySessionId;
+      isSubmittingRef.current = true;
+      submitLockAtRef.current = Date.now();
       try {
-        const { runDevTurn } = await import("./services/runDevTurn");
-        await runDevTurn({
+        await runAgentSkyTurn({
           text,
           userMsg,
           localTurnId,
+          sessionId: previousSurfaceSessionId,
+          agentId: requestedAgentId,
+          hasPriorTurns: messages.some(
+            (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+          ),
+          lang: getUserLang() === "ar-eg" ? "ar" : "en",
+          images: surfaceImages,
           setMessages,
           setInput,
           setAttachedFiles,
-
-          setIsLoading,
-          createOrUpdateConversation,
-          saveMessage,
-          ownInsertedIdsRef,
-        });
-      } finally {
-        isSubmittingRef.current = false;
-      }
-      return;
-    }
-
-    // ── Operator mode: keep the normal chat flow; render operator output as the assistant reply ──
-    if (chatMode === "operator") {
-      try {
-        await runOperatorTurn({
-          text,
-          userMsg,
-          localTurnId,
-          setMessages,
-          setInput,
-          setAttachedFiles,
-          setPendingQuestions,
-          setNarrations,
-          setClarifyQs,
-          setOperatorRunId,
-          createOrUpdateConversation,
-          saveMessage,
-          ownInsertedIdsRef,
-        });
-      } finally {
-        isSubmittingRef.current = false;
-      }
-      return;
-    }
-
-    // ── Images / Video mode: plan first, then generation ──
-    if (chatMode === "images" || chatMode === "video") {
-      const activeMediaMode = chatMode;
-      const expectedMediaType = activeMediaMode === "video" ? "video" : "image";
-      let activeMediaModel = mediaModel;
-      // No model picked yet (or a leftover model of the wrong kind): pick the
-      // sensible default instead of throwing the user's prompt away.
-      if (!activeMediaModel || activeMediaModel.type !== expectedMediaType) {
-        try {
-          const { pickDefaultMediaModel } = await import("@/lib/media/autoMediaIntent");
-          const fallback = await pickDefaultMediaModel(expectedMediaType);
-          if (fallback) {
-            activeMediaModel = fallback;
-            setMediaModel(fallback);
-          }
-        } catch {
-          /* fall through to the message below */
-        }
-      }
-      if (!activeMediaModel || activeMediaModel.type !== expectedMediaType) {
-        toast.error(
-          activeMediaMode === "video"
-            ? "No video model is available right now. Please try again in a moment."
-            : "No image model is available right now. Please try again in a moment.",
-        );
-        // Give the user their words back — never silently clear the composer.
-        setInput(text);
-        isSubmittingRef.current = false;
-        return;
-      }
-
-      const isStartEnd = activeMediaMode === "video" && videoStartEndMode;
-      if (isStartEnd && (!startFrameUrl || !endFrameUrl)) {
-        toast.error("Upload both the first and last frame first");
-        isSubmittingRef.current = false;
-        return;
-      }
-      try {
-        mediaTurnActiveRef.current = true;
-        // آخر صورة مولّدة في المحادثة — تُستخدم تلقائيًا عند طلب تعديل عليها.
-        let lastImageUrl: string | null = null;
-        let lastImagePrompt: string | null = null;
-        for (let i = messages.length - 1; i >= 0 && !lastImageUrl; i--) {
-          const m: any = messages[i];
-          const res = Array.isArray(m?.mediaResults) ? m.mediaResults : [];
-          const hit = [...res]
-            .reverse()
-            .find((r: any) => r?.type === "image" && r?.status === "done" && r?.url);
-          if (hit) {
-            lastImageUrl = hit.url;
-            lastImagePrompt = m?.mediaPlan?.originalPrompt || m?.mediaPlan?.summary || null;
-          }
-        }
-        await runMediaTurn({
-          text,
-          lastImageUrl,
-          lastImagePrompt,
-          userMsg,
-          localTurnId,
-          chatMode: activeMediaMode,
-          mediaModel: activeMediaModel,
-          videoStartEndMode,
-          startFrameUrl,
-          endFrameUrl,
-          videoDurationSec,
-          setMessages,
-          setInput,
-          setAttachedFiles,
-          setPendingQuestions,
           setIsLoading,
           setIsThinking,
+          abortControllerRef,
           createOrUpdateConversation,
           saveMessage,
           ownInsertedIdsRef,
+          onRequests: () => undefined,
+          onSession: (sessionId) => {
+            activeAgentSkySessionRef.current = sessionId;
+          },
+          onFallback: async (reason) => {
+            console.warn("[agentsky-surface] falling back to Browser Use Cloud:", reason);
+            return runComputerTurn({
+              text,
+              userMsg,
+              localTurnId,
+              attachments: surfaceImages,
+              setMessages,
+              setInput,
+              setAttachedFiles,
+              createOrUpdateConversation,
+              saveMessage,
+              ownInsertedIdsRef,
+            });
+          },
+        });
+      } finally {
+        isSubmittingRef.current = false;
+        const next = queuedAgentMessagesRef.current.shift();
+        if (next) window.setTimeout(() => void sendWithTextRef.current?.(next), 80);
+      }
+      return;
+    }
+
+    // ── Images / Video mode: run inside Sky Agent (Higgsfield media tools) ──
+    // The explicit mode only selects the media surface; generation itself is a
+    // Sky Agent turn so plans, edits, paywalls and cards stay in one session.
+    if (chatMode === "images" || chatMode === "video") {
+      const mediaImages = attachedFiles
+        .filter((file) => file.type === "image")
+        .map((file) => file.data);
+      const previousMediaSessionId = [...messages]
+        .reverse()
+        .find((message) => message.agentSkySessionId)?.agentSkySessionId;
+      isSubmittingRef.current = true;
+      submitLockAtRef.current = Date.now();
+      try {
+        mediaTurnActiveRef.current = true;
+        await runAgentSkyTurn({
+          text,
+          userMsg,
+          localTurnId,
+          sessionId: previousMediaSessionId,
+          agentId: requestedAgentId ?? "higgsfield",
+          hasPriorTurns: messages.some(
+            (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+          ),
+          lang: getUserLang() === "ar-eg" ? "ar" : "en",
+          images: mediaImages,
+          setMessages,
+          setInput,
+          setAttachedFiles,
+          setIsLoading,
+          setIsThinking,
+          abortControllerRef,
+          createOrUpdateConversation,
+          saveMessage,
+          ownInsertedIdsRef,
+          onRequests: () => undefined,
+          onSession: (sessionId) => {
+            activeAgentSkySessionRef.current = sessionId;
+          },
+          onFallback: async (reason) => {
+            console.warn("[agentsky-media] falling back to Browser Use Cloud:", reason);
+            return runComputerTurn({
+              text,
+              userMsg,
+              localTurnId,
+              attachments: mediaImages,
+              setMessages,
+              setInput,
+              setAttachedFiles,
+              createOrUpdateConversation,
+              saveMessage,
+              ownInsertedIdsRef,
+            });
+          },
         });
       } finally {
         mediaTurnActiveRef.current = false;
         isSubmittingRef.current = false;
+        const next = queuedAgentMessagesRef.current.shift();
+        if (next) window.setTimeout(() => void sendWithTextRef.current?.(next), 80);
       }
       return;
     }
@@ -2059,22 +1998,12 @@ const ChatPage = () => {
       setChatMode("slides");
     }
 
-    // ── Slides mode: plan first (outline + imported data), generate after approval ─
+    // ── Slides mode: run inside Sky Agent ──
+    // The old standalone slides pipeline is retired; the agent plans, builds
+    // and delivers the deck/file in one session.
     if (chatMode === "slides" || chatMode === "slides-images" || shouldAutoStartSlides) {
       slidesRunningRef.current = true;
       try {
-        // Follow-up like "عدّل السلايد 3 …" edits one slide of the last plan
-        // instead of re-planning the whole deck.
-        const { parseSlideEditIntent } = await import("@/lib/slides/slideEditIntent");
-        const editIntent = parseSlideEditIntent(userInput);
-        const lastPlanMsg = editIntent
-          ? [...messages].reverse().find((m) => m.slidesPlan)
-          : undefined;
-        if (editIntent && lastPlanMsg?.slidesPlan) {
-          await runSlidesSlideEdit(editIntent, lastPlanMsg.slidesPlan, localTurnId);
-          return;
-        }
-
         const docFiles = currentFiles.filter(
           (f) => (f.type === "file" || f.type === "link") && f.data && !f.data.startsWith("__"),
         );
@@ -2082,33 +2011,39 @@ const ChatPage = () => {
           .map((f) => `### ${f.type === "link" ? "Link" : "File"}: ${f.name}\n${f.data}`)
           .join("\n\n")
           .slice(0, 24000);
-
-        await runSlidesTurn({
-          userInput,
+        const slidesPrompt = attachedFilesText
+          ? `${userInput}\n\n--- Source material ---\n${attachedFilesText}`
+          : userInput;
+        const slidesImages = attachedFiles
+          .filter((file) => file.type === "image")
+          .map((file) => file.data);
+        const previousSlidesSessionId = [...messages]
+          .reverse()
+          .find((message) => message.agentSkySessionId)?.agentSkySessionId;
+        await runAgentSkyTurn({
+          text: slidesPrompt,
+          userMsg,
           localTurnId,
-          chatUserId,
-          slidesTemplate,
-          setChatMode,
-          setSearchEnabled,
+          sessionId: previousSlidesSessionId,
+          agentId: requestedAgentId,
+          hasPriorTurns: messages.some(
+            (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+          ),
+          lang: getUserLang() === "ar-eg" ? "ar" : "en",
+          images: slidesImages,
+          setMessages,
+          setInput,
+          setAttachedFiles,
           setIsLoading,
           setIsThinking,
-          resetToolUi,
-          setMessages,
-          setSearchStatus,
+          abortControllerRef,
           createOrUpdateConversation,
           saveMessage,
           ownInsertedIdsRef,
-          fetchSlidesNarration,
-          insertAssistantNarration,
-          clearSlidesTimeout,
-          slidesTimeoutsRef,
-          slidesGenerationTokenRef,
-          planOnly: false,
-          brief: attachedFilesText
-            ? `${userInput}\n\n--- Source material ---\n${attachedFilesText}`
-            : undefined,
-          attachedFilesText: attachedFilesText || undefined,
-          attachedFileMeta: docFiles.map((f) => ({ name: f.name, chars: f.data.length })),
+          onRequests: () => undefined,
+          onSession: (sessionId) => {
+            activeAgentSkySessionRef.current = sessionId;
+          },
         });
       } finally {
         slidesRunningRef.current = false;
@@ -2117,9 +2052,9 @@ const ChatPage = () => {
       return;
     }
 
-    // ── @docs agent: plan → research → review → clean writing ───────────
-    // Also auto-routed from plain language ("اكتبلي مستند عن…", "make me a
-    // PDF proposal") so the unified chat reaches the writer without chips.
+    // ── @docs surface: run inside Sky Agent ──
+    // The old standalone docs pipeline is retired; Sky Agent researches,
+    // writes and delivers the document/file in one session.
     const { shouldAutoStartDocs } = await import("@/lib/docs/autoDocsIntent");
     if (selectedAgent?.id === "docs" || (chatMode === "normal" && shouldAutoStartDocs(userInput))) {
       try {
@@ -2130,95 +2065,40 @@ const ChatPage = () => {
           .map((f) => `### ${f.type === "link" ? "Link" : "File"}: ${f.name}\n${f.data}`)
           .join("\n\n")
           .slice(0, 24000);
-
-        // Follow-up edits on an already generated document: tweak specific
-        // wording in place instead of regenerating the whole file.
-        const lastDocMsg = [...messages].reverse().find((m) => m.docsArtifact);
-        if (lastDocMsg?.docsArtifact) {
-          const { parseDocsEditIntent, replaceTextInHtml } =
-            await import("@/lib/docs/textEditIntent");
-          const intent = parseDocsEditIntent(userInput);
-          const baseHtml = await getLastDocHtml();
-          if (intent && baseHtml && (intent.kind === "replace" || intent.kind === "snippet")) {
-            const ar = /[\u0600-\u06FF]/.test(userInput);
-            let nextHtml: string | null = null;
-            if (intent.kind === "replace") {
-              const res = replaceTextInHtml(baseHtml, intent.from, intent.to);
-              if (res.count > 0) nextHtml = res.html;
-            } else {
-              const { rewriteSnippet } = await import("@/lib/docs/generatePlan");
-              const rewritten = await rewriteSnippet({
-                snippet: intent.snippet,
-                instruction: intent.instruction,
-                language: "en",
-                userId: chatUserId || undefined,
-              });
-              if (rewritten) {
-                const res = replaceTextInHtml(baseHtml, intent.snippet, rewritten);
-                if (res.count > 0) nextHtml = res.html;
-              }
-            }
-            if (nextHtml) {
-              const { saveDocHtml, newArtifactId } = await import("@/lib/agent/docs/htmlCache");
-              const artifactId = newArtifactId();
-              saveDocHtml(artifactId, nextHtml);
-              const docsArtifact = {
-                artifactId,
-                title: lastDocMsg.docsArtifact.title,
-                docType: lastDocMsg.docsArtifact.docType,
-                html: nextHtml,
-              };
-              const note = "Updated that text in the same document — nothing else was regenerated.";
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.clientId === `assistant-${localTurnId}`
-                    ? { ...m, content: note, docsArtifact }
-                    : m,
-                ),
-              );
-              const cid = await createOrUpdateConversation(userInput).catch(() => null);
-              if (cid) {
-                await saveMessage(cid, "user", userInput).catch(() => undefined);
-                const savedId = await saveMessage(cid, "assistant", note, undefined, {
-                  kind: "docsArtifact",
-                  docsArtifact,
-                }).catch(() => undefined);
-                if (savedId) ownInsertedIdsRef.current.add(savedId);
-              }
-              setIsLoading(false);
-              setIsThinking(false);
-              resetToolUi();
-              return;
-            }
-          }
-        }
-
-        // Bigger changes on an existing document keep it as the base version.
-        const previousHtml = lastDocMsg ? await getLastDocHtml() : null;
-        const isRevision = !!previousHtml && !!lastDocMsg;
-
-        const handled = await runDocsTurn({
-          userInput,
+        const docsPrompt = attachedFilesText
+          ? `${userInput}\n\n--- Source material ---\n${attachedFilesText}`
+          : userInput;
+        const docsImages = attachedFiles
+          .filter((file) => file.type === "image")
+          .map((file) => file.data);
+        const previousDocsSessionId = [...messages]
+          .reverse()
+          .find((message) => message.agentSkySessionId)?.agentSkySessionId;
+        await runAgentSkyTurn({
+          text: docsPrompt,
+          userMsg,
           localTurnId,
-          chatUserId,
-          navigate: zoneNavigate,
-          messages,
+          sessionId: previousDocsSessionId,
+          agentId: requestedAgentId,
+          hasPriorTurns: messages.some(
+            (message) => message.role === "assistant" && Boolean(message.agentSkySessionId),
+          ),
+          lang: getUserLang() === "ar-eg" ? "ar" : "en",
+          images: docsImages,
           setMessages,
-          setSearchStatus,
+          setInput,
+          setAttachedFiles,
           setIsLoading,
           setIsThinking,
-          resetToolUi,
-          startDocsStatusFallback,
-          stopDocsStatusFallback,
+          abortControllerRef,
           createOrUpdateConversation,
           saveMessage,
           ownInsertedIdsRef,
-          planOnly: !isRevision,
-          attachedFilesText: attachedFilesText || undefined,
-          attachedFileMeta: docFiles.map((f) => ({ name: f.name, chars: f.data.length })),
-          previousHtml: previousHtml || undefined,
+          onRequests: () => undefined,
+          onSession: (sessionId) => {
+            activeAgentSkySessionRef.current = sessionId;
+          },
         });
-        if (handled) return;
         return;
       } finally {
         isSubmittingRef.current = false;

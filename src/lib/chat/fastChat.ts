@@ -189,10 +189,18 @@ export async function tryFastChat({
   let textBuffer = "";
   let emitted = false;
   let sawAnyPayload = false;
-  const routeSentinel = "[[MEGSY_ESCALATE_TO_FULL_CHAT]]";
-  const routeSentinelPattern = /^\[\[MEGSY_ESCALATE_TO_FULL_CHAT\]\](?:$|[\s:,.!?])/i;
+  const routeSentinelStart = "[[MEGSY_ESCALATE_TO_FULL_CHAT";
+  const routeSentinelStartUpper = routeSentinelStart.toUpperCase();
+  const routeSentinelPattern = /^\[\[MEGSY_ESCALATE_TO_FULL_CHAT(?::[a-z0-9_-]+)?\]\]/i;
+  const isPossibleRouteSentinel = (candidate: string) => {
+    const upper = candidate.replace(/^\s+/, "").toUpperCase();
+    if (routeSentinelStartUpper.startsWith(upper)) return true;
+    if (!upper.startsWith(routeSentinelStartUpper)) return false;
+    const suffix = upper.slice(routeSentinelStartUpper.length);
+    return suffix === "" || /^:[A-Z0-9_-]*\]{0,2}$/.test(suffix);
+  };
   let routePrefix = "";
-  let routeResolved = force === true;
+  let routeResolved = false;
 
   const emitContent = (content: string) => {
     if (!content) return;
@@ -206,10 +214,8 @@ export async function tryFastChat({
     if (!routeResolved) {
       routePrefix += content;
       const candidate = routePrefix.replace(/^\s+/, "");
-      const upper = candidate.toUpperCase();
-      if (routeSentinel.toUpperCase().startsWith(upper) && upper.length < routeSentinel.length)
-        return;
       if (routeSentinelPattern.test(candidate)) throw new Error("__ESCALATE__");
+      if (isPossibleRouteSentinel(candidate)) return;
       routeResolved = true;
       const buffered = routePrefix;
       routePrefix = "";
@@ -312,9 +318,10 @@ export async function tryFastChat({
     signal?.removeEventListener("abort", onOuterAbort);
   }
 
-  // Flush a short, incomplete sentinel prefix as ordinary text if the stream
-  // ended before a route decision could be made.
+  // Never expose a partial internal route marker if the provider cut the frame
+  // mid-sentinel. Treat it as an incomplete route and let the full lane recover.
   if (!routeResolved && routePrefix) {
+    if (isPossibleRouteSentinel(routePrefix)) return "escalate";
     routeResolved = true;
     const buffered = routePrefix;
     routePrefix = "";

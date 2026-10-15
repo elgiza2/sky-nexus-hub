@@ -80,6 +80,26 @@ describe("tryFastChat request options", () => {
     expect(onDelta).not.toHaveBeenCalled();
   });
 
+  it("intercepts the research route suffix even when it arrives in separate chunks", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(sseResponse(["[[MEGSY_ESCALATE_TO_FULL_CHAT", ":research", "]]", "\n"])),
+    );
+    const onDelta = vi.fn();
+
+    const outcome = await tryFastChat({
+      messages: [{ role: "user", content: "ابحث عن الموضوع" }],
+      authToken: "test-token",
+      fingerprint: "test-fingerprint",
+      onDelta,
+    });
+
+    expect(outcome).toBe("escalate");
+    expect(onDelta).not.toHaveBeenCalled();
+  });
+
   it("streams a direct answer as soon as the route prefix is not a sentinel", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(["Hello", " there"])));
     const onDelta = vi.fn();

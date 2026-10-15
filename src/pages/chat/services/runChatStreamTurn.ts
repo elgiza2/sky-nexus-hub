@@ -217,6 +217,7 @@ export async function runChatStreamTurn(opts: RunChatStreamTurnOptions): Promise
   let assistantRenderTimer: ReturnType<typeof setTimeout> | null = null;
   let hasStartedResponse = false;
   let hadStreamError = false;
+  let finishedByError = false;
   const controller = new AbortController();
   abortControllerRef.current = controller;
   let searchImages: string[] = [];
@@ -1170,7 +1171,10 @@ export async function runChatStreamTurn(opts: RunChatStreamTurnOptions): Promise
       }
     },
     onDone: async () => {
-      if (hadStreamError) return;
+      // The error path owns the turn once it starts: it may be awaiting an
+      // asynchronous cloud fallback. Letting this normal completion handler run
+      // as well would insert the empty-response delay text over that fallback.
+      if (hadStreamError || finishedByError) return;
       try {
         const { triggerAha } = await import("@/lib/ahaTracker");
         triggerAha("chat");
@@ -1492,6 +1496,7 @@ export async function runChatStreamTurn(opts: RunChatStreamTurnOptions): Promise
       }
     },
     onError: (err) => {
+      finishedByError = true;
       // Deep Research failures should surface directly as a retryable error
       // card (DeepResearchCard) rather than being handed off to the generic
       // cloud browser-agent fallback, which has no bearing on a research run.

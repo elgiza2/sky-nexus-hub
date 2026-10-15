@@ -192,11 +192,9 @@ const ChatMessageItemImpl = ({
     <>
       {msg.role === "assistant" && msg.agentSkyState && <>
         <AgentPresence message={msg} live={liveThought} />
-        {!!msg.agentSkySteps?.length && <div className="px-3 md:px-12" data-agent-color={msg.agentSkyAgent?.color ?? "aurora"}><StepTimeline steps={msg.agentSkySteps} lang={/^[\u0600-\u06ff]/.test(msg.agentSkySteps[0]?.label ?? "") ? "ar" : "en"} /></div>}
+      {!!msg.agentSkySteps?.length && <div className="px-3 md:px-12" data-agent-color={msg.agentSkyAgent?.color ?? "aurora"}><StepTimeline steps={msg.agentSkySteps} lang={/^[\u0600-\u06ff]/.test(msg.agentSkySteps[0]?.label ?? "") ? "ar" : "en"} /></div>}
       </>}
-      {msg.role === "assistant" && msg.agentSkyState && !msg.content ? (
-        liveThought ? <div className="px-3 md:px-12"><AgentThinkingLine text={liveThought} /></div> : null
-      ) : showMediaSkeleton ? null : msg.role === "assistant" && msg.agentPending && !msg.computerTaskId && !msg.agentSkyState ? (
+      {msg.role === "assistant" && msg.agentSkyState ? null : showMediaSkeleton ? null : msg.role === "assistant" && msg.agentPending && !msg.computerTaskId && !msg.agentSkyState ? (
         <AgentThinkingLine text={liveThought} />
       ) : msg.role === "assistant" && msg.longRunId ? (
         <div className="flex flex-col gap-2">

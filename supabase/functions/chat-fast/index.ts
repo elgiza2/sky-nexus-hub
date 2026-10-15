@@ -31,7 +31,7 @@ function fastSystem(forceAnswer = false): string {
   const iso = now.toISOString().slice(0, 10);
   const routeRules = forceAnswer
     ? `RESCUE MODE: Answer directly with the best useful text you can. Do not emit a route sentinel. Be honest about anything that could not actually be executed.`
-    : `ROUTING: This endpoint can only produce a text answer. If the request requires live browsing, a connected app, an external action, file or media creation/editing, code execution in a repository or terminal, or a specialist subtask, your first and only content must be exactly [[MEGSY_ESCALATE_TO_FULL_CHAT]]. Do not add an explanation or task directive before or after it. If the user only wants an explanation, calculation, brainstorm, or a draft they can use themselves, answer directly.`;
+    : `ROUTING: This endpoint can only produce a text answer. If the request requires live browsing, a connected app, an external action, file or media creation/editing, code execution in a repository or terminal, or a specialist subtask, your first and only content must be exactly [[MEGSY_ESCALATE_TO_FULL_CHAT]]. Do not append a suffix such as :research inside the marker, and do not add an explanation or task directive before or after it. If the user only wants an explanation, calculation, brainstorm, or a draft they can use themselves, answer directly.`;
   return `You are MEGSY, the user's primary assistant. Answer directly and accurately in the user's own language and dialect.
 
 Today is ${iso} (UTC), the current year is ${now.getUTCFullYear()}. Never present older information as "today's" news.
@@ -125,7 +125,6 @@ function verifiedUserId(token: string): string | null {
   return null;
 }
 
-
 /**
  * Guest budget: signed-out visitors chat freely, but within limits so the fast
  * lane can't be farmed. Sliding window per fingerprint/IP bucket.
@@ -147,7 +146,10 @@ function guestAllowance(bucket: string): { ok: boolean; retryAfterSeconds: numbe
   if (hits.length >= GUEST_MAX_PER_WINDOW) {
     guestHits.set(bucket, hits);
     const oldest = hits[0] ?? now;
-    return { ok: false, retryAfterSeconds: Math.max(30, Math.ceil((GUEST_WINDOW_MS - (now - oldest)) / 1000)) };
+    return {
+      ok: false,
+      retryAfterSeconds: Math.max(30, Math.ceil((GUEST_WINDOW_MS - (now - oldest)) / 1000)),
+    };
   }
   hits.push(now);
   guestHits.set(bucket, hits);
@@ -170,7 +172,6 @@ function admin() {
     return null;
   }
 }
-
 
 type Msg = { role: string; content: unknown };
 
@@ -215,8 +216,6 @@ Deno.serve(async (req) => {
       );
     }
   }
-
-
 
   if (!hasModelProvider() && !hasAgentProvider()) {
     // No fast-lane credentials: tell the client to use the full chat path.
@@ -292,14 +291,8 @@ Deno.serve(async (req) => {
     messages: [{ role: "system", content: system }, ...messages.slice(-16)],
   };
 
-
   const db = admin();
-  const result = await callCerebras(
-    [CEREBRAS_MODELS.fast],
-    payload,
-    "fast",
-    db,
-  );
+  const result = await callCerebras([CEREBRAS_MODELS.fast], payload, "fast", db);
   const upstream = result?.response ?? null;
 
   if (!upstream || !upstream.body) {
