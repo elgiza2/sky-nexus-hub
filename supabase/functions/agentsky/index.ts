@@ -1296,7 +1296,8 @@ async function handlePublic(request: Request, route: string) {
     )
       return json(rpcError("unauthorized", "Invalid media token"), 403);
     try {
-      return json(await runState(runId));
+      // Public route has no user JWT, but provider calls still need a key.
+      return json(await withKey(() => runState(runId)));
     } catch (e: any) {
       return json({ runId, status: "RUNNING", urls: [], error: String(e?.message || e) });
     }
@@ -1315,7 +1316,7 @@ async function handlePublic(request: Request, route: string) {
       !(await verify(`media:${runId}:${index}:${exp}`, sig))
     )
       return new Response("Forbidden", { status: 403, headers: cors });
-    const run = await readRun(runId);
+    const run = await withKey(() => readRun(runId));
     const item = extractMedia(run)[index];
     if (!item) return new Response("Not found", { status: 404, headers: cors });
     if (item.kind === "url") return Response.redirect(item.value, 302);
