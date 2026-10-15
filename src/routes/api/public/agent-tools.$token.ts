@@ -106,6 +106,51 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {} },
   },
   {
+    name: "browse_web",
+    description:
+      "Drive a real cloud browser: open pages, click, fill forms, take screenshots, extract data. Use when reading alone is not enough (login walls, JS apps, multi-step flows). Returns steps + result text + files.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        task: { type: "string", description: "What to do in the browser, step by step" },
+        budget_minutes: { type: "number", description: "Max wait, default 10, max 120" },
+      },
+      required: ["task"],
+    },
+  },
+  {
+    name: "save_workspace_file",
+    description:
+      "Save a file to the user's permanent workspace (persists across sessions). Use for code, docs, reports, data. Returns a download link.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "e.g. reports/summary.md, code/app.py" },
+        content: { type: "string", description: "Text content" },
+        content_base64: { type: "string", description: "Base64 for binary files" },
+        mime_type: { type: "string" },
+      },
+      required: ["path"],
+    },
+  },
+  {
+    name: "read_workspace_file",
+    description: "Read a file back from the user's permanent workspace.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "list_workspace_files",
+    description: "List files in the user's permanent workspace, optionally under a prefix.",
+    inputSchema: {
+      type: "object",
+      properties: { prefix: { type: "string", description: "e.g. reports/" } },
+    },
+  },
+  {
     name: "generate_image",
     description:
       "Create or edit an image from a detailed English prompt. The image is shown to the user automatically.",
@@ -498,6 +543,83 @@ async function runTool(userId: string, origin: string, name: string, args: any, 
                   `- ${r.active ? "ON" : "OFF"} "${r.title}" (${r.cron}) last: ${r.last_status || "never"}`,
               )
               .join("\n"),
+        };
+      } catch (e: any) {
+        return { text: `Could not list: ${String(e?.message || e).slice(0, 200)}` };
+      }
+    }
+    case "browse_web": {
+      const task = String(args?.task ?? "")
+        .trim()
+        .slice(0, 8000);
+      if (!task) return { text: "Missing task." };
+      try {
+        const { runAgentBrowserTask } = await import("@/lib/agentsky/browser.server");
+        const minutes = Math.min(Math.max(Number(args?.budget_minutes) || 10, 2), 120);
+        const out = await runAgentBrowserTask(userId, task, minutes * 60_000);
+        const payload = out.files?.length
+          ? { type: "megsy.browser_files", files: out.files }
+          : undefined;
+        return {
+          text: out.ok
+            ? `Browser result:\n${out.output}`
+            : `Browser failed, try another way:\n${out.output}`,
+          payload,
+        };
+      } catch (e: any) {
+        return {
+          text: `Browser error: ${String(e?.message || e).slice(0, 300)}. Try another approach.`,
+        };
+      }
+    }
+    case "save_workspace_file": {
+      const rawPath = String(args?.path ?? "").trim();
+      if (!rawPath) return { text: "Missing path." };
+      try {
+        const { saveWorkspaceFile } = await import("@/lib/agentsky/workspace.server");
+        const out = await saveWorkspaceFile(
+          userId,
+          rawPath,
+          args?.content,
+          args?.content_base64,
+          args?.mime_type,
+        );
+        if (!out.ok) return { text: out.error };
+        return {
+          text: `Saved to workspace: ${out.path} (${out.size} bytes). Download link ready.`,
+          payload: {
+            type: "megsy.file",
+            name: out.name,
+            url: out.url,
+            mime: out.mime,
+            size: out.size,
+          },
+        };
+      } catch (e: any) {
+        return { text: `Could not save: ${String(e?.message || e).slice(0, 200)}` };
+      }
+    }
+    case "read_workspace_file": {
+      const rawPath = String(args?.path ?? "").trim();
+      if (!rawPath) return { text: "Missing path." };
+      try {
+        const { readWorkspaceFile } = await import("@/lib/agentsky/workspace.server");
+        const out = await readWorkspaceFile(userId, rawPath);
+        return { text: out.ok ? `File ${out.path}:\n${out.content}` : out.error };
+      } catch (e: any) {
+        return { text: `Could not read: ${String(e?.message || e).slice(0, 200)}` };
+      }
+    }
+    case "list_workspace_files": {
+      try {
+        const { listWorkspaceFiles } = await import("@/lib/agentsky/workspace.server");
+        const out = await listWorkspaceFiles(userId, String(args?.prefix ?? ""));
+        return {
+          text: out.ok
+            ? out.files.length
+              ? "Workspace files:\n" + out.files.map((f) => `- ${f}`).join("\n")
+              : "Workspace is empty."
+            : out.error,
         };
       } catch (e: any) {
         return { text: `Could not list: ${String(e?.message || e).slice(0, 200)}` };
