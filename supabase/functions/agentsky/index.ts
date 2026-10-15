@@ -358,7 +358,27 @@ async function ensureDefaultAgent(uid: string) {
       throw e;
     }
   }
-  const { agent } = await api<{ agent: any }>(`/agents/${encodeURIComponent(found.id)}`);
+  // The list may reference a stale agent that the provider already removed
+  // ("unknown agent" on fetch). Recreate it instead of failing bootstrap.
+  let current: any = null;
+  try {
+    const { agent } = await api<{ agent: any }>(`/agents/${encodeURIComponent(found.id)}`);
+    current = agent;
+  } catch (e) {
+    if (
+      e instanceof ProviderError &&
+      (e.status === 404 || /unknown agent|not[_\s-]?found/i.test(`${e.code} ${e.message}`))
+    ) {
+      const { agent } = await api<{ agent: any }>("/agents", {
+        method: "POST",
+        headers: { "Idempotency-Key": `default-agent-edge-v2-${uid}-${Date.now()}` },
+        body: JSON.stringify(spec),
+      });
+      return agent;
+    }
+    throw e;
+  }
+  const agent = current;
   const servers = JSON.stringify(agent.mcpServers || []);
   const desired = JSON.stringify(spec.mcpServers);
   if (servers !== desired || !String(agent.prompt || "").includes("megsy-edge-mcp-v1")) {
