@@ -709,6 +709,17 @@ async function handleApi(request: Request, path: string, user: { user: any; toke
           models: mediaModels(tier),
           offer: { active: false, endsAt: "2026-10-07T00:52:09Z" },
         });
+      if (
+        e instanceof ProviderError &&
+        /payment_setup_required|billing|top[\s_-]?up|insufficient/i.test(`${e.code} ${e.message}`)
+      )
+        return json(
+          rpcError(
+            "billing_required",
+            "The AgentSky key needs billing enabled (credits or auto top-up in Settings → Billing) before agents can be created.",
+          ),
+          402,
+        );
       throw e;
     }
   }
