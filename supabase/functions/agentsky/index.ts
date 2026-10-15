@@ -121,8 +121,11 @@ async function provider<T = any>(
   path: string,
   init: RequestInit = {},
   attempt = 0,
+  pinned?: Key,
 ): Promise<T> {
-  const key = await takeKey();
+  // Pin one key per request: rotating keys mid-request mixes AgentSky
+  // workspaces (list from key A, detail via key B => "unknown agent").
+  const key = pinned || (await takeKey());
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${key.value}`);
   headers.set("Content-Type", "application/json");
@@ -136,9 +139,9 @@ async function provider<T = any>(
   }
   if (!response.ok) {
     const err = body?.error || {};
-    if ([401, 402, 403, 429].includes(response.status) && key.id) {
+    if ([401, 402, 403, 429].includes(response.status) && key.id && !pinned) {
       await reportKey(key, response.status, err.message || "");
-      if (attempt < 2) return provider<T>(base, path, init, attempt + 1);
+      if (attempt < 2) return provider<T>(base, path, init, attempt + 1, undefined);
     }
     throw new ProviderError(
       response.status,
@@ -148,8 +151,34 @@ async function provider<T = any>(
   }
   return body as T;
 }
-const api = <T = any>(path: string, init?: RequestInit) => provider<T>(API, path, init);
-const gateway = <T = any>(path: string, init?: RequestInit) => provider<T>(GATEWAY, path, init);
+// Per-request client: one pinned key for every AgentSky call in the request.
+function requestClients(key: Key) {
+  return {
+    api: <T = any>(path: string, init?: RequestInit) => provider<T>(API, path, init, 0, key),
+    gateway: <T = any>(path: string, init?: RequestInit) =>
+      provider<T>(GATEWAY, path, init, 0, key),
+    key,
+  };
+}
+type Ctx = ReturnType<typeof requestClients>;
+let ctx: Ctx | null = null;
+const api = <T = any>(path: string, init?: RequestInit) => {
+  if (!ctx) throw new ProviderError(500, "server_error", "AgentSky context is missing.");
+  return ctx.api<T>(path, init);
+};
+const gateway = <T = any>(path: string, init?: RequestInit) => {
+  if (!ctx) throw new ProviderError(500, "server_error", "AgentSky context is missing.");
+  return ctx.gateway<T>(path, init);
+};
+async function withKey<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = ctx;
+  ctx = requestClients(await takeKey());
+  try {
+    return await fn();
+  } finally {
+    ctx = prev;
+  }
+}
 
 async function userTier(uid: string): Promise<"free" | "pro"> {
   try {
@@ -868,7 +897,8 @@ async function handleApi(request: Request, path: string, user: { user: any; toke
     }
     if (parts[2] === "stream" && method === "GET") {
       const turnId = await latestOpenTurn(token, sid);
-      const key = await takeKey();
+      // Use the request-pinned key so the stream reads from the same workspace.
+      const key = (ctx as Ctx).key;
       const upstream = await fetch(`${API}/sessions/${encodeURIComponent(sid)}/stream`, {
         headers: { Authorization: `Bearer ${key.value}`, Accept: "text/event-stream" },
         signal: request.signal,
@@ -1233,7 +1263,7 @@ async function handleMcp(request: Request, tokenText: string) {
   if (msg.method === "tools/call") {
     const name = String(msg.params?.name || "");
     try {
-      const r = await handleTool(uid, name, msg.params?.arguments || {}, String(id));
+      const r = await withKey(() => handleTool(uid, name, msg.params?.arguments || {}, String(id)));
       return json(mcpResult(id, r.text, r.payload));
     } catch (e: any) {
       return json({
@@ -1310,7 +1340,7 @@ Deno.serve(async (request) => {
     if (!routePath) return await handlePublic(request, url.searchParams.get("route") || "");
     const user = await requireUser(request);
     if (!user) return json(rpcError("unauthorized", "Please sign in"), 401);
-    return await handleApi(request, routePath.replace(/^\/+/, ""), user);
+    return await withKey(() => handleApi(request, routePath.replace(/^\/+/, ""), user));
   } catch (e: any) {
     if (e instanceof ProviderError)
       return json(rpcError(e.code, e.message), e.status >= 400 && e.status < 600 ? e.status : 502);
